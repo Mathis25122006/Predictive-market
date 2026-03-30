@@ -626,9 +626,8 @@ let timerInterval = null;
 const firebaseConfig = {
   apiKey: "AIzaSyAHPpuXWvS8zUw-l8iKh6LuYmIz9mZD2Gk",
   authDomain: "predictive-market.firebaseapp.com",
-  // ⚠️ ATTENTION : Ajoute bien la ligne databaseURL ci-dessous 
-  // Elle est indispensable pour la Realtime Database
-  databaseURL: "https://predictive-market-default-rtdb.europe-west1.firebasedatabase.app/",
+  // URL nettoyée (sans le slash final) pour une meilleure compatibilité mobile
+  databaseURL: "https://predictive-market-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "predictive-market",
   storageBucket: "predictive-market.firebasestorage.app",
   messagingSenderId: "141545759673",
@@ -638,12 +637,14 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Fonction globale pour envoyer les données sur le réseau
+// Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
 function saveToCloud() {
   if (sessionConfig.code) {
     db.ref('sessions/' + sessionConfig.code).set({
       sessionConfig: sessionConfig,
       gameData: game
+    }).catch(err => {
+      console.error("Erreur de sauvegarde Cloud:", err);
     });
   }
 }
