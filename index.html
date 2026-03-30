@@ -1750,7 +1750,8 @@ function checkAccess() {
     msg.textContent = ""; renderPlayChallenges();
 
   }).catch((error) => {
-    msg.textContent = "Erreur de connexion au serveur.";
+    // Affiche la raison exacte envoyée par Google
+    msg.textContent = "Erreur Firebase : " + error.message;
     msg.className = "msg err";
   });
 }
