@@ -432,8 +432,10 @@
     <label>Pseudo</label>
     <input id="pseudo" placeholder="Ex : Renaud">
     
-    <label>Code de session (6 caractères)</label>
-    <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+    <div id="accessCodeContainer">
+      <label>Code de session (6 caractères)</label>
+      <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+    </div>
     
     <div id="qrScannerContainer" class="hidden">
       <p class="subtitle">Ou scannez le QR Code via votre appareil</p>
@@ -555,11 +557,19 @@ function showScreen(screenId) {
     if (stepFields) stepFields.classList.add("hidden");
     
     // Nettoyer les messages d'erreur éventuels
-    const setupMsg = document.getElementById("setupMsg");
-    if (setupMsg) setupMsg.textContent = "";
-  }
+// Nettoyer les messages d'erreur éventuels
+        const setupMsg = document.getElementById("setupMsg");
+        if (setupMsg) setupMsg.textContent = "";
+
+        // NOUVEAU : Réafficher le champ de code et le vider si l'utilisateur revient à l'accueil
+        const codeContainer = document.getElementById("accessCodeContainer");
+        if (codeContainer) codeContainer.style.display = "block";
+        const accessCodeInput = document.getElementById("accessCode");
+        if (accessCodeInput) accessCodeInput.value = "";
+      }
 
   // 2. Boucle principale pour afficher l'écran demandé et masquer les autres
+
   screens.forEach(id => {
     const el = document.getElementById(id);
     if (el) {
@@ -1982,15 +1992,22 @@ window.addEventListener('load', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const codeFromUrl = urlParams.get('session');
   
-  if (codeFromUrl) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    showScreen('play');
-    const inputField = document.getElementById("accessCode");
-    if (inputField) {
-      inputField.value = codeFromUrl.toUpperCase();
-    }
-  }
-});
+if (codeFromUrl) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showScreen('play');
+        const inputField = document.getElementById("accessCode");
+        if (inputField) {
+          inputField.value = codeFromUrl.toUpperCase();
+          
+          // NOUVEAU : On masque la zone de saisie du code et le scanner QR
+          const codeContainer = document.getElementById("accessCodeContainer");
+          if (codeContainer) codeContainer.style.display = "none";
+          
+          const qrContainer = document.getElementById("qrScannerContainer");
+          if (qrContainer) qrContainer.style.display = "none";
+        }
+      }
+    });
 
 function renderPlayerRecap(pseudo) {
   const player = game.players.find(p => p.name === pseudo);
