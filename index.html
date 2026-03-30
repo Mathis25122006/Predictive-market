@@ -588,15 +588,10 @@ function showScreen(screenId) {
       initAccessView();
     }
     
-    // Message d'alerte si le jeu n'est pas encore créé
+    // On s'assure juste que la zone de message est bien vide au démarrage
     const playMsg = document.getElementById("playMsg");
     if (playMsg) {
-      if (game.challenges.length === 0) {
-        playMsg.textContent = "Le jeu n'a pas encore été configuré par l'administrateur.";
-        playMsg.className = "msg err";
-      } else {
-        playMsg.textContent = "";
-      }
+      playMsg.textContent = "";
     }
   }
 
