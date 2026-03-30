@@ -1,0 +1,2330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prediction Game – 2 Challenges</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+ body {
+   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+   background: radial-gradient(circle at top, #020617, #020617 40%, #020617 60%, #020617);
+   background-color:#020617;
+   color: #f9fafb;
+   padding: 16px;
+   max-width: 540px;
+   margin: 0 auto;
+ }
+ h1 {
+   font-size: 22px;
+   margin-bottom: 4px;
+ }
+ h2 {
+   font-size: 18px;
+   margin-top: 0;
+ }
+ h3 {
+   font-size: 15px;
+   margin: 0 0 6px 0;
+ }
+ .vivatech-logo {
+   display:flex;
+   justify-content:center;
+   align-items:center;
+   margin-bottom:8px;
+ }
+ .vivatech-logo-mark {
+   font-weight:800;
+   font-size:18px;
+   letter-spacing:0.16em;
+   text-transform:uppercase;
+   padding:6px 14px;
+   border-radius:999px;
+   background:linear-gradient(135deg,#22c55e,#eab308,#f97316,#ec4899,#6366f1);
+   box-shadow:0 10px 30px rgba(15,23,42,0.8);
+ }
+ .vivatech-logo-mark span {
+   background:rgba(15,23,42,0.9);
+   padding:2px 12px;
+   border-radius:999px;
+ }
+
+ .subtitle {
+   font-size: 13px;
+   color: #9ca3af;
+   margin-bottom: 16px;
+ }
+ .card {
+   background: radial-gradient(circle at top left, rgba(30,64,175,0.6), rgba(15,23,42,0.96));
+   border-radius: 20px;
+   padding: 18px 16px 18px;
+   margin-top: 16px;
+   border: 1px solid rgba(148,163,184,0.4);
+   box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+ }
+ label {
+   font-size: 12px;
+   color: #9ca3af;
+   display: block;
+   margin-bottom: 4px;
+ }
+ input, select {
+   width: 100%;
+   padding: 10px 12px;
+   border-radius: 999px;
+   border: 1px solid rgba(55,65,81,0.9);
+   background: rgba(15,23,42,0.9);
+   color: #f9fafb;
+   margin-bottom: 10px;
+   font-size: 14px;
+   outline: none;
+ }
+ input::placeholder {
+   color: #6b7280;
+ }
+ input:focus, select:focus {
+   border-color: #f97316;
+   box-shadow: 0 0 0 1px rgba(248,113,113,0.5);
+ }
+ button {
+   width: 100%;
+   padding: 11px 14px;
+   border-radius: 999px;
+   border: none;
+   font-weight: 600;
+   font-size: 15px;
+   cursor: pointer;
+   margin-top: 8px;
+   background: linear-gradient(135deg,#f97316,#ec4899);
+   color: #fff;
+   box-shadow: 0 14px 30px rgba(236,72,153,0.5);
+ }
+ button:active {
+   transform: translateY(1px) scale(0.99);
+   box-shadow: 0 8px 20px rgba(236,72,153,0.45);
+ }
+ .answer-btn {
+   background: radial-gradient(circle at top left, rgba(56,189,248,0.2), rgba(15,23,42,0.98));
+   border: 1px solid rgba(148,163,184,0.7);
+   padding: 10px 10px 8px;
+   border-radius: 14px;
+   margin-bottom: 8px;
+   cursor:pointer;
+   font-size: 14px;
+ }
+ .answer-btn.selected {
+   border: 2px solid #f97316;
+   box-shadow: 0 0 0 1px rgba(248,113,113,0.7);
+ }
+ .answer-title {
+   display:flex;
+   justify-content:space-between;
+   align-items:center;
+   margin-bottom:4px;
+ }
+ .answer-label {
+   font-weight:500;
+   max-width:70%;
+   white-space:nowrap;
+   overflow:hidden;
+   text-overflow:ellipsis;
+ }
+ .answer-chip {
+   font-size:11px;
+   padding:3px 8px;
+   border-radius:999px;
+   border:1px solid rgba(148,163,184,0.7);
+   background:rgba(15,23,42,0.9);
+   color:#e5e7eb;
+ }
+ .answer-meta {
+   display:flex;
+   justify-content:space-between;
+   font-size:11px;
+   color:#9ca3af;
+   margin-top:2px;
+ }
+ .pts-pill {
+   padding:2px 8px;
+   border-radius:999px;
+   background:rgba(236,72,153,0.18);
+   color:#fecaca;
+ }
+ .gauge {
+   width:100%;
+   height:6px;
+   border-radius:999px;
+   background:rgba(15,23,42,0.9);
+   overflow:hidden;
+   margin-top:5px;
+ }
+ .gauge-fill {
+   height:100%;
+   background:linear-gradient(90deg, rgba(236,72,153,0.3), rgba(236,72,153,0.9));
+   transition:width 0.15s ease-out;
+ }
+ .leader-entry {
+   padding: 9px 10px;
+   border-radius: 12px;
+   margin-bottom: 6px;
+   background: rgba(15,23,42,0.98);
+   border: 1px solid rgba(55,65,81,0.9);
+   display: flex;
+   justify-content: space-between;
+   align-items:center;
+   font-size: 14px;
+ }
+ .leader-left {
+   display:flex;
+   align-items:center;
+   gap:6px;
+ }
+ .rank-pill {
+   font-size:11px;
+   padding:2px 7px;
+   border-radius:999px;
+   border:1px solid rgba(148,163,184,0.7);
+   color:#9ca3af;
+ }
+ .msg {
+   font-size: 12px;
+   margin-top: 6px;
+   color: #9ca3af;
+ }
+ .msg.ok { color: #4ade80; }
+ .msg.err { color: #f97373; }
+ .badge {
+   display:inline-block;
+   font-size:11px;
+   padding:3px 8px;
+   border-radius:999px;
+   border:1px solid rgba(148,163,184,0.6);
+   color:#9ca3af;
+   margin-top:4px;
+ }
+ .chip {
+   display:inline-block;
+   font-size:11px;
+   padding:3px 8px;
+   border-radius:999px;
+   border:1px solid rgba(148,163,184,0.6);
+   color:#e5e7eb;
+   background:rgba(15,23,42,0.9);
+   margin-right:4px;
+ }
+ .challenge-header {
+   display:flex;
+   flex-direction:column;
+   gap:2px;
+   margin-bottom:6px;
+ }
+ .challenge-title {
+   font-size:14px;
+   font-weight:500;
+ }
+ .challenge-caption {
+   font-size:11px;
+   color:#9ca3af;
+ }
+ .challenge-block {
+   border-radius:16px;
+   padding:10px 10px 8px;
+   margin-bottom:10px;
+   background:rgba(15,23,42,0.9);
+   border:1px solid rgba(55,65,81,0.9);
+ }
+ .setup-grid {
+   display:flex;
+   flex-direction:column;
+   gap:10px;
+ }
+ .setup-challenge {
+   border-radius:14px;
+   padding:10px 10px 8px;
+   background:rgba(15,23,42,0.9);
+   border:1px solid rgba(55,65,81,0.9);
+ }
+ .top-row {
+   display:flex;
+   justify-content:space-between;
+   align-items:center;
+ }
+ .chart-block {
+   margin-top: 14px;
+   padding-top: 10px;
+   border-top: 1px dashed rgba(148,163,184,0.6);
+ }
+ .chart-caption {
+   font-size:11px;
+   color:#9ca3af;
+   margin-bottom:4px;
+ }
+ canvas {
+   width:100%;
+   max-width:100%;
+   display:block;
+   margin-top:6px;
+   border-radius:12px;
+   background: radial-gradient(circle at top left, rgba(15,23,42,0.95), rgba(15,23,42,1));
+   border:1px solid rgba(55,65,81,0.9);
+}
+ .hidden { display:none; }
+
+ /* Nouveaux styles pour le panel de mise (Mode Avancé) */
+ .side-panel-overlay {
+   position: fixed; top:0; left:0; width:100%; height:100%;
+   background: rgba(0,0,0,0.6); z-index: 999;
+   opacity: 0; pointer-events: none; transition: opacity 0.3s;
+ }
+ .side-panel-overlay.open { opacity: 1; pointer-events: auto; }
+
+ .side-panel {
+   position: fixed; top: 0; right: -100%; width: 85%; max-width: 360px; height: 100%;
+   background: #020617; border-left: 1px solid rgba(55,65,81,0.9);
+   box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+   z-index: 1000; transition: right 0.3s ease;
+   padding: 20px; display: flex; flex-direction: column;
+ }
+ .side-panel.open { right: 0; }
+</style>
+</head>
+<body>
+  <div id="globalBalance" class="hidden" style="position:fixed; top:16px; right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:1100; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+  💰 <span id="globalBalanceAmt">0</span>
+</div>
+
+<div id="sellPanelOverlay" class="side-panel-overlay" onclick="closeSellPanel()"></div>
+<div id="sellPanel" class="side-panel">
+  <h2 style="margin-bottom:5px;">Revendre</h2>
+  <p class="subtitle" id="sellAnswerName" style="margin-bottom:20px;">Réponse</p>
+
+  <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #f97316;">
+    <div style="font-size:12px; color:#9ca3af;">Mise initiale sur cette option</div>
+    <div id="sellMaxBet" style="font-size:20px; font-weight:bold; color:#f97316;">0 unités</div>
+  </div>
+
+  <label>Combien d'unités (de votre mise) voulez-vous retirer ?</label>
+  <input type="number" id="sellInput" placeholder="Ex: 5" min="1" oninput="updateSellPotential()">
+  <div style="display:flex; justify-content:flex-end; margin-top:-5px; margin-bottom:15px;">
+     <button onclick="setSellMax()" style="background:#4b5563; padding:4px 8px; font-size:11px; width:auto; border-radius:6px;">TOUT RETIRER</button>
+  </div>
+
+  <div style="background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3); padding:10px; border-radius:10px; margin-bottom:15px;">
+     <div style="font-size:12px; color:#9ca3af;">Argent récupéré avec la Chute Libre (Estimation)</div>
+     <div id="sellPotential" style="font-size:20px; font-weight:bold; color:#4ade80;">0 💰</div>
+  </div>
+
+  <div id="sellError" class="msg err" style="margin-bottom:15px;"></div>
+
+  <div style="margin-top:auto;">
+    <button onclick="confirmSell()" style="background:linear-gradient(135deg,#f97316,#ea580c);">Confirmer le retrait</button>
+    <button onclick="closeSellPanel()" style="background:none; border:1px solid #4b5563; margin-top:10px;">Annuler</button>
+  </div>
+</div>
+
+<div class="vivatech-logo">
+  <div class="vivatech-logo-mark"><span>VIVA TECHNOLOGY</span></div>
+</div>
+
+<h1>Prediction Game</h1>
+
+<div id="home" class="card">
+  <h2>Bienvenue</h2>
+  <p class="subtitle">Choisissez votre mode d'accès pour commencer la session.</p>
+  <button onclick="checkAdminPassword()">Accès Administrateur</button>
+  <button onclick="showScreen('play')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top: 12px;">Jouer</button>
+</div>
+
+<div id="adminMenu" class="card" style="display:none">
+  <h2>Menu Administrateur</h2>
+  <p class="subtitle">Session déverrouillée. Choisissez une option :</p>
+  <button onclick="askResume()">Créer un nouveau jeu</button>
+  <button onclick="showScreen('manageAuth')" style="background: rgba(55,65,81,0.5); margin-top: 12px;">Gérer un jeu existant</button>
+  <button onclick="showScreen('home')" style="background: none; border: 1px solid #4b5563; margin-top: 12px; box-shadow: none;">Retour à l'accueil</button>
+</div>
+
+<div id="selectMode" class="card" style="display:none">
+  <h2>Type de jeu</h2>
+  <p class="subtitle">Comment souhaitez-vous que les joueurs misent ?</p>
+  <button onclick="startSetup('easy')">Créer un jeu Facile (1 unité / question)</button>
+  <button onclick="startSetup('advanced')" style="margin-top:10px;">Créer un jeu Avancé (Solde & Mises libres)</button>
+  <button onclick="startSetup('both')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top:10px;">Créer les deux modes</button>
+  <button onclick="showScreen('adminMenu')" style="background: none; border: 1px solid #4b5563; margin-top: 15px;">Retour</button>
+</div>
+
+<div id="manageAuth" class="card" style="display:none">
+  <h2>Gérer une partie</h2>
+  <label>Entrez le code de la session (6 caractères)</label>
+  <input id="manageCodeInput" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+  <button onclick="checkManageAccess()">Accéder à la gestion</button>
+  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour</button>
+  <div id="manageAuthMsg" class="msg err"></div>
+  <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour à l'accueil</button>
+</div>
+
+<div id="manageGame" class="card" style="display:none">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>Gestion en temps réel</h2>
+    <div id="gameTimer" style="font-weight:800; color:#f97316; font-size:18px; font-family:monospace;">00:00:00</div>
+  </div>
+  <button onclick="confirmExitManage()" style="background:none; border:1px solid #4b5563; margin-top:10px; margin-bottom:15px; font-size:12px;">Quitter la gestion (Accueil)</button>
+  
+  <div id="manageChallengesContainer"></div>
+
+  <div id="finalValidationZone" class="hidden" style="margin-top:20px; padding-top:20px; border-top:2px solid #f97316;">
+    <h3>Validation des résultats</h3>
+    <p class="subtitle">Le temps est écoulé. Sélectionnez les bonnes réponses :</p>
+    <div id="adminValidationList"></div>
+    <button onclick="finish()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:15px;">Promulguer les résultats globaux</button>
+  </div>
+</div>
+
+<div id="setup" class="card" style="display:none">
+  <div id="setupStepQty">
+    <h2>Configuration</h2>
+    <label>Combien de challenges voulez-vous créer ?</label>
+    <select id="challengesQty">
+      <option value="1">1 Challenge</option>
+      <option value="2" selected>2 Challenges</option>
+      <option value="3">3 Challenges</option>
+      <option value="4">4 Challenges</option>
+      <option value="5">5 Challenges</option>
+    </select>
+    <label>Durée de validité du code (minutes)</label>
+    <input type="number" id="sessionDuration" value="60" min="1">
+    
+    <div id="advancedParams" class="hidden">
+      <label>Solde de base par joueur (Unités)</label>
+      <input type="number" id="initialBalance" value="100" min="10">
+    </div>
+
+    <button onclick="generateSetupFields()">Suivant</button>
+    <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Retour à l'accueil</button>
+  </div>
+
+  <div id="setupStepFields" class="hidden">
+    <h2 id="setupTitle">Détails des challenges</h2>
+    <div id="dynamicSetupContainer" class="setup-grid"></div>
+    <button id="setupBtn" onclick="setupNext()">Lancer le jeu</button>
+  </div>
+
+  <div class="msg" id="setupMsg"></div>
+</div>
+
+
+<div id="sessionInfo" class="card" style="display:none">
+  <h2>Session Générée</h2>
+  <p class="subtitle">Transmettez ces accès aux participants :</p>
+  <div style="text-align:center; background: rgba(15,23,42,0.5); padding: 20px; border-radius: 15px; border: 1px solid #f97316;">
+    <div style="font-size: 12px; color: #9ca3af; margin-bottom: 5px;">CODE D'ACCÈS</div>
+    <div id="displayCode" style="color:#f97316; font-size:32px; font-weight:800; letter-spacing:4px;">------</div>
+    <div id="qrContainer" style="margin-top:15px;"></div>
+  </div>
+  <p class="msg" id="displayExpiry" style="text-align:center;"></p>
+  <button onclick="showScreen('home')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top: 15px;">Retour au menu principal</button>
+</div>
+
+<div id="play" class="card" style="display:none">
+  <div id="playerAuth">
+    <h2>Rejoindre le jeu</h2>
+    <label>Pseudo</label>
+    <input id="pseudo" placeholder="Ex : Renaud">
+    
+    <label>Code de session (6 caractères)</label>
+    <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+    
+    <div id="qrScannerContainer" class="hidden">
+      <p class="subtitle">Ou scannez le QR Code via votre appareil</p>
+      <div id="reader" style="width: 100%; border-radius: 15px; overflow: hidden; margin-bottom: 10px;"></div>
+      <button id="startScanBtn" style="background:#3b82f6" onclick="startQRScanner()">Scanner QR Code</button>
+    </div>
+    
+    <button onclick="checkAccess()">Entrer dans le jeu</button>
+    <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Quitter et retourner au menu principal</button>
+  </div>
+
+<div id="gameContent" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 id="playerTitle">Prédictions</h2>
+      <div>
+        <span class="badge" id="badgeCount">0 / 10 joueurs</span>
+        <span class="badge hidden" id="playerBalanceDisplay" style="color:#3b82f6; border-color:#3b82f6;">Solde: 0</span>
+      </div>
+    </div>
+    <div id="challengesPlay"></div>
+    <button id="playBtn" onclick="playNext()">Suivant</button>
+  </div>
+  <div class="msg" id="playMsg"></div>
+</div>
+
+<div id="betPanelOverlay" class="side-panel-overlay" onclick="closeBetPanel()"></div>
+<div id="betPanel" class="side-panel">
+  <h2 style="margin-bottom:5px;">Miser</h2>
+  <p class="subtitle" id="betAnswerName" style="margin-bottom:20px;">Réponse</p>
+  
+  <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid rgba(59,130,246,0.5);">
+    <div style="font-size:12px; color:#9ca3af;">Solde disponible</div>
+    <div id="betAvailable" style="font-size:20px; font-weight:bold; color:#3b82f6;">0 unités</div>
+  </div>
+  
+  <label>Montant de la mise</label>
+  <input type="number" id="betInput" placeholder="Ex: 10" min="1" oninput="updatePotentialGain()">
+  <div style="display:flex; justify-content:flex-end; margin-top:-5px; margin-bottom:15px;">
+     <button onclick="setBetMax()" style="background:#4b5563; padding:4px 8px; font-size:11px; width:auto; border-radius:6px;">MAX</button>
+  </div>
+  
+  <div style="background:rgba(236,72,153,0.1); border:1px solid rgba(236,72,153,0.3); padding:10px; border-radius:10px; margin-bottom:15px;">
+     <div style="font-size:12px; color:#9ca3af;">Gain potentiel estimé</div>
+     <div id="betPotential" style="font-size:20px; font-weight:bold; color:#ec4899;">0 pts</div>
+  </div>
+  
+  <div id="betError" class="msg err" style="margin-bottom:15px;"></div>
+  
+  <div style="margin-top:auto;">
+    <button onclick="confirmBet()" style="background:linear-gradient(135deg,#22c55e,#16a34a);">Valider la mise</button>
+    <button onclick="closeBetPanel()" style="background:none; border:1px solid #4b5563; margin-top:10px;">Annuler</button>
+  </div>
+</div>
+
+<div id="admin" class="card" style="display:none">
+  <h2>Étape 3 • Choisir les bonnes réponses</h2>
+
+  <div id="adminChallenges"></div>
+
+  <button id="adminBtn" onclick="adminNext()">Suivant</button>
+  <div class="msg" id="adminMsg"></div>
+  <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Abandonner et Accueil</button>
+</div>
+
+<div id="results" class="card" style="display:none">
+  <h2>Classement Final</h2>
+  <div id="leaderboard"></div>
+  <div class="msg">Score calculé sur vos gains potentiels (100 - p) cumulés.</div>
+  <div id="chartsContainer"></div>
+  <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px; box-shadow:none;">Retour au menu principal</button>
+</div>
+<div id="playerRecap" class="card" style="display:none">
+  <h2>Vos Prédictions</h2>
+  <p class="subtitle">Voici le résumé de vos mises et l'évolution en temps réel.</p>
+  
+  <div id="recapSummary" style="margin-bottom: 20px;"></div>
+  
+  <h3>Évolution des probabilités globales</h3>
+  <div id="recapChartsContainer"></div>
+  
+  <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px;">Quitter et retourner à l'accueil</button>
+</div>
+
+<script>
+
+// Au chargement, on tente de récupérer une session existante
+
+  
+ function checkAdminPassword() {
+  const password = prompt("Veuillez saisir le mot de passe administrateur :");
+  
+  if (password === "lol") {
+    showScreen('adminMenu'); // On débloque le menu, pas directement le setup
+  } else if (password !== null) {
+    alert("Mot de passe incorrect.");
+  }
+}
+function showScreen(screenId) {
+  // Ajout de 'playerRecap'
+  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap'];
+
+  // 1. Actions de nettoyage et sécurité lors du retour à l'accueil
+  if (screenId === 'home') {
+    // Arrêter le scanner QR s'il est actif
+    if (typeof stopQRScanner === 'function') {
+      stopQRScanner();
+    }
+    
+    // Si on quitte l'écran setup pendant une saisie, on sauvegarde les données
+    const setupEl = document.getElementById('setup');
+    if (setupEl && setupEl.style.display !== 'none') {
+      captureSetupData();
+    }
+    
+    // Réinitialiser l'affichage par défaut des étapes du setup
+    const stepQty = document.getElementById("setupStepQty");
+    const stepFields = document.getElementById("setupStepFields");
+    if (stepQty) stepQty.classList.remove("hidden");
+    if (stepFields) stepFields.classList.add("hidden");
+    
+    // Nettoyer les messages d'erreur éventuels
+    const setupMsg = document.getElementById("setupMsg");
+    if (setupMsg) setupMsg.textContent = "";
+  }
+
+  // 2. Boucle principale pour afficher l'écran demandé et masquer les autres
+  screens.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (id === screenId) {
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  });
+
+  // 3. Logiques spécifiques selon l'écran affiché
+  if (screenId === 'play') {
+    // Initialiser la vue QR si on est sur mobile
+    if (typeof initAccessView === 'function') {
+      initAccessView();
+    }
+    
+    // Message d'alerte si le jeu n'est pas encore créé
+    const playMsg = document.getElementById("playMsg");
+    if (playMsg) {
+      if (game.challenges.length === 0) {
+        playMsg.textContent = "Le jeu n'a pas encore été configuré par l'administrateur.";
+        playMsg.className = "msg err";
+      } else {
+        playMsg.textContent = "";
+      }
+    }
+  }
+
+  // Focus automatique sur le champ pseudo si on entre dans 'play'
+  if (screenId === 'play') {
+    const pseudoInput = document.getElementById("pseudo");
+    if (pseudoInput) setTimeout(() => pseudoInput.focus(), 100);
+  }
+}
+
+
+
+let html5QrCode = null; 
+let currentSetupIndex = 0;
+let selectedAnswers = [];
+let selectedBets = []; // Stocke le montant misé par question
+let selectedBetTypes = []; // NOUVEAU : Stocke si le pari est 'YES' ou 'NO'
+let currentPlayChallengeIndex = 0;
+let currentAdminChallengeIndex = 0;
+let savedSetupData = null; 
+
+let currentPlayerMode = "easy"; 
+let currentPlayerBalance = 0;
+let timerInterval = null; // NOUVEAU : Déclaration indispensable pour le chrono de gestion
+
+let sessionConfig = {
+  code: "",
+  codeAdvanced: "", 
+  mode: "easy", 
+  initialBalance: 100, 
+  expiresAt: null,
+  durationMinutes: 60 
+};
+
+let game = {
+  challenges: [],
+  players: [],
+  maxPlayers: 10,
+  currentPlayerName: "",
+  isResolved: false,
+  gameMode: "easy" 
+};
+
+// --- MOTEUR LMSR (Logarithmic Market Scoring Rule) ---
+const B_LIQUIDITY = 50; // Paramètre de liquidité. Plus il est haut, plus le marché est stable.
+
+function getLMSRProbs(votesArray) {
+  const maxV = Math.max(...votesArray); // Prévention de l'overflow exponentiel
+  const exps = votesArray.map(v => Math.exp((v - maxV) / B_LIQUIDITY));
+  const sumExp = exps.reduce((a, b) => a + b, 0);
+  return exps.map(e => e / sumExp);
+}
+
+function getLMSRCost(votesArray) {
+  const maxV = Math.max(...votesArray);
+  let sumExp = 0;
+  for (let v of votesArray) sumExp += Math.exp((v - maxV) / B_LIQUIDITY);
+  return B_LIQUIDITY * (Math.log(sumExp) + maxV / B_LIQUIDITY);
+}
+// -----------------------------------------------------
+
+function captureSetupData() {
+  const cats = document.querySelectorAll(".dynamic-cat");
+  const ques = document.querySelectorAll(".dynamic-que");
+  const ans = document.querySelectorAll(".dynamic-ans");
+  const pcts = document.querySelectorAll(".dynamic-pct");
+
+  if (cats.length === 0) return; // Rien à sauvegarder
+
+  savedSetupData = {
+    qty: document.getElementById("challengesQty").value,
+    duration: document.getElementById("sessionDuration").value,
+    challenges: Array.from(cats).map((cat, i) => ({
+      category: cat.value,
+      question: ques[i].value,
+      answers: Array.from(document.querySelectorAll(`.dynamic-ans[data-ch="${i}"]`)).map(a => a.value),
+      pcts: Array.from(document.querySelectorAll(`.dynamic-pct[data-ch="${i}"]`)).map(p => p.value)
+    }))
+  };
+}
+
+
+function askResume() {
+  if (savedSetupData) {
+    if (confirm("Souhaitez-vous reprendre votre configuration en cours ? (OK = Reprendre, Annuler = Recommencer à zéro)")) {
+      resumeSetup();
+      return;
+    }
+  }
+  // Reset complet
+  savedSetupData = null;
+  document.getElementById("setupStepQty").classList.remove("hidden");
+  document.getElementById("setupStepFields").classList.add("hidden");
+  showScreen('selectMode'); // On dirige vers l'écran de choix du mode
+}
+function resumeSetup() {
+  // 1. Restaurer la quantité et générer les champs
+  document.getElementById("challengesQty").value = savedSetupData.qty;
+  document.getElementById("sessionDuration").value = savedSetupData.duration;
+  generateSetupFields();
+
+  // 2. Remplir les champs et ajouter les lignes de réponses manquantes
+  savedSetupData.challenges.forEach((savedCh, i) => {
+    const cats = document.querySelectorAll(".dynamic-cat");
+    const ques = document.querySelectorAll(".dynamic-que");
+    cats[i].value = savedCh.category;
+    ques[i].value = savedCh.question;
+
+    const container = document.getElementById(`ans-container-${i}`);
+    // On ajoute les champs de réponses supplémentaires si nécessaire
+    for (let a = 2; a < savedCh.answers.length; a++) {
+      addAnswerField(i);
+    }
+
+    const ansInputs = document.querySelectorAll(`.dynamic-ans[data-ch="${i}"]`);
+    const pctInputs = document.querySelectorAll(`.dynamic-pct[data-ch="${i}"]`);
+    savedCh.answers.forEach((val, idx) => ansInputs[idx].value = val);
+    savedCh.pcts.forEach((val, idx) => pctInputs[idx].value = val);
+  });
+
+  showScreen('setup');
+}
+
+function generateSetupFields() {
+  const qty = parseInt(document.getElementById("challengesQty").value);
+  const container = document.getElementById("dynamicSetupContainer");
+  container.innerHTML = ""; // Reset
+  
+  // On pré-remplit l'objet game.challenges
+  game.challenges = Array.from({ length: qty }, () => ({
+    category: "", question: "", answers: [], votes: [], baseVotes: [], correct: null
+  }));
+
+  // Génération du HTML pour chaque challenge
+  for (let i = 0; i < qty; i++) {
+    const div = document.createElement("div");
+    div.className = "setup-challenge";
+    div.innerHTML = `
+      <div class="top-row"><strong>Challenge ${i + 1}</strong></div>
+      <label>Catégorie</label>
+      <input class="dynamic-cat" data-index="${i}" placeholder="Ex: Tech">
+      <label>Question</label>
+      <input class="dynamic-que" data-index="${i}" placeholder="Ex: Quelle innovation...">
+      <label>Réponses et Probabilités (%)</label>
+      <div id="ans-container-${i}">
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse 1" style="flex:3;">
+          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse 2" style="flex:3;">
+          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+        </div>
+      </div>
+      <div style="display:flex; gap:5px;">
+        <button type="button" onclick="addAnswerField(${i})" style="background: rgba(55,65,81,0.5); font-size: 11px; flex:1;">+ Réponse</button>
+        <button type="button" onclick="setEquitable(${i})" style="background: #3b82f6; font-size: 11px; flex:1;">Équitable</button>
+        <button type="button" onclick="setRandom(${i})" style="background: #8b5cf6; font-size: 11px; flex:1;">Aléatoire</button>
+      </div>
+    `;
+    container.appendChild(div);
+  }
+
+  // Ajout du bouton retour à la fin du formulaire dynamique
+  const backBtn = document.createElement("button");
+  backBtn.textContent = "Retour à l'accueil";
+  backBtn.style.cssText = "background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;";
+  backBtn.onclick = () => showScreen('home');
+  container.appendChild(backBtn);
+
+  document.getElementById("setupStepQty").classList.add("hidden");
+  document.getElementById("setupStepFields").classList.remove("hidden");
+}
+let pctModificationCounter = 0; // Compteur pour suivre l'historique des modifications
+
+function updateNextPct(chIndex, currentInput) {
+  const pcts = Array.from(document.querySelectorAll(`.dynamic-pct[data-ch="${chIndex}"]`));
+  if (pcts.length < 2) return;
+
+  // 1. On compte combien de cases sont encore vides
+  let emptyCount = 0;
+  pcts.forEach(input => {
+    if (input.value === "" || isNaN(parseFloat(input.value))) {
+      emptyCount++;
+    }
+  });
+
+  // Si plus d'une case est vide, on arrête le calcul ici pour vous laisser saisir
+  if (emptyCount > 1) {
+    pctModificationCounter++;
+    currentInput.dataset.modOrder = pctModificationCounter;
+    return; 
+  }
+
+  // 2. On marque la case actuelle comme la plus récemment modifiée
+  pctModificationCounter++;
+  currentInput.dataset.modOrder = pctModificationCounter;
+
+  // 3. On cherche la case la PLUS ANCIENNEMENT modifiée (ou la dernière case vide)
+  let targetInput = null;
+  let oldestOrder = Infinity;
+
+  pcts.forEach(input => {
+    if (input !== currentInput) {
+      // Si la case est vide, on force son ordre à 0 pour être sûr de la cibler
+      const order = (input.value === "" || isNaN(parseFloat(input.value))) ? 0 : (parseInt(input.dataset.modOrder) || 0); 
+      if (order < oldestOrder) {
+        oldestOrder = order;
+        targetInput = input;
+      }
+    }
+  });
+
+  // 4. On calcule la somme de toutes les autres cases
+  let sumOthers = 0;
+  for (let i = 0; i < pcts.length; i++) {
+    if (pcts[i] !== targetInput) {
+      let val = parseFloat(pcts[i].value);
+      if (isNaN(val) || val < 0) val = 0; // Si vide, on compte pour 0
+      sumOthers += val;
+    }
+  }
+
+// 5. On ajuste la case cible (la dernière vide, ou la plus ancienne) pour arriver à 100
+  let remaining = 100 - sumOthers;
+  if (remaining < 0.1) remaining = 0.1; // Sécurité pour éviter les zéros absolus
+
+  targetInput.value = parseFloat(remaining).toFixed(1);
+
+  // CORRECTION : On NE MET PLUS à jour l'ordre de la case compensée automatiquement.
+  // Ainsi, elle reste la "poubelle de compensation" qui absorbe toute votre frappe 
+  // (le '3' puis le '0' de '30') sans jamais se rabattre par erreur sur la 1ère case !
+}
+
+function setEquitable(chIndex) {
+  const pcts = document.querySelectorAll(`.dynamic-pct[data-ch="${chIndex}"]`);
+  // On utilise 100 / nombre de réponses, arrondi à 1 décimale
+  const val = Math.floor((100 / pcts.length) * 10) / 10;
+  pcts.forEach(p => p.value = val);
+  // On n'appelle PAS updateLastPct ici pour laisser les valeurs identiques
+}
+
+function setRandom(chIndex) {
+  const pcts = document.querySelectorAll(`.dynamic-pct[data-ch="${chIndex}"]`);
+  let remaining = 100;
+  const minVal = 0.1;
+
+  for (let i = 0; i < pcts.length - 1; i++) {
+    // On laisse au moins minVal pour chaque case restante
+    const maxSafe = remaining - (pcts.length - 1 - i) * minVal;
+    // Génération entre 0.1 et une fraction du reste
+    let r = Math.max(minVal, Math.floor(Math.random() * (maxSafe / 1.2) * 10) / 10);
+    pcts[i].value = r.toFixed(1);
+    remaining -= r;
+  }
+  pcts[pcts.length - 1].value = Math.max(minVal, remaining).toFixed(1);
+}
+
+function setupNext() {
+  const cats = document.querySelectorAll(".dynamic-cat");
+  const ques = document.querySelectorAll(".dynamic-que");
+  const msg = document.getElementById("setupMsg");
+  let isValid = true;
+
+  game.challenges.forEach((ch, i) => {
+    ch.category = cats[i].value.trim();
+    ch.question = ques[i].value.trim();
+    
+    // Récupère toutes les réponses présentes pour ce challenge
+    const ansInputs = document.querySelectorAll(`.dynamic-ans[data-ch="${i}"]`);
+    const pctInputs = document.querySelectorAll(`.dynamic-pct[data-ch="${i}"]`);
+    
+    ch.answers = [];
+    ch.initialPcts = [];
+    
+    ansInputs.forEach((input, idx) => {
+      const val = input.value.trim();
+      if(val) {
+        ch.answers.push(val);
+        // Force le plancher à 0.1 si la valeur est absente, nulle ou négative
+        let p = parseFloat(pctInputs[idx].value);
+        if (isNaN(p) || p < 0.1) p = 0.1;
+        ch.initialPcts.push(p);
+      }
+    });
+    // On ne rajoute rien ici, ch.answers est déjà rempli proprement par la boucle au-dessus
+
+    if (!ch.category || !ch.question || ch.answers.length < 2) {
+      isValid = false;
+    }
+  });
+
+  if (!isValid) {
+    msg.textContent = "Veuillez remplir tous les champs.";
+    msg.className = "msg err";
+    return;
+  }
+
+  // Initialisation des votes pour chaque challenge créé
+// Initialisation des votes pour chaque challenge créé
+  game.challenges.forEach(ch => initBaseVotes(ch));
+  
+  // Reset des variables de jeu
+  game.players = [];
+  selectedAnswers = new Array(game.challenges.length).fill(null);
+  currentPlayChallengeIndex = 0;
+  currentAdminChallengeIndex = 0;
+
+// GÉNÉRATION DU CODE DE SESSION
+const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  
+  // Code 1
+  sessionConfig.code = "";
+  for(let i=0; i<6; i++) sessionConfig.code += chars.charAt(Math.floor(Math.random() * chars.length));
+
+  // Code 2 (si nécessaire)
+  if (sessionConfig.mode === 'both') {
+    sessionConfig.codeAdvanced = "";
+    for(let i=0; i<6; i++) sessionConfig.codeAdvanced += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
+  console.log("Session créée avec le code : " + sessionConfig.code); // Pour debug
+  
+const duration = parseInt(document.getElementById("sessionDuration").value) || 60;
+  sessionConfig.expiresAt = Date.now() + (duration * 60 * 1000);
+
+  // SAUVEGARDE LOCALE : Permet de ne pas perdre le code si on rafraîchit la page
+  localStorage.setItem('savedSessionConfig', JSON.stringify(sessionConfig));
+  localStorage.setItem('savedGameData', JSON.stringify(game));
+
+  showSessionInfo();
+}
+
+function startSetup(mode) {
+  sessionConfig.mode = mode;
+  const advParams = document.getElementById("advancedParams");
+  
+  if (mode === 'advanced' || mode === 'both') {
+    advParams.classList.remove("hidden");
+  } else {
+    advParams.classList.add("hidden");
+  }
+  showScreen('setup');
+}
+
+function initBaseVotes(ch) {
+  // Calcul de la masse monétaire de départ
+  // En mode facile : 20 unités au total (1 par bot)
+  // En mode avancé : On simule 20 bots qui misent chacun 10% de leur solde par question
+  let targetMass = 20; 
+  if (sessionConfig.mode !== 'easy') {
+    const balance = parseInt(document.getElementById("initialBalance").value) || 100;
+    targetMass = 20 * (balance * 0.1); // Masse équivalente à 20 joueurs moyens
+  }
+
+  const sumPcts = ch.initialPcts.reduce((a, b) => a + b, 0) || 1;
+  let counts = ch.initialPcts.map(pct => Math.round((pct / sumPcts) * targetMass));
+  
+  // Ajustement pour coller exactement à la targetMass
+  let currentTotal = counts.reduce((a, b) => a + b, 0);
+  while (currentTotal !== Math.round(targetMass)) {
+    const diff = Math.round(targetMass) - currentTotal;
+    const maxIdx = ch.initialPcts.indexOf(Math.max(...ch.initialPcts));
+    if (diff > 0) { counts[maxIdx]++; currentTotal++; }
+    else { if(counts[maxIdx]>0) { counts[maxIdx]--; currentTotal--; } }
+  }
+  
+  ch.baseVotes = counts.slice();
+  ch.votes = counts.slice();
+}
+
+function showSessionInfo() {
+  const container = document.getElementById("sessionInfo");
+  const currentUrl = window.location.href.split('?')[0];
+  const expiry = new Date(sessionConfig.expiresAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+  let html = `<h2>Sessions Générées</h2><p class="subtitle">Valide jusqu'à ${expiry}</p>`;
+
+  // Bloc Mode Facile
+  if (sessionConfig.mode === 'easy' || sessionConfig.mode === 'both') {
+    const urlEasy = `${currentUrl}?session=${sessionConfig.code}`;
+    const qrEasy = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlEasy)}`;
+    html += `
+      <div class="card" style="border-color:#22c55e; margin-bottom:15px;">
+        <div style="color:#22c55e; font-weight:bold; margin-bottom:10px;">MODE FACILE</div>
+        <div style="font-size:24px; font-weight:800; color:white;">${sessionConfig.code}</div>
+        <img src="${qrEasy}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+      </div>`;
+  }
+
+  // Bloc Mode Avancé
+  if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
+    const codeAdv = sessionConfig.mode === 'both' ? sessionConfig.codeAdvanced : sessionConfig.code;
+    const urlAdv = `${currentUrl}?session=${codeAdv}`;
+    const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
+    html += `
+      <div class="card" style="border-color:#f97316;">
+        <div style="color:#f97316; font-weight:bold; margin-bottom:10px;">MODE AVANCÉ</div>
+        <div style="font-size:24px; font-weight:800; color:white;">${codeAdv}</div>
+        <img src="${qrAdv}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+      </div>`;
+  }
+
+  html += `<button onclick="showScreen('home')">Retour au menu principal</button>`;
+  container.innerHTML = html;
+  
+  showScreen('sessionInfo');
+}
+
+
+function updateBadge(){
+  const badge = document.getElementById("badgeCount");
+  badge.textContent = game.players.length + " / " + game.maxPlayers + " joueurs";
+}
+
+function renderPlayChallenges(){
+  const container = document.getElementById("challengesPlay");
+  container.innerHTML = "";
+
+  // On boucle sur TOUS les challenges pour les afficher sur la même page
+  game.challenges.forEach((ch, cIndex) => {
+    const block = document.createElement("div");
+    block.className = "challenge-block";
+
+    const header = document.createElement("div");
+    header.className = "challenge-header";
+
+    const cat = document.createElement("div");
+    cat.innerHTML = `<span class="chip">${ch.category}</span>`;
+    const title = document.createElement("div");
+    title.className = "challenge-title";
+    title.textContent = `Challenge ${cIndex+1} — ${ch.question}`;
+    const caption = document.createElement("div");
+    caption.className = "challenge-caption";
+    caption.textContent = "Choisis une réponse.";
+
+    header.appendChild(cat);
+    header.appendChild(title);
+    header.appendChild(caption);
+
+    const answersBox = document.createElement("div");
+    answersBox.id = "answers-ch"+cIndex;
+
+    block.appendChild(header);
+    block.appendChild(answersBox);
+    container.appendChild(block);
+
+    renderAnswersForChallenge(cIndex);
+  });
+
+  // Le bouton servira maintenant à tout valider d'un coup
+  const btn = document.getElementById("playBtn");
+  btn.textContent = "Valider mes prédictions";
+}
+
+function renderAnswersForChallenge(cIndex){
+  const ch = game.challenges[cIndex];
+  const box = document.getElementById("answers-ch"+cIndex);
+  box.innerHTML = "";
+  
+  // CALCUL DES PROBABILITES LMSR
+  const probs = getLMSRProbs(ch.votes);
+
+ch.answers.forEach((a,i)=>{
+    const pct = probs[i];
+    
+    // Formule pour l'affichage de base
+    const safePct = pct <= 0 ? 0.001 : pct;
+    const pts = +(1 / safePct).toFixed(2); // <-- Précision à 2 décimales
+
+    const div = document.createElement("div");
+    div.className = "answer-btn";
+    
+    // En mode facile, on garde le clic sur toute la div. En avancé, on le désactive pour utiliser OUI/NON.
+    if (currentPlayerMode === 'easy') {
+      if(selectedAnswers[cIndex] === i) div.classList.add("selected");
+      div.onclick = () => { 
+        selectedAnswers[cIndex] = i; 
+        selectedBets[cIndex] = 1; 
+        renderAnswersForChallenge(cIndex); 
+      };
+    }
+
+    const top = document.createElement("div");
+    top.className = "answer-title";
+
+    const label = document.createElement("div");
+    label.className = "answer-label";
+    label.textContent = a;
+
+    const chip = document.createElement("div");
+    chip.className = "answer-chip";
+    chip.textContent = (pct*100).toFixed(1) + " %";
+
+    top.appendChild(label);
+    top.appendChild(chip);
+
+    const meta = document.createElement("div");
+    meta.className = "answer-meta";
+
+    if (currentPlayerMode === 'easy') {
+      const ptsSpan = document.createElement("span");
+      const pill = document.createElement("span");
+      pill.className = "pts-pill";
+      pill.textContent = pts + " pts potentiels"; 
+      ptsSpan.appendChild(pill);
+      meta.appendChild(ptsSpan);
+    } else {
+      // MODE AVANCÉ : Boutons OUI / NON
+      meta.style.display = "flex";
+      meta.style.gap = "8px";
+      meta.style.marginTop = "8px";
+      
+      const btnYes = document.createElement("button");
+      btnYes.textContent = "Parier OUI";
+      btnYes.style.cssText = "background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid #22c55e; padding: 6px; font-size: 11px; margin: 0;";
+      btnYes.onclick = (e) => { e.stopPropagation(); openBetPanel(cIndex, i, 'YES'); };
+
+      const btnNo = document.createElement("button");
+      btnNo.textContent = "Parier NON";
+      btnNo.style.cssText = "background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid #ef4444; padding: 6px; font-size: 11px; margin: 0;";
+      btnNo.onclick = (e) => { e.stopPropagation(); openBetPanel(cIndex, i, 'NO'); };
+
+      meta.appendChild(btnYes);
+      meta.appendChild(btnNo);
+      
+      // Affichage de la mise temporaire (si existante)
+      if (selectedAnswers[cIndex] === i && selectedBets[cIndex] > 0) {
+        const betSpan = document.createElement("div");
+        betSpan.style.color = "#3b82f6";
+        betSpan.style.fontSize = "11px";
+        betSpan.style.marginTop = "6px";
+        betSpan.textContent = `En attente : ${selectedBets[cIndex]} u`;
+        meta.appendChild(betSpan);
+      }
+    }
+
+    const gauge = document.createElement("div");
+    gauge.className = "gauge";
+    const gaugeFill = document.createElement("div");
+    gaugeFill.className = "gauge-fill";
+    gaugeFill.style.width = (pct*100) + "%";
+    gauge.appendChild(gaugeFill);
+
+    div.appendChild(top);
+    div.appendChild(meta);
+    div.appendChild(gauge);
+
+    box.appendChild(div);
+  });
+}
+
+function renderAdminChallenge(){
+  const container = document.getElementById("adminChallenges");
+  container.innerHTML = "";
+
+  const cIndex = currentAdminChallengeIndex;
+  const ch = game.challenges[cIndex];
+
+  const block = document.createElement("div");
+  block.className = "challenge-block";
+
+  const header = document.createElement("div");
+  header.className = "challenge-header";
+
+  const cat = document.createElement("div");
+  cat.innerHTML = `<span class="chip">${ch.category}</span>`;
+  const title = document.createElement("div");
+  title.className = "challenge-title";
+  title.textContent = `Challenge ${cIndex+1} — ${ch.question}`;
+
+  header.appendChild(cat);
+  header.appendChild(title);
+
+  const label = document.createElement("div");
+  label.className = "challenge-caption";
+  label.textContent = "Bonne réponse pour ce challenge :";
+
+  const select = document.createElement("select");
+  select.id = "correct-select-"+cIndex;
+
+  ch.answers.forEach((a,i)=>{
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = a;
+    select.appendChild(opt);
+  });
+
+  if(ch.correct !== null){
+    select.value = ch.correct;
+  }
+
+  block.appendChild(header);
+  block.appendChild(label);
+  block.appendChild(select);
+  container.appendChild(block);
+}
+
+function updatePlayButton(){
+  const btn = document.getElementById("playBtn");
+  // On vérifie si l'index actuel est inférieur au dernier index de la liste
+  if(currentPlayChallengeIndex < game.challenges.length - 1){
+    btn.textContent = "Suivant";
+  } else {
+    btn.textContent = "Valider les réponses";
+  }
+}
+
+function updateAdminButton(){
+  const btn = document.getElementById("adminBtn");
+  if(currentAdminChallengeIndex === 0){
+    btn.textContent = "Suivant";
+  } else {
+    btn.textContent = "Promulguer le résultat global";
+  }
+}
+
+function playNext(){
+  const pseudo = game.currentPlayerName;
+  const msg = document.getElementById("playMsg");
+
+  if(!pseudo){
+    msg.textContent = "Erreur de session.";
+    return;
+  }
+
+  // 1. Vérification des obligations (Seulement en Mode Facile)
+  if (currentPlayerMode === 'easy') {
+    // Vérification robuste : on s'assure que chaque question a une réponse valide
+    const hasUnanswered = selectedAnswers.length < game.challenges.length || selectedAnswers.some(ans => ans === null || ans === undefined);
+    if (hasUnanswered) {
+      msg.textContent = "Veuillez répondre à toutes les questions avant de valider.";
+      msg.className = "msg err";
+      return;
+    }
+  }
+
+  msg.textContent = "";
+
+  // 2. Fenêtre de confirmation
+  if (confirm("Voulez-vous vraiment valider vos prédictions ?")) {
+    validate();
+  }
+}
+
+// On peut supprimer ou vider la fonction updatePlayButton() car on n'en a plus besoin
+function updatePlayButton() {}
+
+// --- LOGIQUE DU PANEL DE MISE (MODE AVANCÉ) ---
+let tempBetAnsIndex = null;
+let tempBetCIndex = null;
+let tempBetType = 'YES'; // OUI ou NON
+
+function openBetPanel(cIndex, ansIndex, betType) {
+  tempBetCIndex = cIndex;
+  tempBetAnsIndex = ansIndex;
+  tempBetType = betType;
+
+  const ch = game.challenges[cIndex];
+  
+  // 1. Calcul des probabilités avec LMSR
+  const probs = getLMSRProbs(ch.votes);
+  const pStartYes = probs[ansIndex];
+  
+  // 2. La probabilité du NON est exactement la somme des autres (soit 1 - pStartYes)
+  const pStart = betType === 'YES' ? pStartYes : (1 - pStartYes);
+
+  // 3. Affichage dynamique avec la cote actuelle
+  const typeLabel = betType === 'YES' ? '<span style="color:#4ade80;">OUI</span>' : '<span style="color:#f87171;">NON</span>';
+  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} ${typeLabel} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
+
+  // Si le joueur avait déjà misé sur cette question, on le rembourse temporairement
+  if (selectedAnswers[cIndex] !== null && selectedBets[cIndex] > 0) {
+    currentPlayerBalance += selectedBets[cIndex];
+    selectedAnswers[cIndex] = null;
+    selectedBets[cIndex] = 0;
+    renderAnswersForChallenge(cIndex); // Met à jour l'UI pour désélectionner
+    updateBalanceDisplay();
+  }
+
+  document.getElementById("betAvailable").textContent = currentPlayerBalance + " unités";
+  document.getElementById("betInput").value = "";
+  document.getElementById("betPotential").textContent = "0 pts";
+  document.getElementById("betError").textContent = "";
+
+  document.getElementById("betPanelOverlay").classList.add("open");
+  document.getElementById("betPanel").classList.add("open");
+  
+  // Focus sur l'input après l'animation
+  setTimeout(() => document.getElementById("betInput").focus(), 300);
+}
+
+function closeBetPanel() {
+  document.getElementById("betPanelOverlay").classList.remove("open");
+  document.getElementById("betPanel").classList.remove("open");
+}
+
+function updatePotentialGain() {
+  const val = parseInt(document.getElementById("betInput").value) || 0;
+  const err = document.getElementById("betError");
+  
+  if (val > currentPlayerBalance) {
+    err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital.";
+  } else {
+    err.textContent = "";
+  }
+  
+  if (val <= 0) {
+    document.getElementById("betPotential").textContent = "0 pts";
+    return;
+  }
+
+  const ch = game.challenges[tempBetCIndex];
+  
+  // 1. Probabilités de départ (LMSR)
+  const probsStart = getLMSRProbs(ch.votes);
+  const pStartYes = probsStart[tempBetAnsIndex];
+  const pStart = tempBetType === 'YES' ? pStartYes : (1 - pStartYes);
+
+  // 2. Simulation de l'impact de la mise (Slippage)
+  let simulatedVotes = [...ch.votes];
+  
+  if (tempBetType === 'YES') {
+    simulatedVotes[tempBetAnsIndex] += val; // On injecte le poids sur l'option
+  } else {
+    // Miser NON : on répartit la mise proportionnellement sur toutes les AUTRES options
+    const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempBetAnsIndex];
+    for (let i = 0; i < simulatedVotes.length; i++) {
+      if (i !== tempBetAnsIndex) {
+        const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+        simulatedVotes[i] += val * weight;
+      }
+    }
+  }
+
+  // 3. Probabilités d'arrivée après injection (LMSR)
+  const probsEnd = getLMSRProbs(simulatedVotes);
+  const pEndYes = probsEnd[tempBetAnsIndex];
+  const pEnd = tempBetType === 'YES' ? pEndYes : (1 - pEndYes);
+  
+  // Le prix d'achat moyen avec sécurité absolue LMSR
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0.01) pAvg = 0.01; 
+  if (pAvg >= 0.99) pAvg = 0.99; 
+
+  // 4. Calcul du gain : Mise / Prix moyen
+  const pts = +(val / pAvg).toFixed(2); // <-- Précision à 2 décimales
+  
+  document.getElementById("betPotential").textContent = pts + " pts";
+}
+
+function setBetMax() {
+  document.getElementById("betInput").value = currentPlayerBalance;
+  updatePotentialGain();
+}
+
+function confirmBet() {
+  const val = parseInt(document.getElementById("betInput").value) || 0;
+  const err = document.getElementById("betError");
+  
+  if (val <= 0) {
+    err.textContent = "Veuillez saisir une mise valide.";
+    return;
+  }
+  if (val > currentPlayerBalance) {
+    err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital.";
+    return;
+  }
+
+  // On déduit la mise du solde
+  currentPlayerBalance -= val;
+  
+  // CORRECTION : On met à jour le compteur global en haut à droite 💰
+  updateGlobalBalance();
+
+  // On enregistre le choix et la mise
+  selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
+  selectedBets[tempBetCIndex] = val;
+
+  // On ferme et on actualise l'écran
+  closeBetPanel();
+  renderAnswersForChallenge(tempBetCIndex);
+}
+// ----------------------------------------------
+
+function validate(){
+  const pseudo = game.currentPlayerName;
+  const msg = document.getElementById("playMsg");
+
+  // On récupère ou on crée le profil du joueur
+  let player = game.players.find(p => p.name === pseudo);
+  if (!player) {
+    player = { name: pseudo, balance: currentPlayerBalance, portfolio: [] };
+    game.players.push(player);
+  } else {
+    player.balance = currentPlayerBalance;
+  }
+
+  // 1. Calcul et enregistrement des NOUVELLES mises
+  game.challenges.forEach((ch, cIndex) => {
+    const ansIndex = selectedAnswers[cIndex];
+
+    // CORRECTION : On s'assure que c'est une vraie réponse
+    if (ansIndex !== null && ansIndex !== undefined) {
+      const bet = selectedBets[cIndex] || 1; 
+      const vA = ch.votes[ansIndex];
+      const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+
+      // Calcul ascenseur à l'achat
+      const pStart = vA / vTot;
+      const pEnd = (vA + bet) / (vTot + bet);
+      let pAvg = (pStart + pEnd) / 2;
+      if (pAvg <= 0) pAvg = 0.01;
+
+      const pointsPotentiels = +(bet / pAvg).toFixed(2); // <-- Précision à 2 décimales
+
+      // Si le joueur avait DÉJÀ misé sur cette exacte même option, on additionne
+      let existingBet = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex);
+      if (existingBet) {
+         existingBet.bet += bet;
+         existingBet.pts += pointsPotentiels;
+      } else {
+         player.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: bet, pts: pointsPotentiels });
+      }
+
+      // On injecte les nouveaux fonds dans le marché global
+      ch.votes[ansIndex] += bet; 
+    }
+  });
+
+  localStorage.setItem('savedGameData', JSON.stringify(game));
+  renderPlayerRecap(pseudo);
+}
+
+function computeHistories(){
+  const histories = game.challenges.map(() => []);
+
+  game.challenges.forEach((ch, cIndex)=>{
+    // Initialisation de la courbe avec les votes de base (les bots)
+    const votes = ch.baseVotes ? ch.baseVotes.slice() : new Array(ch.answers.length).fill(0);
+    const total0 = Math.max(1, votes.reduce((a,b)=>a+b,0));
+    histories[cIndex].push(votes.map(v => v/total0));
+
+    // On parcourt tous les joueurs pour construire l'évolution
+    game.players.forEach(p => {
+      // On s'assure que le joueur possède bien le nouveau système de portefeuille
+      if (p.portfolio) {
+        // On récupère toutes ses mises spécifiques à CE challenge
+        const investments = p.portfolio.filter(snap => snap.cIndex === cIndex);
+        
+        investments.forEach(snap => {
+          const ansIndex = snap.ansIndex;
+          const betWeight = snap.bet || 1; 
+          
+          // On ajoute le poids de son investissement sur la courbe
+          votes[ansIndex] += betWeight;
+          const total = Math.max(1, votes.reduce((a, b) => a + b, 0));
+          histories[cIndex].push(votes.map(v => v / total));
+        });
+      }
+    });
+  });
+
+  return histories;
+}
+
+function drawCharts(histories){
+  histories.forEach((hist, cIndex)=>{
+    const canvas = document.getElementById("chart-ch"+cIndex);
+    if(!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width = canvas.clientWidth || 320;
+    const h = canvas.height;
+
+    ctx.clearRect(0,0,w,h);
+
+    if(!hist.length){
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "12px system-ui";
+      ctx.fillText("Pas de votes pour ce challenge.", 12, h/2);
+      return;
+    }
+
+    let maxPct = 0;
+    hist.forEach(snapshot=>{
+      snapshot.forEach(p=>{
+        const val = p*100;
+        if(val > maxPct) maxPct = val;
+      });
+    });
+    if(maxPct < 5) maxPct = 5;
+
+    const paddingLeft = 32;
+    const paddingRight = 10;
+    const paddingTop = 10;
+    const paddingBottom = 22;
+    const chartW = w - paddingLeft - paddingRight;
+    const chartH = h - paddingTop - paddingBottom;
+
+    ctx.strokeStyle = "rgba(55,65,81,0.9)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, paddingTop);
+    ctx.lineTo(paddingLeft, paddingTop + chartH);
+    ctx.lineTo(paddingLeft + chartW, paddingTop + chartH);
+    ctx.stroke();
+
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "10px system-ui";
+
+    const yBottom = paddingTop + chartH;
+    ctx.fillText("0%", 4, yBottom+3);
+
+    const yTop = paddingTop;
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(55,65,81,0.4)";
+    ctx.moveTo(paddingLeft, yTop);
+    ctx.lineTo(paddingLeft + chartW, yTop);
+    ctx.stroke();
+    ctx.fillStyle = "#6b7280";
+    ctx.fillText(maxPct.toFixed(0) + "%", 4, yTop+3);
+
+    const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
+    const answersCount = game.challenges[cIndex].answers.length;
+    const steps = hist.length;
+
+    function xPos(stepIndex){
+      if(steps === 1) return paddingLeft + chartW/2;
+      return paddingLeft + (stepIndex/(steps-1))*chartW;
+    }
+
+    for(let ans=0; ans<answersCount; ans++){
+      ctx.beginPath();
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.strokeStyle = colors[ans % colors.length];
+      let lastX = null;
+      let lastY = null;
+      hist.forEach((snapshot, idx)=>{
+        const pct = snapshot[ans] * 100;
+        const x = xPos(idx);
+        const y = paddingTop + chartH - (pct/maxPct)*chartH;
+        if(idx===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+        lastX = x;
+        lastY = y;
+      });
+      ctx.stroke();
+      // petit marqueur sur le dernier point
+      if(lastX !== null){
+        ctx.beginPath();
+        ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
+        ctx.fillStyle = colors[ans % colors.length];
+        ctx.fill();
+      }
+    }
+
+    const legendY = h - 6;
+    ctx.font = "10px system-ui";
+    const stepX = chartW / (answersCount + 1);
+    game.challenges[cIndex].answers.forEach((label, ans)=>{
+      const color = colors[ans % colors.length];
+      const x = paddingLeft + stepX * (ans + 1);
+      const labelText = label && label.length > 16 ? label.slice(0,15) + "…" : (label || ("Réponse " + (ans+1)));
+      ctx.fillStyle = color;
+      ctx.fillRect(x, legendY-8, 10, 3);
+      ctx.fillStyle = "#e5e7eb";
+      ctx.fillText(labelText, x+14, legendY-4);
+    });
+  });
+}
+
+function adminNext(){
+  const msg = document.getElementById("adminMsg");
+  const cIndex = currentAdminChallengeIndex;
+
+  // Enregistrer la réponse du challenge actuel
+  const sel = document.getElementById("correct-select-" + cIndex);
+  if(sel) {
+    game.challenges[cIndex].correct = parseInt(sel.value, 10);
+  }
+
+  if(currentAdminChallengeIndex < game.challenges.length - 1){
+    currentAdminChallengeIndex++;
+    renderAdminChallenge();
+    updateAdminButton();
+  } else {
+    finish();
+  }
+}
+
+function finish() {
+  // 1. L'admin enregistre les bonnes réponses à partir de ses listes déroulantes
+  game.challenges.forEach((ch, i) => {
+    const sel = document.getElementById("correct-select-" + i);
+    if (sel) ch.correct = parseInt(sel.value, 10);
+  });
+
+  game.isResolved = true;
+  localStorage.setItem('savedGameData', JSON.stringify(game)); 
+
+  // 2. L'admin passe à l'écran de classement
+  displayLeaderboard();
+  showScreen('results');
+}
+
+function displayLeaderboard() {
+  // Le score final = l'Argent restant en banque + Les paris gagnants
+  const leaderboard = game.players.map(p => {
+    let scoreFinal = p.balance || 0; 
+    if (p.portfolio) {
+      p.portfolio.forEach(snap => {
+        // On vérifie que la réponse est bonne ET qu'il n'a pas revendu ses parts avant la fin
+        if (snap.ansIndex === game.challenges[snap.cIndex].correct && !snap.cashedOut) {
+          scoreFinal += snap.pts;
+        }
+      });
+    }
+    return { name: p.name, pts: +(scoreFinal).toFixed(2) }; // <-- Précision décimale finale
+  });
+
+  leaderboard.sort((a, b) => b.pts - a.pts);
+
+  const leaderContainer = document.getElementById("leaderboard");
+  if (leaderContainer) {
+    leaderContainer.innerHTML = "";
+    leaderboard.slice(0, 10).forEach((p, idx) => {
+      const row = document.createElement("div");
+      row.className = "leader-entry";
+      row.innerHTML = `<div class="leader-left"><span class="rank-pill">#${idx+1}</span><span>${p.name}</span></div><div>${p.pts} pts</div>`;
+      leaderContainer.appendChild(row);
+    });
+  }
+}
+
+function checkAccess() {
+  const pseudo = document.getElementById("pseudo").value.trim();
+  const inputCode = document.getElementById("accessCode").value.trim().toUpperCase();
+  const msg = document.getElementById("playMsg");
+  const now = Date.now();
+
+  // 1. Vérification des champs
+  if(!pseudo || !inputCode) {
+    msg.textContent = "Pseudo et code requis.";
+    msg.className = "msg err";
+    return;
+  }
+
+// 2. Vérification du Code de session et attribution du mode
+  if (sessionConfig.code === "") {
+    msg.textContent = "Aucune session active.";
+    msg.className = "msg err";
+    return;
+  }
+
+  let modeToPlay = null;
+  if (sessionConfig.mode === 'both') {
+    if (inputCode === sessionConfig.codeAdvanced) modeToPlay = 'advanced';
+    else if (inputCode === sessionConfig.code) modeToPlay = 'easy';
+  } else {
+    if (inputCode === sessionConfig.code) modeToPlay = sessionConfig.mode;
+  }
+
+  if (!modeToPlay) {
+    msg.textContent = "Code incorrect.";
+    msg.className = "msg err";
+    return;
+  }
+
+  const resultsDeadline = sessionConfig.expiresAt + (120 * 60 * 1000); // + 2 heures
+
+  // 3. CAS : Session archivée (> 2h après la fin)
+  if (now > resultsDeadline) {
+    msg.textContent = "La session est terminée et le classement n'est plus disponible.";
+    msg.className = "msg err";
+    return;
+  }
+
+// 4. CAS : Temps de jeu écoulé
+  if (now > sessionConfig.expiresAt) {
+    if (game.isResolved === true) {
+      // Le jeu est validé, le joueur affiche directement le classement
+      displayLeaderboard(); 
+      showScreen('results'); 
+    } else {
+      // Le jeu est fini mais l'admin n'a pas encore validé.
+      // On laisse le joueur entrer sur son propre tableau de bord (s'il a déjà joué)
+      const existingPlayer = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
+      if (existingPlayer) {
+          currentPlayerMode = modeToPlay;
+          game.currentPlayerName = pseudo;
+          currentPlayerBalance = existingPlayer.balance || 0;
+          updateGlobalBalance();
+          renderPlayerRecap(pseudo);
+      } else {
+          msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
+          msg.className = "msg ok";
+      }
+    }
+    return;
+  }
+
+// 5. CAS : Jeu en cours (Le chrono tourne encore)
+  currentPlayerMode = modeToPlay;
+  game.currentPlayerName = pseudo;
+
+  // On vérifie si ce joueur a déjà fait ses prédictions (Portefeuille existant)
+  const existingPlayer = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
+  
+  if (existingPlayer) {
+    // Le joueur est de retour : On l'envoie sur son Dashboard pour voir/revendre ses cotes
+    currentPlayerBalance = existingPlayer.balance !== undefined ? existingPlayer.balance : ((modeToPlay === 'advanced') ? sessionConfig.initialBalance : 0);
+    updateGlobalBalance(); // <-- Mise à jour du nouveau compteur 💰 en haut à droite
+    document.getElementById("playerAuth").classList.add("hidden");
+    renderPlayerRecap(pseudo);
+    return;
+  }
+
+// C'est un nouveau joueur : on initialise son jeu
+  currentPlayerBalance = (modeToPlay === 'advanced') ? sessionConfig.initialBalance : 0;
+  selectedBets = new Array(game.challenges.length).fill(0);
+  selectedAnswers = new Array(game.challenges.length).fill(null); // <-- CORRECTION : Initialisation propre
+
+  updateGlobalBalance();
+
+  document.getElementById("playerAuth").classList.add("hidden");
+  document.getElementById("gameContent").classList.remove("hidden");
+  document.getElementById("playerTitle").textContent = "Prédictions de " + pseudo;
+  msg.textContent = "";
+  renderPlayChallenges();
+}
+
+function updateBalanceDisplay() {
+  const balEl = document.getElementById("playerBalanceDisplay");
+  if (currentPlayerMode === 'advanced') {
+    balEl.textContent = "Solde : " + currentPlayerBalance;
+    balEl.classList.remove("hidden");
+  } else {
+    balEl.classList.add("hidden");
+  }
+}
+
+function startQRScanner() {
+  const reader = document.getElementById("reader");
+  if (reader) reader.style.display = "block";
+  
+  html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    (decodedText) => {
+      // Si on trouve un code, on essaie d'extraire le paramètre session
+      try {
+        const url = new URL(decodedText);
+        const code = url.searchParams.get("session");
+        if (code) {
+          document.getElementById("accessCode").value = code.toUpperCase();
+          stopQRScanner();
+        }
+      } catch (e) {
+        // Si ce n'est pas une URL, on prend le texte brut
+        document.getElementById("accessCode").value = decodedText.toUpperCase();
+        stopQRScanner();
+      }
+    },
+    (errorMessage) => { /* Erreurs de scan silencieuses */ }
+  ).then(() => {
+    const btn = document.getElementById("startScanBtn");
+    if (btn) {
+      btn.textContent = "Arrêter le scanner";
+      btn.onclick = stopQRScanner;
+    }
+  }).catch(err => {
+    console.error("Impossible de démarrer le scanner:", err);
+    alert("Erreur d'accès à la caméra.");
+  });
+}
+
+
+function stopQRScanner() {
+  // On vérifie si html5QrCode existe ET s'il est en train de scanner (getState)
+  if (html5QrCode && typeof html5QrCode.getState === 'function' && html5QrCode.getState() === 2) {
+    html5QrCode.stop().then(() => {
+      const reader = document.getElementById("reader");
+      const btn = document.getElementById("startScanBtn");
+      if (reader) reader.style.display = "none";
+      if (btn) {
+        btn.textContent = "Scanner QR Code";
+        btn.onclick = startQRScanner;
+      }
+    }).catch(err => console.log("Erreur lors de l'arrêt du scanner:", err));
+  }
+}
+
+function initAccessView() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const qrContainer = document.getElementById("qrScannerContainer");
+  // On affiche le bouton de scan sur mobile, ou si on force l'affichage
+  if(isMobile && qrContainer) {
+    qrContainer.classList.remove("hidden");
+  }
+}
+
+// Modifier la fonction showScreen existante pour appeler initAccessView
+
+function addAnswerField(chIndex) {
+  const container = document.getElementById(`ans-container-${chIndex}`);
+  const count = container.querySelectorAll('.dynamic-ans').length + 1;
+  
+  const div = document.createElement("div");
+  div.style.display = "flex";
+  div.style.gap = "8px";
+  div.style.marginBottom = "8px";
+  
+ div.innerHTML = `
+    <input class="dynamic-ans" data-ch="${chIndex}" placeholder="Réponse ${count}" style="flex:3;">
+    <input type="number" class="dynamic-pct" data-ch="${chIndex}" placeholder="%" style="flex:1;" oninput="updateNextPct(${chIndex}, this)">
+  `;
+  container.appendChild(div);
+}
+
+function checkManageAccess() {
+  const input = document.getElementById("manageCodeInput").value.trim().toUpperCase();
+  const msg = document.getElementById("manageAuthMsg");
+  const now = Date.now();
+  
+  // Calcul de la deadline : expiration joueur + 30 minutes
+  const adminDeadline = sessionConfig.expiresAt + (30 * 60 * 1000);
+
+  if (input !== sessionConfig.code || sessionConfig.code === "") {
+    msg.textContent = "Code de session invalide.";
+    return;
+  }
+
+  if (now > adminDeadline) {
+    msg.textContent = "Cette session est expirée depuis plus de 30 minutes et n'est plus gérable.";
+    return;
+  }
+
+  // Si tout est bon
+  showScreen('manageGame');
+  startManageTimer();
+  renderManageDashboard();
+}
+
+function startManageTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  
+  timerInterval = setInterval(() => {
+    const now = Date.now();
+    const diff = sessionConfig.expiresAt - now;
+
+    if (diff <= 0) {
+      clearInterval(timerInterval);
+      document.getElementById("gameTimer").textContent = "TERMINÉ";
+      document.getElementById("finalValidationZone").classList.remove("hidden");
+      renderValidationList();
+    } else {
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      document.getElementById("gameTimer").textContent = 
+        `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+  }, 1000);
+}
+
+function renderManageDashboard() {
+  const container = document.getElementById("manageChallengesContainer");
+  container.innerHTML = "";
+
+  game.challenges.forEach((ch, i) => {
+    const block = document.createElement("div");
+    block.className = "challenge-block";
+    block.style.marginTop = "15px";
+    
+    // Calcul des % actuels (Compatible avec la formule classique ou LMSR si elle est active)
+    let probs = [];
+    if (typeof getLMSRProbs === 'function') {
+        probs = getLMSRProbs(ch.votes);
+    } else {
+        const totalVotes = ch.votes.reduce((a,b) => a+b, 0) || 1;
+        probs = ch.votes.map(v => v / totalVotes);
+    }
+
+    let answersHtml = ch.answers.map((ans, idx) => {
+      const pct = (probs[idx] * 100).toFixed(1);
+      return `<div style="font-size:12px; display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span>${ans}</span> <strong style="color:#f97316">${pct}%</strong>
+              </div>`;
+    }).join('');
+
+    // NOUVEAU : Affichage des mises des joueurs en temps réel
+    let playersHtml = `<div style="margin-top:10px; font-size:11px; color:#9ca3af; border-top:1px solid rgba(55,65,81,0.5); padding-top:8px;"><strong>Mises des joueurs :</strong><br>`;
+    let hasBets = false;
+    
+    game.players.forEach(p => {
+        if (p.portfolio) {
+            const pBets = p.portfolio.filter(b => b.cIndex === i);
+            pBets.forEach(b => {
+                hasBets = true;
+                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet}u</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
+            });
+        }
+    });
+    
+    if (!hasBets) playersHtml += "<em>Aucune mise enregistrée pour le moment.</em>";
+    playersHtml += `</div>`;
+
+    block.innerHTML = `
+      <div class="chip">${ch.category}</div>
+      <div class="challenge-title" style="margin:5px 0;">${ch.question}</div>
+      <canvas id="manage-chart-${i}" height="120" style="margin-bottom:10px;"></canvas>
+      <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px;">
+        ${answersHtml}
+        ${playersHtml}
+      </div>
+    `;
+    container.appendChild(block);
+  });
+
+  // On dessine les graphiques (on réutilise drawCharts mais vers nos nouveaux canvas)
+  const histories = computeHistories();
+  histories.forEach((hist, i) => {
+    // Petit hack pour réutiliser drawCharts : on simule l'ID que la fonction attend
+    const originalId = "chart-ch" + i;
+    const manageId = "manage-chart-" + i;
+    // On temporise pour laisser le DOM se créer
+    setTimeout(() => drawSingleChart(hist, manageId, i), 50);
+  });
+}
+
+function renderValidationList() {
+  const list = document.getElementById("adminValidationList");
+  list.innerHTML = "";
+  game.challenges.forEach((ch, i) => {
+    let options = ch.answers.map((ans, idx) => 
+      `<option value="${idx}">${ans}</option>`
+    ).join('');
+    
+    list.innerHTML += `
+      <div style="margin-bottom:10px;">
+        <label style="color:white;">${ch.question}</label>
+        <select id="correct-select-${i}">${options}</select>
+      </div>
+    `;
+  });
+}
+
+// Fonction utilitaire pour dessiner sur un canvas spécifique
+function drawSingleChart(hist, canvasId, cIndex) {
+  // On adapte légèrement la logique de drawCharts pour cibler n'importe quel ID
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  // ... (Ici on utilise la même logique que ta fonction drawCharts existante)
+  // Pour gagner de la place, tu peux modifier drawCharts pour qu'elle accepte un ID en paramètre
+
+}
+
+function confirmExitManage() {
+  if (confirm("Voulez-vous vraiment quitter ?")) {
+    // On sauvegarde l'état actuel avant de partir
+    localStorage.setItem('savedGameData', JSON.stringify(game));
+    showScreen('home');
+  }
+}
+
+// On regroupe toute la logique de chargement à la fin pour être sûr que les variables existent
+window.addEventListener('load', () => {
+  // 1. Restauration localStorage
+  const savedConfig = localStorage.getItem('savedSessionConfig');
+  const savedGame = localStorage.getItem('savedGameData');
+  
+  if (savedConfig && savedGame) {
+    sessionConfig = JSON.parse(savedConfig);
+    game = JSON.parse(savedGame);
+    console.log("Session restaurée : " + sessionConfig.code);
+  }
+
+  // 2. Gestion du lien URL (Paramètre session)
+  const urlParams = new URLSearchParams(window.location.search);
+  const codeFromUrl = urlParams.get('session');
+  
+  if (codeFromUrl) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    showScreen('play');
+    const inputField = document.getElementById("accessCode");
+    if (inputField) {
+      inputField.value = codeFromUrl.toUpperCase();
+    }
+  }
+});
+
+function renderPlayerRecap(pseudo) {
+  const player = game.players.find(p => p.name === pseudo);
+  if(!player) return;
+
+  const summaryContainer = document.getElementById("recapSummary");
+  summaryContainer.innerHTML = "";
+
+  // On vérifie si le chrono est écoulé
+  const isTimeUp = Date.now() > sessionConfig.expiresAt;
+
+  if (isTimeUp && !game.isResolved) {
+     // Message d'attente si le temps est écoulé mais que l'admin réfléchit encore
+     summaryContainer.innerHTML += `<div style="background:rgba(250, 204, 21, 0.15); border:1px solid #facc15; color:#facc15; padding:12px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; font-size:14px; box-shadow:0 4px 15px rgba(250,204,21,0.2);">Les résultats paraîtront très prochainement... ⏳</div>`;
+  }
+
+  // Bouton pour utiliser l'argent retiré et remiser (On le cache si le jeu est gelé)
+  if (currentPlayerMode === 'advanced' && !isTimeUp) {
+     summaryContainer.innerHTML += `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin-bottom:15px; box-shadow:0 10px 20px rgba(59,130,246,0.3);">Investir sur de nouvelles options</button>`;
+  }
+
+  if (!player.portfolio || player.portfolio.length === 0) {
+     summaryContainer.innerHTML += `<div class="msg">Aucun investissement en cours.</div>`;
+  } else {
+     player.portfolio.forEach(snap => {
+        const ch = game.challenges[snap.cIndex];
+        const answerText = ch.answers[snap.ansIndex];
+        
+        let detailsHtml = "";
+        let actionBtn = "";
+
+        if (currentPlayerMode === 'advanced') {
+            // Mode Avancé : Calcul complet de la revente avec précision
+            const vA = ch.votes[snap.ansIndex];
+            const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+            
+            const quantiteParts = snap.pts; 
+            const pStart = vA / vTot; 
+            
+            const estimatedWithdraw = quantiteParts * pStart; 
+            const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
+            
+            let pAvg = (pStart + pEnd) / 2; 
+            if (pAvg <= 0) pAvg = 0.01;
+            
+            const currentValue = +(quantiteParts * pAvg).toFixed(2); // Précision décimale
+            const profit = +(currentValue - snap.bet).toFixed(2);
+            const colorProfit = profit >= 0 ? "#4ade80" : "#f87171";
+            const sign = profit >= 0 ? "+" : "";
+
+            if (!isTimeUp) {
+               actionBtn = `<button onclick="openSellPanel(${snap.cIndex}, ${snap.ansIndex})" style="background:#f97316; padding:6px 12px; font-size:12px; width:auto; margin-top:8px;">Retirer des fonds (Partiel/Total)</button>`;
+            } else if (isTimeUp && !game.isResolved) {
+               actionBtn = `<div style="font-size:11px; color:#facc15; margin-top:8px;">🔒 Marché clôturé, en attente du résultat</div>`;
+            }
+
+            detailsHtml = `
+               Mise totale : ${snap.bet} u | Gain max à terme : ${snap.pts} pts<br>
+               <span style="color:${colorProfit}; font-weight:bold;">Valeur de revente : ${currentValue} 💰 (${sign}${profit} 💰)</span>
+            `;
+        } else {
+            // Mode Facile : On masque les données de revente
+            detailsHtml = `Gain potentiel à terme : ${snap.pts} pts`;
+        }
+
+        summaryContainer.innerHTML += `
+          <div class="challenge-block">
+            <div class="challenge-title">${ch.question}</div>
+            <div style="color:#4ade80; font-weight:bold; margin-top:5px;">Choix : ${answerText}</div>
+            <div style="font-size:12px; color:#9ca3af; margin-top:3px; line-height:1.4;">
+               ${detailsHtml}
+            </div>
+            ${actionBtn}
+          </div>
+        `;
+     });
+  }
+
+  const chartsContainer = document.getElementById("recapChartsContainer");
+  chartsContainer.innerHTML = "";
+  game.challenges.forEach((ch, i) => {
+    const block = document.createElement("div");
+    block.className = "chart-block";
+    block.innerHTML = `<h3>${ch.category}</h3><div class="chart-caption">${ch.question}</div><canvas id="recap-chart-${i}" height="180"></canvas>`;
+    chartsContainer.appendChild(block);
+  });
+  
+  const histories = computeHistories();
+  histories.forEach((hist, i) => setTimeout(() => drawSingleChart(hist, "recap-chart-" + i, i), 50));
+
+  showScreen('playerRecap');
+}
+
+// Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
+function drawSingleChart(hist, canvasId, cIndex) {
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width = canvas.clientWidth || 320;
+  const h = canvas.height;
+
+  ctx.clearRect(0,0,w,h);
+
+  if(!hist.length){ return; }
+
+  let maxPct = 0;
+  hist.forEach(snapshot=>{
+    snapshot.forEach(p=>{
+      const val = p*100;
+      if(val > maxPct) maxPct = val;
+    });
+  });
+  if(maxPct < 5) maxPct = 5;
+
+  const paddingLeft = 32; const paddingRight = 10;
+  const paddingTop = 10; const paddingBottom = 22;
+  const chartW = w - paddingLeft - paddingRight;
+  const chartH = h - paddingTop - paddingBottom;
+
+  ctx.strokeStyle = "rgba(55,65,81,0.9)";
+  ctx.lineWidth = 1; ctx.beginPath();
+  ctx.moveTo(paddingLeft, paddingTop);
+  ctx.lineTo(paddingLeft, paddingTop + chartH);
+  ctx.lineTo(paddingLeft + chartW, paddingTop + chartH);
+  ctx.stroke();
+
+  ctx.fillStyle = "#6b7280"; ctx.font = "10px system-ui";
+  ctx.fillText("0%", 4, paddingTop + chartH + 3);
+  ctx.fillText(maxPct.toFixed(0) + "%", 4, paddingTop + 3);
+
+  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
+  const answersCount = game.challenges[cIndex].answers.length;
+  const steps = hist.length;
+
+  function xPos(stepIndex){
+    if(steps === 1) return paddingLeft + chartW/2;
+    return paddingLeft + (stepIndex/(steps-1))*chartW;
+  }
+
+  for(let ans=0; ans<answersCount; ans++){
+    ctx.beginPath();
+    ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.strokeStyle = colors[ans % colors.length];
+    let lastX = null, lastY = null;
+    
+    hist.forEach((snapshot, idx)=>{
+      const pct = snapshot[ans] * 100;
+      const x = xPos(idx);
+      const y = paddingTop + chartH - (pct/maxPct)*chartH;
+      if(idx===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      lastX = x; lastY = y;
+    });
+    ctx.stroke();
+    
+    if(lastX !== null){
+      ctx.beginPath(); ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
+      ctx.fillStyle = colors[ans % colors.length]; ctx.fill();
+    }
+  }
+
+  const legendY = h - 6;
+  const stepX = chartW / (answersCount + 1);
+  game.challenges[cIndex].answers.forEach((label, ans)=>{
+    const color = colors[ans % colors.length];
+    const x = paddingLeft + stepX * (ans + 1);
+    const labelText = label && label.length > 16 ? label.slice(0,15) + "…" : label;
+    ctx.fillStyle = color; ctx.fillRect(x, legendY-8, 10, 3);
+    ctx.fillStyle = "#e5e7eb"; ctx.fillText(labelText, x+14, legendY-4);
+  });
+}
+
+function cashOut(cIndex) {
+  if (!confirm("Voulez-vous vraiment revendre cette prédiction à son prix actuel ? L'action est irréversible.")) return;
+
+  const player = game.players.find(p => p.name === game.currentPlayerName);
+  if (!player) return;
+
+  const ch = game.challenges[cIndex];
+  const ansIndex = player.answers[cIndex];
+  const snap = player.snapshots[cIndex];
+
+  if (ansIndex === null || snap.cashedOut) return;
+
+  const vA = ch.votes[ansIndex];
+  const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+  const betWeight = snap.bet;
+
+  // 1. Calcul de l'effet "Chute Libre"
+  const pStart = vA / vTot;
+  const pEnd = Math.max(0.01, vA - betWeight) / Math.max(1, vTot - betWeight);
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0) pAvg = 0.01;
+
+  // 2. Gain réel récupéré
+  const currentValue = Math.round(snap.pts * pAvg);
+
+  // 3. On retire le poids de la mise du pot (La cote s'effondre pour les autres)
+  ch.votes[ansIndex] -= betWeight;
+  if (ch.votes[ansIndex] < 0) ch.votes[ansIndex] = 0;
+
+  // 4. Mise à jour du joueur
+  player.balance += currentValue;
+  snap.cashedOut = true; // Marque comme revendu
+  
+  // 5. Sauvegarde et Rafraîchissement
+  localStorage.setItem('savedGameData', JSON.stringify(game));
+  renderPlayerRecap(game.currentPlayerName);
+}
+
+function updateGlobalBalance() {
+  const balEl = document.getElementById("globalBalance");
+  const balAmt = document.getElementById("globalBalanceAmt");
+  if (currentPlayerMode === 'advanced') {
+    balAmt.textContent = currentPlayerBalance;
+    balEl.classList.remove("hidden");
+  } else {
+    balEl.classList.add("hidden");
+  }
+}
+
+// --- LOGIQUE DE REVENTE ---
+let tempSellCIndex = null;
+let tempSellAnsIndex = null;
+let tempSellSnap = null;
+
+function openSellPanel(cIndex, ansIndex) {
+  const player = game.players.find(p => p.name === game.currentPlayerName);
+  tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex);
+  if(!tempSellSnap) return;
+
+  tempSellCIndex = cIndex;
+  tempSellAnsIndex = ansIndex;
+
+  document.getElementById("sellAnswerName").textContent = game.challenges[cIndex].answers[ansIndex];
+  document.getElementById("sellMaxBet").textContent = tempSellSnap.bet + " unités";
+  document.getElementById("sellInput").value = "";
+  document.getElementById("sellInput").max = tempSellSnap.bet;
+  document.getElementById("sellPotential").textContent = "0 💰";
+  document.getElementById("sellError").textContent = "";
+
+  document.getElementById("sellPanelOverlay").classList.add("open");
+  document.getElementById("sellPanel").classList.add("open");
+}
+
+// CORRECTION : LA FONCTION MANQUANTE POUR FERMER LE MENU
+function closeSellPanel() {
+  document.getElementById("sellPanelOverlay").classList.remove("open");
+  document.getElementById("sellPanel").classList.remove("open");
+}
+
+function setSellMax() {
+  document.getElementById("sellInput").value = tempSellSnap.bet;
+  updateSellPotential();
+}
+
+function updateSellPotential() {
+  const sellVal = parseInt(document.getElementById("sellInput").value) || 0;
+  const err = document.getElementById("sellError");
+
+  if (sellVal > tempSellSnap.bet) {
+    err.textContent = "Vous ne pouvez pas retirer plus que votre mise initiale (" + tempSellSnap.bet + ").";
+    document.getElementById("sellPotential").textContent = "0 💰";
+    return;
+  } else { err.textContent = ""; }
+
+  if (sellVal <= 0) { document.getElementById("sellPotential").textContent = "0 💰"; return; }
+
+// Calcul Slippage Revente (Chute Libre basée sur la quantité)
+  const ch = game.challenges[tempSellCIndex];
+  const vA = ch.votes[tempSellAnsIndex];
+  const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+
+  // 1. Calcul du nombre de parts (quantité) que l'on souhaite revendre
+  const fraction = sellVal / tempSellSnap.bet;
+  const quantiteAVendre = tempSellSnap.pts * fraction;
+
+  // 2. Chute du prix (Slippage)
+  const pStart = vA / vTot;
+  const estimatedWithdraw = quantiteAVendre * pStart;
+  
+  const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0) pAvg = 0.01;
+
+  // 3. Argent réel récupéré = Quantité vendue * Prix moyen
+  const recoveredMoney = +(quantiteAVendre * pAvg).toFixed(2); // <-- Précision décimale
+  document.getElementById("sellPotential").textContent = recoveredMoney + " 💰";
+}
+
+function confirmSell() {
+  const sellVal = parseInt(document.getElementById("sellInput").value) || 0;
+  if (sellVal <= 0 || sellVal > tempSellSnap.bet) return;
+
+  const ch = game.challenges[tempSellCIndex];
+  const vA = ch.votes[tempSellAnsIndex];
+  const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+
+  // 1. Calcul des parts à revendre
+  const fraction = sellVal / tempSellSnap.bet;
+  const quantiteAVendre = tempSellSnap.pts * fraction;
+
+  // 2. Calcul du glissement et de l'argent récupéré
+  const pStart = vA / vTot;
+  const estimatedWithdraw = quantiteAVendre * pStart;
+  const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0) pAvg = 0.01;
+
+  const recoveredMoney = +(quantiteAVendre * pAvg).toFixed(2); // <-- Précision décimale
+
+  // 3. On retire l'argent du pot global (La cote chute officiellement pour les autres)
+  ch.votes[tempSellAnsIndex] -= recoveredMoney;
+  if (ch.votes[tempSellAnsIndex] < 0) ch.votes[tempSellAnsIndex] = 0;
+
+  // 4. Le joueur récupère son argent
+  currentPlayerBalance += recoveredMoney;
+  updateGlobalBalance();
+
+  // 5. Mise à jour de son portefeuille (On soustrait la mise ET les parts)
+  tempSellSnap.bet -= sellVal;
+  tempSellSnap.pts -= quantiteAVendre;
+
+  // Si on a tout vendu (ou qu'il reste des poussières d'arrondi)
+  if (tempSellSnap.bet <= 0 || tempSellSnap.pts <= 0) {
+     const player = game.players.find(p => p.name === game.currentPlayerName);
+     player.portfolio = player.portfolio.filter(b => b !== tempSellSnap); 
+  }
+
+  const player = game.players.find(p => p.name === game.currentPlayerName);
+  player.balance = currentPlayerBalance;
+
+  localStorage.setItem('savedGameData', JSON.stringify(game));
+  closeSellPanel();
+  renderPlayerRecap(game.currentPlayerName); // On rafraîchit le tableau de bord
+}
+
+function goToPlayScreen() {
+  // Vide les sélections temporaires pour permettre de faire de nouveaux paris
+  selectedAnswers = new Array(game.challenges.length).fill(null);
+  selectedBets = new Array(game.challenges.length).fill(0);
+  showScreen('play');
+  renderPlayChallenges();
+}
+
+</script>
+
+</body>
+</html>
