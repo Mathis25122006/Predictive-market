@@ -1692,6 +1692,12 @@ function checkAccess() {
     sessionConfig = data.sessionConfig;
     game = data.gameData;
 
+    // CORRECTION FIREBASE : Firebase supprime automatiquement les tableaux vides.
+    // Il faut donc recréer le tableau des joueurs s'il a disparu !
+    if (!game.players) {
+      game.players = [];
+    }
+
     // --- Suite de la vérification habituelle ---
     let modeToPlay = null;
     if (sessionConfig.mode === 'both') {
