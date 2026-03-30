@@ -623,12 +623,17 @@ let currentPlayerBalance = 0;
 let timerInterval = null; 
 
 // --- CONFIGURATION FIREBASE ---
-// ⚠️ REMPLACEZ CES CLÉS PAR CELLES DE VOTRE PROJET FIREBASE
 const firebaseConfig = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "votre-projet.firebaseapp.com",
-  databaseURL: "https://votre-projet-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "votre-projet"
+  apiKey: "AIzaSyAHPpuXWvS8zUw-l8iKh6LuYmIz9mZD2Gk",
+  authDomain: "predictive-market.firebaseapp.com",
+  // ⚠️ ATTENTION : Ajoute bien la ligne databaseURL ci-dessous 
+  // Elle est indispensable pour la Realtime Database
+  databaseURL: "https://predictive-market-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "predictive-market",
+  storageBucket: "predictive-market.firebasestorage.app",
+  messagingSenderId: "141545759673",
+  appId: "1:141545759673:web:54ec217b4d4fc1785d0c68",
+  measurementId: "G-8FGM2526FT"
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
