@@ -534,11 +534,14 @@
   }
 }
 function showScreen(screenId) {
-  // Ajout de 'playerRecap'
   const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap'];
 
-  // 1. Actions de nettoyage et sécurité lors du retour à l'accueil
+  // 1. Actions de nettoyage et sécurité
   if (screenId === 'home') {
+    // On arrête les écoutes Firebase actives pour le joueur
+    if (sessionConfig.code) {
+      db.ref('sessions/' + sessionConfig.code).off();
+    }
     // Arrêter le scanner QR s'il est actif
     if (typeof stopQRScanner === 'function') {
       stopQRScanner();
@@ -933,8 +936,9 @@ function setupNext() {
 // Initialisation des votes pour chaque challenge créé
   game.challenges.forEach(ch => initBaseVotes(ch));
   
-  // Reset des variables de jeu
+// Reset des variables de jeu
   game.players = [];
+  game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
   selectedAnswers = new Array(game.challenges.length).fill(null);
   currentPlayChallengeIndex = 0;
   currentAdminChallengeIndex = 0;
@@ -980,29 +984,24 @@ function startSetup(mode) {
 }
 
 function initBaseVotes(ch) {
-  // Calcul de la masse monétaire de départ
-  // En mode facile : 20 unités au total (1 par bot)
-  // En mode avancé : On simule 20 bots qui misent chacun 10% de leur solde par question
-  let targetMass = 20; 
-  if (sessionConfig.mode !== 'easy') {
-    const balance = parseInt(document.getElementById("initialBalance").value) || 100;
-    targetMass = 20 * (balance * 0.1); // Masse équivalente à 20 joueurs moyens
-  }
-
+  // 1. Normalisation pour s'assurer que le total fait 100% (1.0)
   const sumPcts = ch.initialPcts.reduce((a, b) => a + b, 0) || 1;
-  let counts = ch.initialPcts.map(pct => Math.round((pct / sumPcts) * targetMass));
+  const normPcts = ch.initialPcts.map(pct => pct / sumPcts);
+
+  // 2. On trouve le pourcentage le plus bas pour lui attribuer "0 mise" de base
+  // (L'algorithme LMSR calcule les prix en fonction de la différence de "parts" entre les options)
+  const minPct = Math.min(...normPcts);
+
+  // 3. Calcul des "parts" initiales exactes requises par l'algorithme LMSR
+  // Formule inversée : q = B * ln(P_cible / P_min)
+  let initialShares = normPcts.map(p => {
+    // Math.max évite les erreurs mathématiques si un pourcentage est à 0
+    return B_LIQUIDITY * Math.log(Math.max(p, 0.001) / Math.max(minPct, 0.001));
+  });
   
-  // Ajustement pour coller exactement à la targetMass
-  let currentTotal = counts.reduce((a, b) => a + b, 0);
-  while (currentTotal !== Math.round(targetMass)) {
-    const diff = Math.round(targetMass) - currentTotal;
-    const maxIdx = ch.initialPcts.indexOf(Math.max(...ch.initialPcts));
-    if (diff > 0) { counts[maxIdx]++; currentTotal++; }
-    else { if(counts[maxIdx]>0) { counts[maxIdx]--; currentTotal--; } }
-  }
-  
-  ch.baseVotes = counts.slice();
-  ch.votes = counts.slice();
+  // On sauvegarde ces parts comme état de départ
+  ch.baseVotes = initialShares.slice();
+  ch.votes = initialShares.slice();
 }
 
 function showSessionInfo() {
@@ -1633,14 +1632,8 @@ function finish() {
     if (sel) ch.correct = parseInt(sel.value, 10);
   });
 
-game.isResolved = true;
-  saveToCloud(); 
-
-  // On coupe l'écoute Firebase pour figer les résultats
-  if (sessionConfig.code) db.ref('sessions/' + sessionConfig.code).off();
-  if (sessionConfig.codeAdvanced) db.ref('sessions/' + sessionConfig.codeAdvanced).off();
-
-  // 2. L'admin passe à l'écran de classement
+  game.isResolved = true;
+  saveToCloud(); // Remplace localStorage
   
   // On coupe l'écoute en temps réel de l'admin
   if (sessionConfig.code) {
@@ -1653,9 +1646,11 @@ game.isResolved = true;
 }
 
 function displayLeaderboard() {
-  // Le score final = l'Argent restant en banque + Les paris gagnants
-  const leaderboard = game.players.map(p => {
-    let scoreFinal = p.balance || 0; 
+  // Sécurité : Si aucun joueur n'est inscrit, on crée une liste vide pour éviter le bug "map"
+  const playersList = game.players || [];
+
+  const leaderboard = playersList.map(p => {
+    let scoreFinal = p.balance || 0;
     if (p.portfolio) {
       p.portfolio.forEach(snap => {
         // On vérifie que la réponse est bonne ET qu'il n'a pas revendu ses parts avant la fin
@@ -1863,39 +1858,71 @@ function addAnswerField(chIndex) {
 function checkManageAccess() {
   const input = document.getElementById("manageCodeInput").value.trim().toUpperCase();
   const msg = document.getElementById("manageAuthMsg");
-  const now = Date.now();
-  
-  // Calcul de la deadline : expiration joueur + 30 minutes
-const adminDeadline = sessionConfig.expiresAt + (30 * 60 * 1000);
 
-  // On autorise l'accès si le code correspond au code Facile OU au code Avancé
-  const isEasyCode = (input === sessionConfig.code);
-  const isAdvancedCode = (sessionConfig.mode === 'both' && input === sessionConfig.codeAdvanced);
-
-  if (!isEasyCode && !isAdvancedCode) {
-    msg.textContent = "Code de session invalide.";
+  if (!input) {
+    msg.textContent = "Veuillez entrer un code de session.";
     return;
   }
 
-  if (now > adminDeadline) {
-    msg.textContent = "Cette session est expirée depuis plus de 30 minutes et n'est plus gérable.";
-    return;
-  }
+  msg.textContent = "Connexion au serveur...";
+  msg.className = "msg ok";
 
-  // Si tout est bon
-  showScreen('manageGame');
-  startManageTimer();
-  
-  // NOUVEAU : On écoute Firebase en temps réel sur le code saisi
-  db.ref('sessions/' + input).on('value', (snapshot) => {
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      game = data.gameData;
-      renderManageDashboard();
+  // 1. On récupère les données sur Firebase
+  db.ref('sessions/' + input).once('value').then((snapshot) => {
+    if (!snapshot.exists()) {
+      msg.textContent = "Ce code de session n'existe pas.";
+      msg.className = "msg err";
+      return;
     }
+
+    const data = snapshot.val();
+    sessionConfig = data.sessionConfig;
+    game = data.gameData;
+
+    // Réparation Firebase si la liste des joueurs est vide
+    if (!game.players) game.players = [];
+
+    // 2. REDIRECTION : Si déjà promulgué -> Classement
+    if (game.isResolved) {
+      msg.textContent = "";
+      displayLeaderboard();
+      showScreen('results');
+      return;
+    }
+
+    // 3. ACCÈS GESTION : Si pas encore promulgué
+    const now = Date.now();
+    const adminDeadline = sessionConfig.expiresAt + (30 * 60 * 1000);
+
+    if (now > adminDeadline) {
+      msg.textContent = "Session expirée et non validée.";
+      msg.className = "msg err";
+      return;
+    }
+
+    // On ouvre l'interface de gestion
+    msg.textContent = "";
+    showScreen('manageGame');
+    
+    // On lance le chrono visuel et le rafraîchissement des graphiques
+    startManageTimer();
+    renderManageDashboard();
+
+    // ON ACTIVE LE TEMPS RÉEL : On écoute les futures mises
+    db.ref('sessions/' + input).on('value', (liveSnap) => {
+      if (liveSnap.exists()) {
+        const liveData = liveSnap.val();
+        game = liveData.gameData;
+        if (!game.players) game.players = [];
+        renderManageDashboard();
+      }
+    });
+
+  }).catch(err => {
+    msg.textContent = "Erreur : " + err.message;
+    msg.className = "msg err";
   });
 }
-
 
 function startManageTimer() {
   if (timerInterval) clearInterval(timerInterval);
@@ -1946,9 +1973,12 @@ function renderManageDashboard() {
 
     // NOUVEAU : Affichage des mises des joueurs en temps réel
     let playersHtml = `<div style="margin-top:10px; font-size:11px; color:#9ca3af; border-top:1px solid rgba(55,65,81,0.5); padding-top:8px;"><strong>Mises des joueurs :</strong><br>`;
-    let hasBets = false;
+let hasBets = false;
     
-    game.players.forEach(p => {
+    // Sécurité : On s'assure que la liste des joueurs existe avant de la parcourir
+    const playersList = game.players || [];
+    
+    playersList.forEach(p => {
         if (p.portfolio) {
             const pBets = p.portfolio.filter(b => b.cIndex === i);
             pBets.forEach(b => {
@@ -1973,14 +2003,14 @@ function renderManageDashboard() {
     container.appendChild(block);
   });
 
-  // On dessine les graphiques (on réutilise drawCharts mais vers nos nouveaux canvas)
+// On dessine les graphiques en temps réel
   const histories = computeHistories();
   histories.forEach((hist, i) => {
-    // Petit hack pour réutiliser drawCharts : on simule l'ID que la fonction attend
-    const originalId = "chart-ch" + i;
     const manageId = "manage-chart-" + i;
-    // On temporise pour laisser le DOM se créer
-    setTimeout(() => drawSingleChart(hist, manageId, i), 50);
+    // On attend 100ms que le navigateur ait fini d'afficher le HTML pour dessiner les courbes
+    setTimeout(() => {
+      drawSingleChart(hist, manageId, i);
+    }, 100);
   });
 }
 
@@ -2001,15 +2031,7 @@ function renderValidationList() {
   });
 }
 
-// Fonction utilitaire pour dessiner sur un canvas spécifique
-function drawSingleChart(hist, canvasId, cIndex) {
-  // On adapte légèrement la logique de drawCharts pour cibler n'importe quel ID
-  const canvas = document.getElementById(canvasId);
-  if(!canvas) return;
-  // ... (Ici on utilise la même logique que ta fonction drawCharts existante)
-  // Pour gagner de la place, tu peux modifier drawCharts pour qu'elle accepte un ID en paramètre
 
-}
 
 function confirmExitManage() {
   if (confirm("Voulez-vous vraiment quitter ?")) {
@@ -2055,15 +2077,77 @@ if (codeFromUrl) {
       }
     });
 
+// Variable pour stocker l'intervalle du joueur
+let playerTimerInterval = null;
+
+// Nouvelle fonction pour gérer le décompte côté joueur
+function startPlayerTimer() {
+  if (playerTimerInterval) clearInterval(playerTimerInterval);
+
+  playerTimerInterval = setInterval(() => {
+    const timerEl = document.getElementById("playerCountdown");
+    // Si le joueur quitte la page, on arrête le chrono
+    if (!timerEl) {
+      clearInterval(playerTimerInterval);
+      return;
+    }
+
+    const now = Date.now();
+    const diff = sessionConfig.expiresAt - now;
+
+    if (diff <= 0) {
+      clearInterval(playerTimerInterval);
+      timerEl.textContent = "TERMINÉ";
+      // Le temps est écoulé : on rafraîchit la page pour bloquer les mises et afficher le message d'attente
+      if (game.currentPlayerName) renderPlayerRecap(game.currentPlayerName);
+    } else {
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      timerEl.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+  }, 1000);
+}
+
 function renderPlayerRecap(pseudo) {
   const player = game.players.find(p => p.name === pseudo);
   if(!player) return;
+
+  // NOUVEAU : Écoute en temps réel pour rediriger vers le classement dès la validation admin
+  if (sessionConfig.code) {
+    db.ref('sessions/' + sessionConfig.code).on('value', (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        game = data.gameData;
+        
+        // Si l'admin vient de promulguer les résultats, on bascule INSTANTANÉMENT
+        if (game.isResolved) {
+          db.ref('sessions/' + sessionConfig.code).off(); // On arrête d'écouter
+          if (typeof playerTimerInterval !== 'undefined') clearInterval(playerTimerInterval);
+          
+          displayLeaderboard();
+          showScreen('results');
+        }
+      }
+    });
+  }
 
   const summaryContainer = document.getElementById("recapSummary");
   summaryContainer.innerHTML = "";
 
   // On vérifie si le chrono est écoulé
   const isTimeUp = Date.now() > sessionConfig.expiresAt;
+
+  // NOUVEAU : Affichage du décompte en temps réel si le jeu est encore en cours
+  if (!isTimeUp) {
+    summaryContainer.innerHTML += `
+      <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(59,130,246,0.4); border-radius:12px; padding:12px; text-align:center; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+        <div style="font-size:12px; color:#9ca3af; margin-bottom:4px;">Fin de la session dans :</div>
+        <div id="playerCountdown" style="font-size:24px; font-weight:800; color:#3b82f6; font-family:monospace; letter-spacing:1px;">--:--:--</div>
+      </div>
+    `;
+    startPlayerTimer();
+  }
 
   if (isTimeUp && !game.isResolved) {
      // Message d'attente si le temps est écoulé mais que l'admin réfléchit encore
