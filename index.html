@@ -288,6 +288,10 @@
    padding: 20px; display: flex; flex-direction: column;
  }
  .side-panel.open { right: 0; }
+
+.hidden { display: none; }
+.dynamic-cat-custom { margin-top: 8px; }
+
 </style>
 </head>
 <body>
@@ -384,14 +388,8 @@
 <div id="setup" class="card" style="display:none">
   <div id="setupStepQty">
     <h2>Configuration</h2>
-    <label>Combien de challenges voulez-vous créer ?</label>
-    <select id="challengesQty">
-      <option value="1">1 Challenge</option>
-      <option value="2" selected>2 Challenges</option>
-      <option value="3">3 Challenges</option>
-      <option value="4">4 Challenges</option>
-      <option value="5">5 Challenges</option>
-    </select>
+   <label>Nombre de Challenges</label>
+<input type="number" id="challengesQty" value="2" min="1" max="20" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 15px;">
     <label>Durée de validité du code (minutes)</label>
     <input type="number" id="sessionDuration" value="60" min="1">
     
@@ -635,6 +633,7 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
 function saveToCloud() {
@@ -758,23 +757,50 @@ function resumeSetup() {
 }
 
 function generateSetupFields() {
-  const qty = parseInt(document.getElementById("challengesQty").value);
+  let qty = parseInt(document.getElementById("challengesQty").value);
+  
+  // Sécurité : si la saisie est vide ou invalide, on met 1 par défaut
+  if (isNaN(qty) || qty < 1) qty = 1;
+  if (qty > 50) qty = 50; // Limite optionnelle pour éviter de faire ramer le navigateur
+
   const container = document.getElementById("dynamicSetupContainer");
+  container.innerHTML = "";
   container.innerHTML = ""; // Reset
   
-  // On pré-remplit l'objet game.challenges
-  game.challenges = Array.from({ length: qty }, () => ({
-    category: "", question: "", answers: [], votes: [], baseVotes: [], correct: null
-  }));
+  // On initialise proprement les challenges avec des valeurs par défaut
+  game.challenges = [];
+  for (let i = 0; i < qty; i++) {
+    game.challenges.push({
+      category: "Live traffic", // Catégorie par défaut pour éviter les bugs
+      question: "", 
+      answers: [], 
+      votes: [], 
+      baseVotes: [], 
+      correct: null
+    });
+  }
 
   // Génération du HTML pour chaque challenge
   for (let i = 0; i < qty; i++) {
+    const ch = game.challenges[i]; // On définit 'ch' pour qu'il soit accessible dans le template
     const div = document.createElement("div");
     div.className = "setup-challenge";
     div.innerHTML = `
       <div class="top-row"><strong>Challenge ${i + 1}</strong></div>
       <label>Catégorie</label>
-      <input class="dynamic-cat" data-index="${i}" placeholder="Ex: Tech">
+     <select class="dynamic-cat-select" data-index="${i}" onchange="toggleCustomCat(${i})">
+        <option value="Live traffic" ${ch.category === "Live traffic" || ch.category === "" ? "selected" : ""}>Live traffic</option>
+        <option value="Future Spotlight" ${ch.category === "Future Spotlight" ? "selected" : ""}>Future Spotlight</option>
+        <option value="Trend Signals" ${ch.category === "Trend Signals" ? "selected" : ""}>Trend Signals</option>
+        <option value="Innovation Arena" ${ch.category === "Innovation Arena" ? "selected" : ""}>Innovation Arena</option>
+        <option value="Fun Facts" ${ch.category === "Fun Facts" ? "selected" : ""}>Fun Facts</option>
+        <option value="custom" ${ch.category !== "" && !["Live traffic","Future Spotlight","Trend Signals","Innovation Arena","Fun Facts"].includes(ch.category) ? "selected" : ""}>-- Saisie libre --</option>
+      </select>
+      <input class="dynamic-cat-custom ${(["Live traffic","Future Spotlight","Trend Signals","Innovation Arena","Fun Facts"].includes(ch.category) || ch.category === "") ? "hidden" : ""}" 
+             id="custom-cat-${i}" 
+             placeholder="Tapez votre catégorie..." 
+             value="${(!["Live traffic","Future Spotlight","Trend Signals","Innovation Arena","Fun Facts"].includes(ch.category)) ? ch.category : ""}">
+      
       <label>Question</label>
       <input class="dynamic-que" data-index="${i}" placeholder="Ex: Quelle innovation...">
       <label>Réponses et Probabilités (%)</label>
@@ -893,13 +919,17 @@ function setRandom(chIndex) {
 }
 
 function setupNext() {
-  const cats = document.querySelectorAll(".dynamic-cat");
+  const selects = document.querySelectorAll(".dynamic-cat-select");
   const ques = document.querySelectorAll(".dynamic-que");
   const msg = document.getElementById("setupMsg");
   let isValid = true;
 
   game.challenges.forEach((ch, i) => {
-    ch.category = cats[i].value.trim();
+    let catValue = selects[i].value;
+    if (catValue === "custom") {
+      catValue = document.getElementById(`custom-cat-${i}`).value.trim();
+    }
+    ch.category = catValue;
     ch.question = ques[i].value.trim();
     
     // Récupère toutes les réponses présentes pour ce challenge
@@ -1378,8 +1408,8 @@ function updatePotentialGain() {
   if (pAvg <= 0.01) pAvg = 0.01; 
   if (pAvg >= 0.99) pAvg = 0.99; 
 
-  // 4. Calcul du gain : Mise / Prix moyen
-  const pts = +(val / pAvg).toFixed(2); // <-- Précision à 2 décimales
+// 4. Calcul du gain : Mise / Prix moyen
+  const pts = (val / pAvg).toFixed(2); 
   
   document.getElementById("betPotential").textContent = pts + " pts";
 }
@@ -1436,18 +1466,24 @@ function validate(){
     const ansIndex = selectedAnswers[cIndex];
 
     // CORRECTION : On s'assure que c'est une vraie réponse
-    if (ansIndex !== null && ansIndex !== undefined) {
-      const bet = selectedBets[cIndex] || 1; 
-      const vA = ch.votes[ansIndex];
-      const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+// CORRECTION : On s'assure que c'est une vraie réponse
+      if (ansIndex !== null && ansIndex !== undefined) {
+        const bet = selectedBets[cIndex] || 1; 
 
-      // Calcul ascenseur à l'achat
-      const pStart = vA / vTot;
-      const pEnd = (vA + bet) / (vTot + bet);
-      let pAvg = (pStart + pEnd) / 2;
-      if (pAvg <= 0) pAvg = 0.01;
+        // Calcul ascenseur à l'achat AVEC L'ALGORITHME LMSR
+        const probsStart = getLMSRProbs(ch.votes);
+        const pStart = probsStart[ansIndex];
 
-      const pointsPotentiels = +(bet / pAvg).toFixed(2); // <-- Précision à 2 décimales
+        let simulatedVotes = [...ch.votes];
+        simulatedVotes[ansIndex] += bet;
+        const probsEnd = getLMSRProbs(simulatedVotes);
+        const pEnd = probsEnd[ansIndex];
+
+        let pAvg = (pStart + pEnd) / 2;
+        if (pAvg <= 0.01) pAvg = 0.01;
+        if (pAvg >= 0.99) pAvg = 0.99;
+
+        const pointsPotentiels = +(bet / pAvg).toFixed(2); // <-- Précision à 2 décimales
 
       // Si le joueur avait DÉJÀ misé sur cette exacte même option, on additionne
       let existingBet = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex);
@@ -1656,10 +1692,10 @@ function displayLeaderboard() {
         // On vérifie que la réponse est bonne ET qu'il n'a pas revendu ses parts avant la fin
         if (snap.ansIndex === game.challenges[snap.cIndex].correct && !snap.cashedOut) {
           scoreFinal += snap.pts;
-        }
+}
       });
     }
-    return { name: p.name, pts: +(scoreFinal).toFixed(2) }; // <-- Précision décimale finale
+    return { name: p.name, pts: scoreFinal.toFixed(2) }; 
   });
 
   leaderboard.sort((a, b) => b.pts - a.pts);
@@ -2169,22 +2205,25 @@ function renderPlayerRecap(pseudo) {
         let detailsHtml = "";
         let actionBtn = "";
 
-        if (currentPlayerMode === 'advanced') {
-            // Mode Avancé : Calcul complet de la revente avec précision
-            const vA = ch.votes[snap.ansIndex];
-            const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
-            
+if (currentPlayerMode === 'advanced') {
+            // Mode Avancé : Calcul complet de la revente avec l'algorithme LMSR
             const quantiteParts = snap.pts; 
-            const pStart = vA / vTot; 
+            
+            const probsStart = getLMSRProbs(ch.votes);
+            const pStart = probsStart[snap.ansIndex];
             
             const estimatedWithdraw = quantiteParts * pStart; 
-            const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
+            
+            let simulatedVotes = [...ch.votes];
+            simulatedVotes[snap.ansIndex] = Math.max(0, simulatedVotes[snap.ansIndex] - estimatedWithdraw);
+            const probsEnd = getLMSRProbs(simulatedVotes);
+            const pEnd = probsEnd[snap.ansIndex];
             
             let pAvg = (pStart + pEnd) / 2; 
-            if (pAvg <= 0) pAvg = 0.01;
+            if (pAvg <= 0.01) pAvg = 0.01;
             
-            const currentValue = +(quantiteParts * pAvg).toFixed(2); // Précision décimale
-            const profit = +(currentValue - snap.bet).toFixed(2);
+            const currentValue = (quantiteParts * pAvg).toFixed(2); 
+            const profit = (currentValue - snap.bet).toFixed(2);
             const colorProfit = profit >= 0 ? "#4ade80" : "#f87171";
             const sign = profit >= 0 ? "+" : "";
 
@@ -2406,23 +2445,27 @@ function updateSellPotential() {
 
 // Calcul Slippage Revente (Chute Libre basée sur la quantité)
   const ch = game.challenges[tempSellCIndex];
-  const vA = ch.votes[tempSellAnsIndex];
-  const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
 
   // 1. Calcul du nombre de parts (quantité) que l'on souhaite revendre
   const fraction = sellVal / tempSellSnap.bet;
   const quantiteAVendre = tempSellSnap.pts * fraction;
 
-  // 2. Chute du prix (Slippage)
-  const pStart = vA / vTot;
+  // 2. Chute du prix (Slippage) AVEC LMSR
+  const probsStart = getLMSRProbs(ch.votes);
+  const pStart = probsStart[tempSellAnsIndex];
+  
   const estimatedWithdraw = quantiteAVendre * pStart;
   
-  const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
-  let pAvg = (pStart + pEnd) / 2;
-  if (pAvg <= 0) pAvg = 0.01;
+  let simulatedVotes = [...ch.votes];
+  simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+  const probsEnd = getLMSRProbs(simulatedVotes);
+  const pEnd = probsEnd[tempSellAnsIndex];
 
-  // 3. Argent réel récupéré = Quantité vendue * Prix moyen
-  const recoveredMoney = +(quantiteAVendre * pAvg).toFixed(2); // <-- Précision décimale
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0.01) pAvg = 0.01;
+
+// 3. Argent réel récupéré = Quantité vendue * Prix moyen
+  const recoveredMoney = (quantiteAVendre * pAvg).toFixed(2); 
   document.getElementById("sellPotential").textContent = recoveredMoney + " 💰";
 }
 
@@ -2430,24 +2473,29 @@ function confirmSell() {
   const sellVal = parseInt(document.getElementById("sellInput").value) || 0;
   if (sellVal <= 0 || sellVal > tempSellSnap.bet) return;
 
-  const ch = game.challenges[tempSellCIndex];
-  const vA = ch.votes[tempSellAnsIndex];
-  const vTot = ch.votes.reduce((a, b) => a + b, 0) || 1;
+const ch = game.challenges[tempSellCIndex];
 
   // 1. Calcul des parts à revendre
   const fraction = sellVal / tempSellSnap.bet;
   const quantiteAVendre = tempSellSnap.pts * fraction;
 
-  // 2. Calcul du glissement et de l'argent récupéré
-  const pStart = vA / vTot;
+  // 2. Calcul du glissement et de l'argent récupéré AVEC LMSR
+  const probsStart = getLMSRProbs(ch.votes);
+  const pStart = probsStart[tempSellAnsIndex];
+  
   const estimatedWithdraw = quantiteAVendre * pStart;
-  const pEnd = Math.max(0.01, vA - estimatedWithdraw) / Math.max(1, vTot - estimatedWithdraw);
-  let pAvg = (pStart + pEnd) / 2;
-  if (pAvg <= 0) pAvg = 0.01;
+  
+  let simulatedVotes = [...ch.votes];
+  simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+  const probsEnd = getLMSRProbs(simulatedVotes);
+  const pEnd = probsEnd[tempSellAnsIndex];
 
-  const recoveredMoney = +(quantiteAVendre * pAvg).toFixed(2); // <-- Précision décimale
+let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0.01) pAvg = 0.01;
 
-  // 3. On retire l'argent du pot global (La cote chute officiellement pour les autres)
+  const recoveredMoney = parseFloat((quantiteAVendre * pAvg).toFixed(2)); 
+
+  // 3. On retire l'argent du pot global
   ch.votes[tempSellAnsIndex] -= recoveredMoney;
   if (ch.votes[tempSellAnsIndex] < 0) ch.votes[tempSellAnsIndex] = 0;
 
@@ -2479,6 +2527,18 @@ function goToPlayScreen() {
   selectedBets = new Array(game.challenges.length).fill(0);
   showScreen('play');
   renderPlayChallenges();
+}
+
+function toggleCustomCat(index) {
+  const select = document.querySelector(`.dynamic-cat-select[data-index="${index}"]`);
+  const customInput = document.getElementById(`custom-cat-${index}`);
+  
+  if (select.value === "custom") {
+    customInput.classList.remove("hidden");
+    customInput.focus();
+  } else {
+    customInput.classList.add("hidden");
+  }
 }
 
 </script>
