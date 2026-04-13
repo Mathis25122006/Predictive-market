@@ -634,12 +634,22 @@ const db = firebase.database();
 
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
 function saveToCloud() {
+  const payload = {
+    sessionConfig: sessionConfig,
+    gameData: game
+  };
+
+  // 1. Sauvegarde sur le code principal (Facile ou Unique)
   if (sessionConfig.code) {
-    db.ref('sessions/' + sessionConfig.code).set({
-      sessionConfig: sessionConfig,
-      gameData: game
-    }).catch(err => {
+    db.ref('sessions/' + sessionConfig.code).set(payload).catch(err => {
       console.error("Erreur de sauvegarde Cloud:", err);
+    });
+  }
+  
+  // 2. Sauvegarde miroir sur le code avancé (Si on a cliqué sur "Créer les deux")
+  if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
+    db.ref('sessions/' + sessionConfig.codeAdvanced).set(payload).catch(err => {
+      console.error("Erreur de sauvegarde Cloud (Avancé):", err);
     });
   }
 }
