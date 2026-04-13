@@ -633,6 +633,7 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
+// Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
 function saveToCloud() {
   const payload = {
     sessionConfig: sessionConfig,
@@ -646,7 +647,7 @@ function saveToCloud() {
     });
   }
   
-  // 2. Sauvegarde miroir sur le code avancé (Si on a cliqué sur "Créer les deux")
+  // 2. Sauvegarde miroir sur le code avancé (Si mode "Les deux")
   if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
     db.ref('sessions/' + sessionConfig.codeAdvanced).set(payload).catch(err => {
       console.error("Erreur de sauvegarde Cloud (Avancé):", err);
@@ -1632,8 +1633,14 @@ function finish() {
     if (sel) ch.correct = parseInt(sel.value, 10);
   });
 
-  game.isResolved = true;
-  saveToCloud(); // Remplace localStorage
+game.isResolved = true;
+  saveToCloud(); 
+
+  // On coupe l'écoute Firebase pour figer les résultats
+  if (sessionConfig.code) db.ref('sessions/' + sessionConfig.code).off();
+  if (sessionConfig.codeAdvanced) db.ref('sessions/' + sessionConfig.codeAdvanced).off();
+
+  // 2. L'admin passe à l'écran de classement
   
   // On coupe l'écoute en temps réel de l'admin
   if (sessionConfig.code) {
@@ -1859,9 +1866,13 @@ function checkManageAccess() {
   const now = Date.now();
   
   // Calcul de la deadline : expiration joueur + 30 minutes
-  const adminDeadline = sessionConfig.expiresAt + (30 * 60 * 1000);
+const adminDeadline = sessionConfig.expiresAt + (30 * 60 * 1000);
 
-  if (input !== sessionConfig.code || sessionConfig.code === "") {
+  // On autorise l'accès si le code correspond au code Facile OU au code Avancé
+  const isEasyCode = (input === sessionConfig.code);
+  const isAdvancedCode = (sessionConfig.mode === 'both' && input === sessionConfig.codeAdvanced);
+
+  if (!isEasyCode && !isAdvancedCode) {
     msg.textContent = "Code de session invalide.";
     return;
   }
@@ -1875,15 +1886,16 @@ function checkManageAccess() {
   showScreen('manageGame');
   startManageTimer();
   
-  // NOUVEAU : Écoute de Firebase en temps réel pour l'administrateur
-  db.ref('sessions/' + sessionConfig.code).on('value', (snapshot) => {
+  // NOUVEAU : On écoute Firebase en temps réel sur le code saisi
+  db.ref('sessions/' + input).on('value', (snapshot) => {
     if (snapshot.exists()) {
       const data = snapshot.val();
-      game = data.gameData; // On synchronise le jeu local avec les nouveautés du Cloud
-      renderManageDashboard(); // On redessine les graphiques et on affiche les nouvelles mises !
+      game = data.gameData;
+      renderManageDashboard();
     }
   });
 }
+
 
 function startManageTimer() {
   if (timerInterval) clearInterval(timerInterval);
@@ -2001,12 +2013,10 @@ function drawSingleChart(hist, canvasId, cIndex) {
 
 function confirmExitManage() {
   if (confirm("Voulez-vous vraiment quitter ?")) {
-    // On coupe l'écoute en temps réel pour libérer la mémoire
-    if (sessionConfig.code) {
-      db.ref('sessions/' + sessionConfig.code).off();
-    }
+    // On coupe l'écoute Firebase (sur les deux codes possibles)
+    if (sessionConfig.code) db.ref('sessions/' + sessionConfig.code).off();
+    if (sessionConfig.codeAdvanced) db.ref('sessions/' + sessionConfig.codeAdvanced).off();
     
-    // On sauvegarde l'état actuel avant de partir
     localStorage.setItem('savedGameData', JSON.stringify(game));
     showScreen('home');
   }
