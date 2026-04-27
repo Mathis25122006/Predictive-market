@@ -2659,41 +2659,43 @@ window.addEventListener('load', () => {
     console.log("Session restaurée : " + sessionConfig.code);
   }
 
-  // 2. Gestion du lien URL (Paramètre session)
-  const urlParams = new URLSearchParams(window.location.search);
-  const codeFromUrl = urlParams.get('session');
-  
-if (codeFromUrl) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        showScreen('play');
-        const inputField = document.getElementById("accessCode");
-        if (inputField) {
-          inputField.value = codeFromUrl.toUpperCase();
-          
-          // NOUVEAU : On masque la zone de saisie du code et le scanner QR
-          const codeContainer = document.getElementById("accessCodeContainer");
-          if (codeContainer) codeContainer.style.display = "none";
-          
-          const qrContainer = document.getElementById("qrScannerContainer");
-          if (qrContainer) qrContainer.style.display = "none";
+  // 2. Gestion du lien URL (Paramètre session et pseudo)
+          const urlParams = new URLSearchParams(window.location.search);
+          const codeFromUrl = urlParams.get('session');
+          const pseudoFromUrl = urlParams.get('p'); // On attrape le pseudo s'il est dans le lien
 
-          // NOUVEAU : RECONNEXION AUTOMATIQUE (MAGIE 🪄)
-          const savedPseudo = localStorage.getItem('monPredictionPseudo');
-          const savedEmail = localStorage.getItem('monPredictionEmail');
-          
-          if (savedPseudo) {
-             document.getElementById("pseudo").value = savedPseudo;
-             if (savedEmail) document.getElementById("playerEmail").value = savedEmail;
-             
-             // On clique automatiquement sur le bouton "Entrer dans le jeu" après 0.5s 
-             // (Le temps que le visuel finisse de se charger à l'écran)
-             setTimeout(() => {
-                checkAccess();
-             }, 500);
-          }
-        }
-      }
-    });
+        if (codeFromUrl) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showScreen('play');
+                const inputField = document.getElementById("accessCode");
+                if (inputField) {
+                  inputField.value = codeFromUrl.toUpperCase();
+
+                  const codeContainer = document.getElementById("accessCodeContainer");
+                  if (codeContainer) codeContainer.style.display = "none";
+
+                  const qrContainer = document.getElementById("qrScannerContainer");
+                  if (qrContainer) qrContainer.style.display = "none";
+
+                  // NOUVEAU : RECONNEXION AUTOMATIQUE INFAILLIBLE
+                  // On prend le pseudo du lien (Make.com), sinon on cherche dans la mémoire (Safari/Chrome)
+                  const finalPseudo = pseudoFromUrl || localStorage.getItem('monPredictionPseudo');
+                  
+                  if (finalPseudo) {
+                     document.getElementById("pseudo").value = finalPseudo;
+                     
+                     // Si on a l'email en mémoire, on le remet, sinon ce n'est pas grave le pseudo suffit pour se connecter
+                     const savedEmail = localStorage.getItem('monPredictionEmail');
+                     if (savedEmail) document.getElementById("playerEmail").value = savedEmail;
+                     
+                     // On déclenche la connexion auto après une demi-seconde
+                     setTimeout(() => {
+                        checkAccess();
+                     }, 500);
+                  }
+                }
+              }
+            });
 
 // Variable pour stocker l'intervalle du joueur
 let playerTimerInterval = null;
