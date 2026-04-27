@@ -567,7 +567,7 @@
   <div id="chartsContainer"></div>
   <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px; box-shadow:none;">Retour au menu principal</button>
 </div>
-<div id="playerRecap" class="card" style="display:none">
+<div id="playerRecap" class="card" style="display:none; padding-bottom: 100px;">
   <h2>Vos Prédictions</h2>
   <p class="subtitle">Voici le résumé de vos mises et l'évolution en temps réel.</p>
   
@@ -2227,8 +2227,13 @@ const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     const phoneEl = document.getElementById("playerPhone");
     const phone = phoneEl ? phoneEl.value.trim() : ""; // Si la case n'existe pas, on met vide au lieu de planter
 
+// ENREGISTREMENT DE L'EMAIL ET SAUVEGARDE LOCALE
     const emailEl = document.getElementById("playerEmail");
     const email = emailEl ? emailEl.value.trim() : "";
+
+    // NOUVEAU : On sauvegarde l'identité dans la mémoire du téléphone
+    localStorage.setItem('monPredictionPseudo', pseudo);
+    localStorage.setItem('monPredictionEmail', email);
 
     let me = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
     if (!me) {
@@ -2671,6 +2676,21 @@ if (codeFromUrl) {
           
           const qrContainer = document.getElementById("qrScannerContainer");
           if (qrContainer) qrContainer.style.display = "none";
+
+          // NOUVEAU : RECONNEXION AUTOMATIQUE (MAGIE 🪄)
+          const savedPseudo = localStorage.getItem('monPredictionPseudo');
+          const savedEmail = localStorage.getItem('monPredictionEmail');
+          
+          if (savedPseudo) {
+             document.getElementById("pseudo").value = savedPseudo;
+             if (savedEmail) document.getElementById("playerEmail").value = savedEmail;
+             
+             // On clique automatiquement sur le bouton "Entrer dans le jeu" après 0.5s 
+             // (Le temps que le visuel finisse de se charger à l'écran)
+             setTimeout(() => {
+                checkAccess();
+             }, 500);
+          }
         }
       }
     });
