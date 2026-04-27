@@ -280,14 +280,25 @@
  }
  .side-panel-overlay.open { opacity: 1; pointer-events: auto; }
 
- .side-panel {
-   position: fixed; top: 0; right: -100%; width: 85%; max-width: 360px; height: 100%;
-   background: #020617; border-left: 1px solid rgba(55,65,81,0.9);
-   box-shadow: -10px 0 30px rgba(0,0,0,0.8);
-   z-index: 1000; transition: right 0.3s ease;
-   padding: 20px; display: flex; flex-direction: column;
+.side-panel {
+   position: fixed; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 85vh;
+   background: #020617; border-top: 1px solid rgba(55,65,81,0.9); border-left: none;
+   border-radius: 24px 24px 0 0;
+   box-shadow: 0 -10px 40px rgba(0,0,0,0.9);
+   z-index: 1000; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+   padding: 24px 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column;
+   box-sizing: border-box;
  }
- .side-panel.open { right: 0; }
+ .side-panel.open { bottom: 0; }
+ 
+ /* NOUVEAU : Barre d'action fixe en bas d'écran */
+ .sticky-action-bar {
+   position: fixed; bottom: 0; left: 0; width: 100%;
+   background: rgba(2,6,23,0.95); border-top: 1px solid rgba(55,65,81,0.9);
+   padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+   z-index: 900; backdrop-filter: blur(10px);
+   display: flex; gap: 10px; box-sizing: border-box;
+ }
 
 .hidden { display: none; }
 .dynamic-cat-custom { margin-top: 8px; }
@@ -455,15 +466,19 @@
     <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Quitter et retourner au menu principal</button>
   </div>
 
-<div id="gameContent" class="hidden">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h2 id="playerTitle">Prédictions</h2>
+<div id="gameContent" class="hidden" style="padding-bottom: 90px;">
+    <div style="display:flex;justify-content:space-between;align-items:center; margin-bottom: 15px;">
+      <h2 id="playerTitle" style="margin:0;">Prédictions</h2>
       <div>
         <span class="badge hidden" id="playerBalanceDisplay" style="color:#3b82f6; border-color:#3b82f6;">Solde: 0</span>
       </div>
     </div>
     <div id="challengesPlay"></div>
-    <button id="playBtn" onclick="playNext()">Suivant</button>
+    
+    <div class="sticky-action-bar">
+      <button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; flex:0.4; font-size:12px; padding:12px 5px; box-shadow:none;">Mes Paris</button>
+      <button onclick="playNext()" style="flex:1; margin:0; padding:12px 5px; font-size:14px; box-shadow:0 10px 20px rgba(249,115,22,0.3);">Valider et Enregistrer</button>
+    </div>
   </div>
   <div class="msg" id="playMsg"></div>
 </div>
@@ -1267,11 +1282,7 @@ function renderPlayChallenges(){
   if (!container) return;
   container.innerHTML = "";
 
-  // Bouton d'accès rapide au récapitulatif / historique
-  const quickRecap = document.createElement("div");
-  quickRecap.style.textAlign = "right";
-  quickRecap.innerHTML = `<button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:none; border:1px solid #3b82f6; color:#3b82f6; font-size:10px; width:auto; padding:4px 10px; margin-bottom:10px; box-shadow:none;">Voir mes paris / récapitulatif</button>`;
-  container.appendChild(quickRecap);
+  // L'ancien bouton "quickRecap" a été supprimé au profit de la barre flottante mobile
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
 
@@ -2638,23 +2649,19 @@ function updateRecapUI(pseudo) {
     </div>
 
     <div style="background:rgba(15,23,42,0.6); border-radius:12px; padding:10px; margin-bottom:20px; border:1px solid #334155;">
-      <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
-      ${provLeaderboard.slice(0, 3).map((p, i) => `
-        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
-          <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
-          <span>${p.score} pts</span>
+          <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
+          ${provLeaderboard.slice(0, 3).map((p, i) => `
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
+              <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
+              <span>${p.score} pts</span>
+            </div>
+          `).join('')}
         </div>
-      `).join('')}
-    </div>
 
-    <button onclick="goToPlayScreen()" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; margin-bottom:20px;">
-      Retourner aux questions
-    </button>
+        <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos paris</h3>
+      `;
 
-    <h3 style="margin-bottom:10px;">Détail de vos paris</h3>
-  `;
-
-  if (player.portfolio) {
+      if (player.portfolio) {
     player.portfolio.forEach(snap => {
       const ch = game.challenges[snap.cIndex];
       const typeBadge = snap.type === 'NO' ? 
@@ -2673,6 +2680,14 @@ function updateRecapUI(pseudo) {
       `;
     });
   }
+
+  // NOUVEAU : Barre collante pour retourner aux questions sans avoir à scroller
+  summaryContainer.innerHTML += `
+    <div style="padding-bottom: 90px;"></div>
+    <div class="sticky-action-bar">
+      <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; width:100%; font-size:15px; box-shadow:0 10px 20px rgba(59,130,246,0.3);">Retourner aux questions</button>
+    </div>
+  `;
 
   // Lancement du moteur de chronomètre
   startRecapSessionTimer();
