@@ -460,6 +460,10 @@
     <label>Pseudo</label>
     <input id="pseudo" placeholder="Ex : Renaud">
     
+
+    <label>Adresse E-mail (Optionnel)</label>
+    <input id="playerEmail" type="email" placeholder="Ex: joueur@email.com" style="margin-bottom: 10px;">
+    
     <div id="accessCodeContainer">
       <label>Code de session (6 caractères)</label>
       <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
@@ -2201,7 +2205,7 @@ function checkAccess() {
       return;
     }
 
-    const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     if (now > checkTime) {
       if (game.isResolved === true) {
         showPlayerResult(pseudo); 
@@ -2219,7 +2223,29 @@ function checkAccess() {
       return;
     }
 
-currentPlayerMode = modeToPlay;
+// NOUVEAU : Enregistrement immédiat du joueur et de ses contacts (SÉCURISÉ)
+    const phoneEl = document.getElementById("playerPhone");
+    const phone = phoneEl ? phoneEl.value.trim() : ""; // Si la case n'existe pas, on met vide au lieu de planter
+
+    const emailEl = document.getElementById("playerEmail");
+    const email = emailEl ? emailEl.value.trim() : "";
+
+    let me = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
+    if (!me) {
+      // Si le joueur est nouveau, on lui crée un profil tout de suite
+      let startBal = currentPlayerBalance === 0 && modeToPlay === 'advanced' ? (sessionConfig.initialBalance || 100) : currentPlayerBalance;
+      me = { name: pseudo, phone: phone, email: email, balance: startBal, portfolio: [] };
+      game.players.push(me);
+      saveToCloud(); // On sauvegarde immédiatement pour la BDD
+    } else {
+      // S'il se reconnecte et ajoute son téléphone, on met à jour
+      let updated = false;
+      if (phone && me.phone !== phone) { me.phone = phone; updated = true; }
+      if (email && me.email !== email) { me.email = email; updated = true; }
+      if (updated) saveToCloud();
+    }
+
+    currentPlayerMode = modeToPlay;
     game.currentPlayerName = pseudo;
 
     // NOUVEAU : Un seul écouteur en temps réel pour piloter toute l'interface joueur
@@ -3306,18 +3332,44 @@ function sendBroadcastMessage() {
   const text = input.value.trim();
   if (!text) return;
 
+  // 1. Envoi interne (pour la cloche de notification in-app)
   if (!game.messages) game.messages = [];
   game.messages.push({
     text: text,
     timestamp: Date.now()
   });
+  saveToCloud(); 
 
-  saveToCloud(); // Envoi sur Firebase instantanément
+  // 2. PRÉPARATION DE L'ALERTE EXTERNE (Pour Make.com / Zapier)
+  const currentUrl = window.location.href.split('?')[0];
+  const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
+  const alertText = `Vous avez un nouveau message, consultez le rapidement pour adapter vos pronostics ! Lien direct : ${joinUrl}`;
+
+  // On rassemble les contacts de tous les joueurs ayant fourni un tél ou un mail
+  const contacts = (game.players || [])
+     .map(p => ({ name: p.name, phone: p.phone, email: p.email }))
+     .filter(c => c.phone || c.email);
+
+// S'il y a des contacts, on envoie directement au Webhook de Make.com
+  if (contacts.length > 0) {
+     const webhookUrl = "https://hook.eu1.make.com/xy3wpxwsiwrljpiw5w6qtyow3malmsgk"; // <--- REMPLACEZ CECI PAR VOTRE URL MAKE
+     
+     fetch(webhookUrl, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+             session: sessionConfig.code,
+             messageToSend: alertText,
+             recipients: contacts
+         })
+     }).catch(err => console.error("Erreur d'envoi Webhook :", err));
+  }
+
   input.value = "";
   
   const msgFeedback = document.getElementById("adminMessageFeedback");
   if(msgFeedback) {
-      msgFeedback.textContent = "Message envoyé !";
+      msgFeedback.textContent = "Message interne et alertes externes envoyés !";
       setTimeout(() => msgFeedback.textContent = "", 3000);
   }
 }
