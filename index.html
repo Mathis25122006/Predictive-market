@@ -292,6 +292,15 @@
 .hidden { display: none; }
 .dynamic-cat-custom { margin-top: 8px; }
 
+/* Animation de fondu pour les colonnes du grand écran */
+#bsLeft, #bsMiddle {
+  transition: opacity 0.8s ease-in-out;
+  opacity: 1;
+}
+.bs-faded {
+  opacity: 0 !important;
+}
+
 </style>
 </head>
 <body>
@@ -346,6 +355,7 @@
   <p class="subtitle">Session déverrouillée. Choisissez une option :</p>
   <button onclick="askResume()">Créer un nouveau jeu</button>
   <button onclick="showScreen('manageAuth')" style="background: rgba(55,65,81,0.5); margin-top: 12px;">Gérer un jeu existant</button>
+  <button onclick="showScreen('bigScreenAuth')" style="background: linear-gradient(135deg,#a855f7,#d946ef); margin-top: 12px; box-shadow:0 10px 20px rgba(168,85,247,0.4);">Affichage Grand Écran</button>
   <button onclick="showScreen('home')" style="background: none; border: 1px solid #4b5563; margin-top: 12px; box-shadow: none;">Retour à l'accueil</button>
 </div>
 
@@ -378,10 +388,9 @@
   <div id="manageChallengesContainer"></div>
 
   <div id="finalValidationZone" class="hidden" style="margin-top:20px; padding-top:20px; border-top:2px solid #f97316;">
-    <h3>Validation des résultats</h3>
-    <p class="subtitle">Le temps est écoulé. Sélectionnez les bonnes réponses :</p>
-    <div id="adminValidationList"></div>
-    <button onclick="finish()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:15px;">Promulguer les résultats globaux</button>
+    <h3>Fin de la session</h3>
+    <p class="subtitle">Le temps global est écoulé. Assurez-vous d'avoir publié les résultats de toutes les questions ci-dessus avant de clôturer.</p>
+    <button onclick="finish()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:15px;">Clôturer le jeu et afficher le classement final</button>
   </div>
 </div>
 
@@ -450,7 +459,6 @@
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h2 id="playerTitle">Prédictions</h2>
       <div>
-        <span class="badge" id="badgeCount">0 / 10 joueurs</span>
         <span class="badge hidden" id="playerBalanceDisplay" style="color:#3b82f6; border-color:#3b82f6;">Solde: 0</span>
       </div>
     </div>
@@ -518,6 +526,39 @@
   <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px;">Quitter et retourner à l'accueil</button>
 </div>
 
+<div id="bigScreenAuth" class="card" style="display:none">
+  <h2>Accès Grand Écran</h2>
+  <p class="subtitle">Saisissez le code de la session à projeter.</p>
+  <input id="bsCodeInput" placeholder="Code (Ex: A1B2C3)" style="text-transform: uppercase;">
+  <button onclick="checkBigScreenAccess()" style="background: linear-gradient(135deg,#a855f7,#d946ef);">Lancer l'affichage direct</button>
+  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour</button>
+  <div id="bsAuthMsg" class="msg"></div>
+</div>
+
+<div id="bigScreen" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at center, #2e1065, #0f172a); z-index:3000; color:white; overflow:hidden; padding:25px 40px; box-sizing:border-box; font-family: system-ui, sans-serif;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+     <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
+
+     <div style="text-align:center; flex:1;">
+        <div style="font-size:18px; font-weight:800; letter-spacing:0.1em; color:#a855f7;">VIVA TECHNOLOGY</div>
+        <div style="font-size:38px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">LIVE PREDICTION GAME</div>
+        <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:4px 18px; border-radius:999px;">
+           <span style="font-size:11px; color:#f87171; font-weight:bold; text-transform:uppercase; margin-right:10px;">Fin de la session :</span>
+           <span id="bsGlobalTimer" style="font-size:22px; font-weight:800; font-family:monospace; color:#f87171;">00:00:00</span>
+        </div>
+     </div>
+
+     <div style="width:250px; text-align:right;">
+        <div style="font-size:24px; font-weight:900; opacity:0.3;">VIVA<br>TECH</div>
+     </div>
+  </div>
+<div style="display:flex; justify-content:space-between; gap:25px; height:calc(100vh - 280px);">
+     <div id="bsLeft" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column;"></div>
+     <div id="bsMiddle" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column;"></div>
+     <div id="bsRight" style="flex:0.8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow-y:auto;"></div>
+  </div>
+</div>
+
 <script>
 
   function getEffectiveStatus(ch) {
@@ -547,10 +588,15 @@
   }
 }
 function showScreen(screenId) {
-  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap'];
+  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen'];
 
   // 1. Actions de nettoyage et sécurité
   if (screenId === 'home') {
+    // Nettoyage spécifique au Grand Écran
+    if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
+    if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
+    if (typeof isBigScreenActive !== 'undefined') isBigScreenActive = false;
+    
     // On arrête les écoutes Firebase actives pour le joueur
     if (sessionConfig.code) {
       db.ref('sessions/' + sessionConfig.code).off();
@@ -624,7 +670,7 @@ let html5QrCode = null;
 let currentSetupIndex = 0;
 let selectedAnswers = [];
 let selectedBets = []; // Stocke le montant misé par question
-let selectedBetTypes = []; // NOUVEAU : Stocke si le pari est 'YES' ou 'NO'
+let selectedBetTypes = []; // NOUVEAU : Stocke 'YES' ou 'NO'
 let currentPlayChallengeIndex = 0;
 let currentAdminChallengeIndex = 0;
 let savedSetupData = null; 
@@ -1025,10 +1071,18 @@ if (!isValid) {
     return;
   }
 
-  // --- NOUVEAU : GÉNÉRATION D'IMAGES IA ---
-// --- ATTRIBUTION DES IMAGES ALÉATOIRES PAR CATÉGORIE ---
+// --- ATTRIBUTION DES IMAGES FIXES PAR CATÉGORIE ---
   game.challenges.forEach((ch, i) => {
-    ch.imageUrl = getRandomCategoryImage(ch.category);
+    // On vérifie ce qui a été choisi dans le menu déroulant pour ce challenge
+    const selectedMode = selects[i].value;
+    
+    if (selectedMode === "custom") {
+      // Si c'est le mode Saisie Libre, on force votre image dédiée
+      ch.imageUrl = "saisie_libre.jpg";
+    } else {
+      // Sinon, on applique la logique habituelle (live_traffic.jpg, etc.)
+      ch.imageUrl = getRandomCategoryImage(ch.category);
+    }
   });
 
   // Initialisation des votes pour chaque challenge créé
@@ -1038,6 +1092,8 @@ if (!isValid) {
   game.players = [];
   game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
   selectedAnswers = new Array(game.challenges.length).fill(null);
+  selectedBets = new Array(game.challenges.length).fill(0);
+  selectedBetTypes = new Array(game.challenges.length).fill('YES');
   currentPlayChallengeIndex = 0;
   currentAdminChallengeIndex = 0;
 
@@ -1057,9 +1113,11 @@ const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
   console.log("Session créée avec le code : " + sessionConfig.code); // Pour debug
   
-  // On calcule l'expiration globale de la session basée sur la question qui finit le plus tard
+// On calcule la fin réelle du jeu basée sur la question qui finit le plus tard
   const maxEndTime = Math.max(...game.challenges.map(c => c.endTime));
-  sessionConfig.expiresAt = maxEndTime + (30 * 60 * 1000); // Maintient la session ouverte 30 min après la dernière question
+  
+  sessionConfig.gameEndTime = maxEndTime; // NOUVEAU : Pour l'affichage exact des chronomètres (Admin et Joueurs)
+  sessionConfig.expiresAt = maxEndTime + (30 * 60 * 1000); // Sécurité cachée : Maintient la BDD ouverte 30 min après la fin
 
   // SAUVEGARDE SUR LE SERVEUR
   saveToCloud();
@@ -1151,7 +1209,9 @@ html += `
 
 function updateBadge(){
   const badge = document.getElementById("badgeCount");
-  badge.textContent = game.players.length + " / " + game.maxPlayers + " joueurs";
+  if (badge) {
+    badge.textContent = game.players.length + " / " + game.maxPlayers + " joueurs";
+  }
 }
 
 let playScreenTimerInterval = null;
@@ -1165,49 +1225,53 @@ function startPlayScreenTimers() {
 
     game.challenges.forEach((ch, i) => {
       const effStatus = getEffectiveStatus(ch);
-      
-      // On regarde ce qui est actuellement affiché à l'écran pour ce challenge
-      const pendingTimerEl = document.getElementById(`pending-timer-${i}`);
-      const openAnswersEl = document.getElementById(`answers-ch${i}`);
+      const pendingTimer = document.getElementById(`pending-timer-${i}`);
+      const openTimer = document.getElementById(`open-timer-${i}`);
 
-      // 1. Si la question est EN ATTENTE
+      // 1. GESTION DU DÉCOMPTE DE DÉBUT (PENDING)
       if (effStatus === "pending") {
-        if (pendingTimerEl) {
+        if (pendingTimer) {
           const diff = ch.startTime - now;
-          const h = Math.floor(diff / 3600000);
-          const m = Math.floor((diff % 3600000) / 60000);
-          const s = Math.floor((diff % 60000) / 1000);
-          pendingTimerEl.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        } else {
-          needsRefresh = true; // L'écran n'est pas encore sur le bon affichage
-        }
-      }
-      
-      // 2. Si la question est OUVERTE
+          if (diff <= 0) needsRefresh = true;
+          else pendingTimer.textContent = formatTimeDiff(diff);
+        } else { needsRefresh = true; } // Devrait être affiché mais ne l'est pas
+      } 
+      // 2. GESTION DU DÉCOMPTE DE FIN (OPEN)
       else if (effStatus === "open") {
-        if (pendingTimerEl) {
-          needsRefresh = true; // Le décompte est fini mais l'écran ne l'a pas encore effacé
-        }
+        if (openTimer) {
+          const diff = ch.endTime - now;
+          if (diff <= 0) needsRefresh = true;
+          else openTimer.textContent = formatTimeDiff(diff);
+        } else { needsRefresh = true; } // Devrait être ouvert mais affiche encore le pending
       }
-      
-      // 3. Si la question est CLOSE
+      // 3. PASSAGE AU STATUT CLOS
       else if (effStatus === "closed") {
-         if (openAnswersEl) {
-           needsRefresh = true; // L'heure de fin est atteinte, il faut cacher les boutons de mise
-         }
+        if (openTimer || document.getElementById(`answers-ch${i}`)) needsRefresh = true;
       }
     });
 
-    // Si une incohérence est détectée entre l'heure et l'écran, on fait "sauter" l'écran pour l'actualiser
     if (needsRefresh) renderPlayChallenges();
-    
   }, 1000);
+}
+
+// Fonction utilitaire pour le formatage
+function formatTimeDiff(diff) {
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
   container.innerHTML = "";
+
+  // Bouton d'accès rapide au récapitulatif / historique
+  const quickRecap = document.createElement("div");
+  quickRecap.style.textAlign = "right";
+  quickRecap.innerHTML = `<button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:none; border:1px solid #3b82f6; color:#3b82f6; font-size:10px; width:auto; padding:4px 10px; margin-bottom:10px; box-shadow:none;">Voir mes paris / récapitulatif</button>`;
+  container.appendChild(quickRecap);
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
 
@@ -1266,8 +1330,11 @@ function renderPlayChallenges(){
     const header = document.createElement("div");
     header.className = "challenge-header";
     header.innerHTML = `
-      <div class="chip">${ch.category}</div>
-      <div class="challenge-title">${ch.question}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="chip">${ch.category}</div>
+        <div id="open-timer-${cIndex}" style="font-size:12px; font-weight:800; color:#f87171; font-family:monospace; background:rgba(248,113,113,0.1); padding:2px 8px; border-radius:4px;">--:--</div>
+      </div>
+      <div class="challenge-title" style="margin-top:5px;">${ch.question}</div>
       ${betInfoHtml}
     `;
     
@@ -1482,14 +1549,7 @@ function playNext() {
   msg.textContent = "";
 
   if (confirm("Voulez-vous vraiment valider vos prédictions actuelles ?")) {
-    validate(); // Enregistre les mises
-    
-    // NOUVEAU : On informe le joueur et on reste sur la page !
-    msg.textContent = "Prédictions enregistrées ! Vous pouvez rester ici pour les prochaines questions.";
-    msg.className = "msg ok";
-    
-    // On efface le message après 3 secondes
-    setTimeout(() => { msg.textContent = ""; }, 3000);
+    validate(); // Enregistre les mises et déclenche la redirection automatique
   }
 }
 
@@ -1623,9 +1683,10 @@ function confirmBet() {
   // CORRECTION : On met à jour le compteur global en haut à droite 💰
   updateGlobalBalance();
 
-  // On enregistre le choix et la mise
+// On enregistre le choix, la mise ET le type de pari (OUI/NON)
   selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
   selectedBets[tempBetCIndex] = val;
+  selectedBetTypes[tempBetCIndex] = tempBetType; // NOUVEAU
 
   // On ferme et on actualise l'écran
   closeBetPanel();
@@ -1634,62 +1695,79 @@ function confirmBet() {
 // ----------------------------------------------
 
 function validate(){
+  if (!game.players) game.players = []; // SÉCURITÉ ANTI-CRASH FIREBASE
   const pseudo = game.currentPlayerName;
   const msg = document.getElementById("playMsg");
 
-  // On récupère ou on crée le profil du joueur
   let player = game.players.find(p => p.name === pseudo);
   if (!player) {
     player = { name: pseudo, balance: currentPlayerBalance, portfolio: [] };
     game.players.push(player);
   } else {
     player.balance = currentPlayerBalance;
+    if (!player.portfolio) player.portfolio = [];
   }
 
   // 1. Calcul et enregistrement des NOUVELLES mises
   game.challenges.forEach((ch, cIndex) => {
     const ansIndex = selectedAnswers[cIndex];
 
-    // CORRECTION : On s'assure que c'est une vraie réponse
-// CORRECTION : On s'assure que c'est une vraie réponse
-      if (ansIndex !== null && ansIndex !== undefined) {
-        const bet = selectedBets[cIndex] || 1; 
+    if (ansIndex !== null && ansIndex !== undefined) {
+      const bet = selectedBets[cIndex] || 1; 
+      // Sécurité anti-crash si selectedBetTypes n'est pas encore défini
+      const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES'; 
 
-        // Calcul ascenseur à l'achat AVEC L'ALGORITHME LMSR
-        const probsStart = getLMSRProbs(ch.votes);
-        const pStart = probsStart[ansIndex];
+      const probsStart = getLMSRProbs(ch.votes);
+      const pStartYes = probsStart[ansIndex];
+      const pStart = bType === 'YES' ? pStartYes : (1 - pStartYes);
 
-        let simulatedVotes = [...ch.votes];
-        simulatedVotes[ansIndex] += bet;
-        const probsEnd = getLMSRProbs(simulatedVotes);
-        const pEnd = probsEnd[ansIndex];
+      let simulatedVotes = [...ch.votes];
+      if (bType === 'YES') {
+        simulatedVotes[ansIndex] += bet; // Achat de parts OUI
+      } else {
+        // Achat de parts NON : on répartit la mise sur toutes les AUTRES options
+        const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[ansIndex];
+        for (let i = 0; i < simulatedVotes.length; i++) {
+          if (i !== ansIndex) {
+            const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+            simulatedVotes[i] += bet * weight;
+          }
+        }
+      }
 
-        let pAvg = (pStart + pEnd) / 2;
-        if (pAvg <= 0.01) pAvg = 0.01;
-        if (pAvg >= 0.99) pAvg = 0.99;
+      const probsEnd = getLMSRProbs(simulatedVotes);
+      const pEndYes = probsEnd[ansIndex];
+      const pEnd = bType === 'YES' ? pEndYes : (1 - pEndYes);
 
-        const pointsPotentiels = +(bet / pAvg).toFixed(2); // <-- Précision à 2 décimales
+      let pAvg = (pStart + pEnd) / 2;
+      if (pAvg <= 0.01) pAvg = 0.01;
+      if (pAvg >= 0.99) pAvg = 0.99;
 
-      // Si le joueur avait DÉJÀ misé sur cette exacte même option, on additionne
-      let existingBet = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex);
+      const pointsPotentiels = +(bet / pAvg).toFixed(2);
+
+      let existingBet = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && b.type === bType);
       if (existingBet) {
          existingBet.bet += bet;
          existingBet.pts += pointsPotentiels;
       } else {
-         player.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: bet, pts: pointsPotentiels });
+         player.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: bet, pts: pointsPotentiels, type: bType });
       }
 
-// On injecte les nouveaux fonds dans le marché global
-      ch.votes[ansIndex] += bet; 
+      ch.votes = simulatedVotes; 
     }
   });
 
-  saveToCloud(); // Remplace localStorage
+  saveToCloud(); 
   
-  // NOUVEAU : On ne redirige plus vers Recap. On nettoie les sélections (pour éviter les doubles validations) et on rafraîchit.
+  // On nettoie les sélections temporaires
   selectedAnswers = new Array(game.challenges.length).fill(null);
   selectedBets = new Array(game.challenges.length).fill(0);
-  renderPlayChallenges(); 
+  if (typeof selectedBetTypes !== 'undefined') {
+    selectedBetTypes = new Array(game.challenges.length).fill('YES');
+  }
+
+  // --- LA LIGNE MAGIQUE QUI AVAIT DISPARU ---
+  renderPlayerRecap(pseudo);
 }
 
 function computeHistories(){
@@ -1851,40 +1929,35 @@ function adminNext(){
 }
 
 function finish() {
-  // 1. L'admin enregistre les bonnes réponses à partir de ses listes déroulantes
-  game.challenges.forEach((ch, i) => {
-    const sel = document.getElementById("correct-select-" + i);
-    if (sel) ch.correct = parseInt(sel.value, 10);
-  });
+  // On vérifie que toutes les questions ont bien reçu un résultat
+  const allResolved = game.challenges.every(ch => ch.status === "resolved");
+  if (!allResolved) {
+     if (!confirm("Attention, certaines questions n'ont pas encore de résultat publié. Voulez-vous vraiment clôturer le jeu définitivement ?")) {
+         return;
+     }
+  }
 
+  // On verrouille le jeu
   game.isResolved = true;
-  saveToCloud(); // Remplace localStorage
+  saveToCloud(); 
   
   // On coupe l'écoute en temps réel de l'admin
   if (sessionConfig.code) {
     db.ref('sessions/' + sessionConfig.code).off();
   }
 
-  // 2. L'admin passe à l'écran de classement
+  // On passe à l'écran de classement
   displayLeaderboard();
   showScreen('results');
 }
 
 function displayLeaderboard() {
-  // Sécurité : Si aucun joueur n'est inscrit, on crée une liste vide pour éviter le bug "map"
   const playersList = game.players || [];
 
   const leaderboard = playersList.map(p => {
-    let scoreFinal = p.balance || 0;
-    if (p.portfolio) {
-      p.portfolio.forEach(snap => {
-        // On vérifie que la réponse est bonne ET qu'il n'a pas revendu ses parts avant la fin
-        if (snap.ansIndex === game.challenges[snap.cIndex].correct && !snap.cashedOut) {
-          scoreFinal += snap.pts;
-}
-      });
-    }
-    return { name: p.name, pts: scoreFinal.toFixed(2) }; 
+    // CORRECTION : Le solde du joueur contient DÉJÀ l'argent des questions résolues,
+    // calculé mathématiquement (OUI/NON) au moment où l'admin publie les résultats.
+    return { name: p.name, pts: (p.balance || 0).toFixed(2) }; 
   });
 
   leaderboard.sort((a, b) => b.pts - a.pts);
@@ -1956,7 +2029,8 @@ function checkAccess() {
       return;
     }
 
-    if (now > sessionConfig.expiresAt) {
+    const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+    if (now > checkTime) {
       if (game.isResolved === true) {
         displayLeaderboard(); showScreen('results'); 
       } else {
@@ -1976,15 +2050,19 @@ function checkAccess() {
 currentPlayerMode = modeToPlay;
     game.currentPlayerName = pseudo;
 
-    // NOUVEAU : On active l'écoute en temps réel pour le joueur
+    // NOUVEAU : Un seul écouteur en temps réel pour piloter toute l'interface joueur
     db.ref('sessions/' + inputCode).on('value', (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         game = data.gameData;
         sessionConfig = data.sessionConfig;
 
-        // Mise à jour du solde local (pour les gains)
-        const me = (game.players || []).find(p => p.name === pseudo);
+        // 1. SÉCURITÉ FIREBASE : On restaure les données qui s'effacent
+        if (!game.players) game.players = [];
+        game.currentPlayerName = pseudo;
+
+        // 2. Mise à jour du solde local
+        const me = game.players.find(p => p.name === pseudo);
         if (me) {
           currentPlayerBalance = me.balance;
           updateGlobalBalance();
@@ -1993,32 +2071,26 @@ currentPlayerMode = modeToPlay;
           updateGlobalBalance();
         }
 
-        // Affichage de l'interface de jeu
+        // 3. Rafraîchissement de l'écran principal des questions
         document.getElementById("playerAuth").classList.add("hidden");
         document.getElementById("gameContent").classList.remove("hidden");
         document.getElementById("playerTitle").textContent = "Prédictions de " + pseudo;
         renderPlayChallenges();
-      }
-    });
-    // NOUVEAU : On écoute Firebase EN TEMPS RÉEL sur l'écran de jeu
-    db.ref('sessions/' + inputCode).on('value', (liveSnap) => {
-      if (liveSnap.exists()) {
-        const liveData = liveSnap.val();
-        game = liveData.gameData;
-        
-        // On met à jour le solde du joueur (pour voir ses gains arriver)
-        const me = game.players.find(p => p.name === pseudo);
-        if (me) {
-          currentPlayerBalance = me.balance;
-          updateGlobalBalance();
+
+        // 4. Rafraîchissement du tableau de bord "Live" si le joueur y est
+        const recapEl = document.getElementById("playerRecap");
+        if (recapEl && recapEl.style.display === "block") {
+          if (game.isResolved) {
+             displayLeaderboard();
+             showScreen('results');
+          } else {
+             updateRecapUI(pseudo);
+          }
         }
-        
-        renderPlayChallenges();
       }
     });
 
   }).catch((error) => {
-    // Affiche la raison exacte envoyée par Google
     msg.textContent = "Erreur Firebase : " + error.message;
     msg.className = "msg err";
   });
@@ -2179,19 +2251,34 @@ function startManageTimer() {
   
   timerInterval = setInterval(() => {
     const now = Date.now();
-    const diff = sessionConfig.expiresAt - now;
+    // On utilise la vraie fin du jeu (ou expiresAt par sécurité si c'est une vieille partie)
+    const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+    const diff = targetTime - now;
 
+    // NOUVEAU : On vérifie si TOUTES les questions sont clôturées ou publiées
+    const allClosedOrResolved = game.challenges.every(ch => {
+      const status = getEffectiveStatus(ch);
+      return status === "closed" || status === "resolved";
+    });
+
+    // Gestion de l'affichage du temps global
     if (diff <= 0) {
       clearInterval(timerInterval);
       document.getElementById("gameTimer").textContent = "TERMINÉ";
-      document.getElementById("finalValidationZone").classList.remove("hidden");
-      renderValidationList();
     } else {
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
       document.getElementById("gameTimer").textContent = 
         `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+
+    // Apparition du bouton final : Si le temps est écoulé OU si l'admin a tout fermé manuellement
+    const finalZone = document.getElementById("finalValidationZone");
+    if (diff <= 0 || allClosedOrResolved) {
+      finalZone.classList.remove("hidden");
+    } else {
+      finalZone.classList.add("hidden");
     }
   }, 1000);
 }
@@ -2244,9 +2331,9 @@ let hasBets = false;
 // On utilise le calcul automatique du temps
     const effStatus = getEffectiveStatus(ch);
     
-    let statusLabel = `<span style="color:#9ca3af;">En attente (Début: ${new Date(ch.startTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})</span>`;
-    if(effStatus === "open") statusLabel = `<span style="color:#4ade80;">EN DIRECT (Fin: ${new Date(ch.endTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})</span>`;
-    if(effStatus === "closed") statusLabel = `<span style="color:#f87171;">TEMPS ÉCOULÉ (En attente résultat)</span>`;
+let statusLabel = `<span style="color:#9ca3af;">En attente</span>`;
+    if(effStatus === "open") statusLabel = `<span style="color:#4ade80;">EN DIRECT</span>`;
+    if(effStatus === "closed") statusLabel = `<span style="color:#f87171;">TEMPS ÉCOULÉ</span>`;
     if(effStatus === "resolved") statusLabel = `<span style="color:#3b82f6;">RÉSULTAT PUBLIÉ</span>`;
 
     block.innerHTML = `
@@ -2256,34 +2343,40 @@ let hasBets = false;
       </div>
       <div class="challenge-title" style="margin:5px 0;">${ch.question}</div>
       
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
-        <button onclick="forceTime(${i}, 'start')" style="background:#4b5563; font-size:11px; padding:6px; margin:0;">Ouvrir maintenant</button>
-        <button onclick="forceTime(${i}, 'end')" style="background:#4b5563; font-size:11px; padding:6px; margin:0;">Clôturer maintenant</button>
-      </div>
+      <div style="margin-bottom:12px;">
+        ${effStatus === "pending" ? `
+          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center; border:1px dashed #4b5563;">
+            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">Ouverture auto dans :</div>
+            <div id="admin-pending-timer-${i}" style="font-size:20px; font-weight:800; color:#3b82f6; font-family:monospace; margin:5px 0;">--:--</div>
+            <button onclick="forceTime(${i}, 'start')" style="background:#22c55e; font-size:11px; padding:8px; margin:0; width:100%;">LANCER MAINTENANT</button>
+          </div>
+        ` : ""}
 
-      ${effStatus === 'closed' ? `
-        <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; margin-bottom:10px;">
-          <label style="color:#3b82f6; margin-bottom:8px;">Saisir le résultat gagnant :</label>
-          <select id="res-${i}" style="margin-bottom:8px; border-radius:8px; background:#020617; color:white; border:1px solid #3b82f6;">
-            ${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
-          </select>
-          <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px;">Publier & Créditer les gains</button>
-        </div>
-      ` : ''}
-      <div class="challenge-title" style="margin:5px 0;">${ch.question}</div>
-      
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
-        <button onclick="updateChallengeStatus(${i}, 'open')" style="background:#22c55e; font-size:11px; padding:6px; margin:0;">Lancer / Ouvrir</button>
-        <button onclick="updateChallengeStatus(${i}, 'closed')" style="background:#ef4444; font-size:11px; padding:6px; margin:0;">Clôturer</button>
-      </div>
+        ${effStatus === "open" ? `
+          <div style="margin-bottom:8px; text-align:center;">
+            <div style="font-size:10px; color:#f87171; text-transform:uppercase;">Clôture auto dans :</div>
+            <div id="admin-open-timer-${i}" style="font-size:18px; font-weight:800; color:#f87171; font-family:monospace; margin:2px 0;">--:--</div>
+          </div>
+          <button onclick="forceTime(${i}, 'end')" style="background:#ef4444; font-size:12px; padding:10px; margin:0; font-weight:bold; width:100%;">CLÔTURER MAINTENANT</button>
+        ` : ""}
 
-      ${ch.status === 'closed' ? `
-        <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; margin-bottom:10px;">
-          <label style="color:#3b82f6; margin-bottom:8px;">Saisir le résultat gagnant :</label>
-          <select id="res-${i}" style="margin-bottom:8px;">${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`)}</select>
-          <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px;">Publier le résultat provisoire</button>
-        </div>
-      ` : ''}
+        ${effStatus === 'closed' ? `
+          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px;">
+            <label style="color:#3b82f6; margin-bottom:8px; display:block; font-size:12px;">Saisir le résultat gagnant :</label>
+            <select id="res-${i}" style="margin-bottom:8px; background:#020617; color:white; border:1px solid #3b82f6; border-radius:8px; width:100%;">
+              ${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
+            </select>
+            <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px; font-size:12px; width:100%;">Publier & Créditer les gains</button>
+          </div>
+        ` : ""}
+
+        ${effStatus === 'resolved' ? `
+          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
+            <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
+            <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
+          </div>
+        ` : ""}
+      </div>
 
       <canvas id="manage-chart-${i}" height="120" style="margin-bottom:10px;"></canvas>
       <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px;">
@@ -2303,6 +2396,9 @@ let hasBets = false;
       drawSingleChart(hist, manageId, i);
     }, 100);
   });
+
+  // NOUVEAU : On lance les décomptes côté admin
+  startAdminDashboardTimers();
 }
 
 function renderValidationList() {
@@ -2384,7 +2480,8 @@ function startPlayerTimer() {
     }
 
     const now = Date.now();
-    const diff = sessionConfig.expiresAt - now;
+    const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+    const diff = targetTime - now;
 
     if (diff <= 0) {
       clearInterval(playerTimerInterval);
@@ -2401,128 +2498,184 @@ function startPlayerTimer() {
 }
 
 function renderPlayerRecap(pseudo) {
-  const player = game.players.find(p => p.name === pseudo);
-  if(!player) return;
+  // On ne bloque plus l'affichage, updateRecapUI gérera le cas "joueur vide"
+  updateRecapUI(pseudo);
+  showScreen('playerRecap');
+}
 
-  // NOUVEAU : Écoute en temps réel pour rediriger vers le classement dès la validation admin
-  if (sessionConfig.code) {
-    db.ref('sessions/' + sessionConfig.code).on('value', (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        game = data.gameData;
-        
-        // Si l'admin vient de promulguer les résultats, on bascule INSTANTANÉMENT
-        if (game.isResolved) {
-          db.ref('sessions/' + sessionConfig.code).off(); // On arrête d'écouter
-          if (typeof playerTimerInterval !== 'undefined') clearInterval(playerTimerInterval);
-          
-          displayLeaderboard();
-          showScreen('results');
-        }
+let recapTimerInterval = null;
+
+function startRecapSessionTimer() {
+  if (recapTimerInterval) clearInterval(recapTimerInterval);
+
+  // On stocke la mécanique du chronomètre dans une variable
+  const tick = () => {
+    const timerEl = document.getElementById("recapSessionTimer");
+    if (!timerEl) return;
+
+    const now = Date.now();
+    const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+    const diff = targetTime - now;
+
+    if (diff <= 0) {
+      clearInterval(recapTimerInterval);
+      timerEl.textContent = "SESSION TERMINÉE";
+    } else {
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      // Affichage propre (cache les heures s'il reste moins d'1h)
+      timerEl.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+  };
+
+  // 1. On force l'affichage IMMÉDIAT du temps (corrige le bug du --:--:--)
+  tick();
+
+  // 2. On lance la boucle qui tournera toutes les secondes
+  recapTimerInterval = setInterval(tick, 1000);
+}
+
+// Fonction interne pour mettre à jour les chiffres en temps réel
+// Fonction interne pour mettre à jour les chiffres en temps réel
+function updateRecapUI(pseudo) {
+  let player = (game.players || []).find(p => p.name === pseudo);
+  if (!player) {
+    player = { name: pseudo, balance: currentPlayerBalance, portfolio: [] };
+  }
+  
+  const summaryContainer = document.getElementById("recapSummary");
+  if (!summaryContainer) return;
+
+  const chartsTitle = document.querySelector("#playerRecap h3");
+  const chartsContainer = document.getElementById("recapChartsContainer");
+  
+  // GESTION DE L'ÉTAT VIDE (Aucun pari)
+  if (!player.portfolio || player.portfolio.length === 0) {
+    if (chartsTitle) chartsTitle.style.display = "none";
+    if (chartsContainer) chartsContainer.style.display = "none";
+    
+    summaryContainer.innerHTML = `
+      <div style="background:rgba(15,23,42,0.8); border:1px solid #3b82f6; border-radius:15px; padding:40px 20px; text-align:center; margin: 20px auto; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+        <div style="font-size:18px; color:#f9fafb; margin-bottom:25px; font-weight:bold;">Vous n'avez pas encore saisi de pari.</div>
+        <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); padding:12px 24px; border-radius:999px; font-weight:bold; box-shadow:0 10px 20px rgba(59,130,246,0.3); border:none;">Retourner aux questions</button>
+      </div>
+    `;
+    return; // <-- LE MOT-CLÉ QUI EMPÊCHAIT LE BOUTON DE MARCHER !
+  } else {
+    if (chartsTitle) chartsTitle.style.display = "block";
+    if (chartsContainer) chartsContainer.style.display = "block";
+  }
+
+// CALCUL DU GAIN POTENTIEL MAXIMUM
+  let totalPotentialPoints = 0;
+  if (player.portfolio) {
+    player.portfolio.forEach(snap => {
+      const ch = game.challenges[snap.cIndex];
+      const isWin = (snap.type === 'YES' && snap.ansIndex === ch.correct) ||
+                    (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
+                    (!snap.type && snap.ansIndex === ch.correct);
+
+      // CORRECTION : On ajoute le potentiel UNIQUEMENT s'il n'a pas encore été payé sur le solde
+      if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
+        totalPotentialPoints += snap.pts;
       }
     });
   }
+  const maxScorePossible = (player.balance + totalPotentialPoints).toFixed(2);
 
-  const summaryContainer = document.getElementById("recapSummary");
-  summaryContainer.innerHTML = "";
+  // GÉNÉRATION DU CLASSEMENT PROVISOIRE
+  const provLeaderboard = (game.players || []).map(p => {
+    let pot = 0;
+    (p.portfolio || []).forEach(snap => {
+      const ch = game.challenges[snap.cIndex];
+      const isWin = (snap.type === 'YES' && snap.ansIndex === ch.correct) ||
+                    (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
+                    (!snap.type && snap.ansIndex === ch.correct);
+      
+      // CORRECTION : Évite le double comptage des gains pour le top 3
+      if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
+        pot += snap.pts;
+      }
+    });
+    return { name: p.name, score: parseFloat((p.balance + pot).toFixed(2)) };
+  }).sort((a, b) => b.score - a.score);
 
-  // On vérifie si le chrono est écoulé
-  const isTimeUp = Date.now() > sessionConfig.expiresAt;
+  const myRank = provLeaderboard.findIndex(p => p.name === pseudo) + 1;
 
-  // NOUVEAU : Affichage du décompte en temps réel si le jeu est encore en cours
-  if (!isTimeUp) {
-    summaryContainer.innerHTML += `
-      <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(59,130,246,0.4); border-radius:12px; padding:12px; text-align:center; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
-        <div style="font-size:12px; color:#9ca3af; margin-bottom:4px;">Fin de la session dans :</div>
-        <div id="playerCountdown" style="font-size:24px; font-weight:800; color:#3b82f6; font-family:monospace; letter-spacing:1px;">--:--:--</div>
-      </div>
-    `;
-    startPlayerTimer();
-  }
-
-  if (isTimeUp && !game.isResolved) {
-     // Message d'attente si le temps est écoulé mais que l'admin réfléchit encore
-     summaryContainer.innerHTML += `<div style="background:rgba(250, 204, 21, 0.15); border:1px solid #facc15; color:#facc15; padding:12px; border-radius:12px; text-align:center; font-weight:bold; margin-bottom:15px; font-size:14px; box-shadow:0 4px 15px rgba(250,204,21,0.2);">Les résultats paraîtront très prochainement... ⏳</div>`;
-  }
-
-  // Bouton pour utiliser l'argent retiré et remiser (On le cache si le jeu est gelé)
-  if (currentPlayerMode === 'advanced' && !isTimeUp) {
-     summaryContainer.innerHTML += `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin-bottom:15px; box-shadow:0 10px 20px rgba(59,130,246,0.3);">Investir sur de nouvelles options</button>`;
-  }
-
-  if (!player.portfolio || player.portfolio.length === 0) {
-     summaryContainer.innerHTML += `<div class="msg">Aucun investissement en cours.</div>`;
-  } else {
-     player.portfolio.forEach(snap => {
-        const ch = game.challenges[snap.cIndex];
-        const answerText = ch.answers[snap.ansIndex];
-        
-        let detailsHtml = "";
-        let actionBtn = "";
-
-if (currentPlayerMode === 'advanced') {
-            // Mode Avancé : Calcul complet de la revente avec l'algorithme LMSR
-            const quantiteParts = snap.pts; 
-            
-            const probsStart = getLMSRProbs(ch.votes);
-            const pStart = probsStart[snap.ansIndex];
-            
-            const estimatedWithdraw = quantiteParts * pStart; 
-            
-            let simulatedVotes = [...ch.votes];
-            simulatedVotes[snap.ansIndex] = Math.max(0, simulatedVotes[snap.ansIndex] - estimatedWithdraw);
-            const probsEnd = getLMSRProbs(simulatedVotes);
-            const pEnd = probsEnd[snap.ansIndex];
-            
-            let pAvg = (pStart + pEnd) / 2; 
-            if (pAvg <= 0.01) pAvg = 0.01;
-            
-            const currentValue = (quantiteParts * pAvg).toFixed(2); 
-            const profit = (currentValue - snap.bet).toFixed(2);
-            const colorProfit = profit >= 0 ? "#4ade80" : "#f87171";
-            const sign = profit >= 0 ? "+" : "";
-
-            if (!isTimeUp) {
-               actionBtn = `<button onclick="openSellPanel(${snap.cIndex}, ${snap.ansIndex})" style="background:#f97316; padding:6px 12px; font-size:12px; width:auto; margin-top:8px;">Retirer des fonds (Partiel/Total)</button>`;
-            } else if (isTimeUp && !game.isResolved) {
-               actionBtn = `<div style="font-size:11px; color:#facc15; margin-top:8px;">🔒 Marché clôturé, en attente du résultat</div>`;
-            }
-
-            detailsHtml = `
-               Mise totale : ${snap.bet} u | Gain max à terme : ${snap.pts} pts<br>
-               <span style="color:${colorProfit}; font-weight:bold;">Valeur de revente : ${currentValue} 💰 (${sign}${profit} 💰)</span>
-            `;
-        } else {
-            // Mode Facile : On masque les données de revente
-            detailsHtml = `Gain potentiel à terme : ${snap.pts} pts`;
-        }
-
-        summaryContainer.innerHTML += `
-          <div class="challenge-block">
-            <div class="challenge-title">${ch.question}</div>
-            <div style="color:#4ade80; font-weight:bold; margin-top:5px;">Choix : ${answerText}</div>
-            <div style="font-size:12px; color:#9ca3af; margin-top:3px; line-height:1.4;">
-               ${detailsHtml}
-            </div>
-            ${actionBtn}
-          </div>
-        `;
-     });
-  }
-
-  const chartsContainer = document.getElementById("recapChartsContainer");
-  chartsContainer.innerHTML = "";
-  game.challenges.forEach((ch, i) => {
-    const block = document.createElement("div");
-    block.className = "chart-block";
-    block.innerHTML = `<h3>${ch.category}</h3><div class="chart-caption">${ch.question}</div><canvas id="recap-chart-${i}" height="180"></canvas>`;
-    chartsContainer.appendChild(block);
-  });
+  // CALCUL IMMÉDIAT DU TEMPS RESTANT
+  const now = Date.now();
+  const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+  const diff = targetTime - now;
+  let timerText = "--:--:--";
   
-  const histories = computeHistories();
-  histories.forEach((hist, i) => setTimeout(() => drawSingleChart(hist, "recap-chart-" + i, i), 50));
+  if (diff <= 0) {
+    timerText = "SESSION TERMINÉE";
+  } else {
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    timerText = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  }
 
-  showScreen('playerRecap');
+  summaryContainer.innerHTML = `
+    <div style="text-align:center; margin-bottom:15px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
+      <div style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Temps de jeu restant</div>
+      <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
+    </div>
+    
+    <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #3b82f6; border-radius:15px; padding:15px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:11px; color:#9ca3af; text-transform:uppercase;">Gain Max Potentiel</div>
+          <div style="font-size:28px; font-weight:800; color:#3b82f6;">${maxScorePossible} <span style="font-size:14px;">pts</span></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:#9ca3af;">Rang Provisoire</div>
+          <div style="font-size:22px; font-weight:800; color:#4ade80;">#${myRank}</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:rgba(15,23,42,0.6); border-radius:12px; padding:10px; margin-bottom:20px; border:1px solid #334155;">
+      <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
+      ${provLeaderboard.slice(0, 3).map((p, i) => `
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
+          <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
+          <span>${p.score} pts</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <button onclick="goToPlayScreen()" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; margin-bottom:20px;">
+      Retourner aux questions
+    </button>
+
+    <h3 style="margin-bottom:10px;">Détail de vos paris</h3>
+  `;
+
+  if (player.portfolio) {
+    player.portfolio.forEach(snap => {
+      const ch = game.challenges[snap.cIndex];
+      const typeBadge = snap.type === 'NO' ? 
+        '<span style="background:rgba(248,113,113,0.2); color:#f87171; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">NON</span>' : 
+        '<span style="background:rgba(74,222,128,0.2); color:#4ade80; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">OUI</span>';
+
+      summaryContainer.innerHTML += `
+        <div class="challenge-block" style="border-left: 3px solid #3b82f6;">
+          <div style="font-size:10px; color:#9ca3af;">${ch.category}</div>
+          <div class="challenge-title">${ch.question}</div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+            <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]} ${typeBadge}</div>
+            <div style="color:#3b82f6; font-size:13px;">+${snap.pts} pts potentiels</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // Lancement du moteur de chronomètre
+  startRecapSessionTimer();
 }
 
 // Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
@@ -2839,21 +2992,59 @@ function resolveChallenge(index) {
   game.challenges[index].correct = correctIdx;
   game.challenges[index].status = "resolved";
   
-  // DISTRIBUTION DES GAINS : On crédite le solde des gagnants pour qu'ils puissent REJOUER
+// DISTRIBUTION DES GAINS : Prise en compte du OUI et du NON
   if (game.players) {
     game.players.forEach(p => {
       if (p.portfolio) {
-        // On cherche si le joueur a misé sur la BONNE réponse de cette question
-        const winningBet = p.portfolio.find(b => b.cIndex === index && b.ansIndex === correctIdx);
+        // On filtre TOUS les paris gagnants (Ceux qui ont dit OUI sur la bonne, ou NON sur une mauvaise)
+        const winningBets = p.portfolio.filter(b => b.cIndex === index && (
+          (b.type === 'YES' && b.ansIndex === correctIdx) ||
+          (b.type === 'NO' && b.ansIndex !== correctIdx) ||
+          (!b.type && b.ansIndex === correctIdx) // Rétrocompatibilité
+        ));
         
-        // On vérifie s'il n'a pas déjà été payé pour cette question (sécurité)
-        if (winningBet && !winningBet.paidOut) {
-          p.balance = parseFloat((p.balance + winningBet.pts).toFixed(2));
-          winningBet.paidOut = true; // Marqueur de paiement
-        }
+        winningBets.forEach(winningBet => {
+          if (!winningBet.paidOut) {
+            p.balance = parseFloat((p.balance + winningBet.pts).toFixed(2));
+            winningBet.paidOut = true; 
+          }
+        });
       }
     });
   }
+  
+  saveToCloud();
+  renderManageDashboard();
+}
+
+function undoResolveChallenge(index) {
+  if(!confirm("Voulez-vous vraiment annuler ce résultat ? L'argent gagné par les joueurs sur cette question leur sera automatiquement retiré jusqu'à la nouvelle publication.")) return;
+
+  const ch = game.challenges[index];
+  
+// 1. REPRISE DES GAINS : On annule les paiements effectués
+  if (game.players) {
+    game.players.forEach(p => {
+      if (p.portfolio) {
+        const winningBets = p.portfolio.filter(b => b.cIndex === index && (
+          (b.type === 'YES' && b.ansIndex === ch.correct) ||
+          (b.type === 'NO' && b.ansIndex !== ch.correct) ||
+          (!b.type && b.ansIndex === ch.correct)
+        ));
+        
+        winningBets.forEach(winningBet => {
+          if (winningBet.paidOut) {
+            p.balance = parseFloat((p.balance - winningBet.pts).toFixed(2));
+            winningBet.paidOut = false; 
+          }
+        });
+      }
+    });
+  }
+  
+  // 2. RETOUR AU STATUT PRÉCÉDENT
+  ch.correct = null;
+  ch.status = "closed";
   
   saveToCloud();
   renderManageDashboard();
@@ -2873,6 +3064,329 @@ function quickTime(index, type) {
   }
 }
 
+let adminDashboardTimerInterval = null;
+
+function startAdminDashboardTimers() {
+  if (adminDashboardTimerInterval) clearInterval(adminDashboardTimerInterval);
+
+  adminDashboardTimerInterval = setInterval(() => {
+    const now = Date.now();
+    let needsRefresh = false;
+
+    game.challenges.forEach((ch, i) => {
+      const effStatus = getEffectiveStatus(ch);
+      const pTimer = document.getElementById(`admin-pending-timer-${i}`);
+      const oTimer = document.getElementById(`admin-open-timer-${i}`);
+
+      if (effStatus === "pending") {
+        if (pTimer) {
+          const diff = ch.startTime - now;
+          if (diff <= 0) needsRefresh = true;
+          else pTimer.textContent = formatTimeDiff(diff);
+        } else { needsRefresh = true; }
+      } 
+      else if (effStatus === "open") {
+        if (oTimer) {
+          const diff = ch.endTime - now;
+          if (diff <= 0) needsRefresh = true;
+          else oTimer.textContent = formatTimeDiff(diff);
+        } else { needsRefresh = true; }
+      }
+      else if (effStatus === "closed" && (oTimer || pTimer)) {
+        needsRefresh = true;
+      }
+    });
+
+    if (needsRefresh) renderManageDashboard();
+  }, 1000);
+}
+
+// ==========================================
+// MOTEUR D'AFFICHAGE GRAND ÉCRAN (VIVA TECH)
+// ==========================================
+
+let bsInterval = null;
+let bsTimerInterval = null;
+let isBigScreenActive = false;
+let bsActiveIndices = [];
+let bsLeftIndex = 0;
+let bsRightIndex = 1;
+let bsToggle = 'left';
+
+function checkBigScreenAccess() {
+  const input = document.getElementById("bsCodeInput").value.trim().toUpperCase();
+  const msg = document.getElementById("bsAuthMsg");
+  if (!input) {
+    msg.textContent = "Veuillez entrer le code de session.";
+    msg.className = "msg err";
+    return;
+  }
+
+  msg.textContent = "Connexion au serveur..."; 
+  msg.className = "msg ok";
+
+  // Ecoute en temps réel pour synchroniser le grand écran instantanément avec les smartphones
+  db.ref('sessions/' + input).on('value', (snapshot) => {
+    if (!snapshot.exists()) {
+      msg.textContent = "Code invalide ou session inexistante."; 
+      msg.className = "msg err";
+      return;
+    }
+    
+    const data = snapshot.val();
+    game = data.gameData;
+    sessionConfig = data.sessionConfig;
+    if (!game.players) game.players = [];
+
+    if (!isBigScreenActive) {
+      isBigScreenActive = true;
+      msg.textContent = "";
+      showScreen('bigScreen');
+      startBigScreenEngine();
+    } else {
+      // Met à jour les pourcentages instantanément lors d'un pari
+      renderBigScreen();
+    }
+  });
+}
+
+function startBigScreenEngine() {
+  if (bsInterval) clearInterval(bsInterval);
+  if (bsTimerInterval) clearInterval(bsTimerInterval);
+  
+  updateBsIndices(true);
+  renderBigScreen();
+
+  // MOTEUR DE ROTATION ALTERNÉE : S'exécute toutes les 30 secondes avec fondu
+  bsInterval = setInterval(() => {
+    // 1. On identifie quel côté va changer (bsToggle nous dit lequel est remplacé)
+    const targetId = (bsToggle === 'left') ? "bsLeft" : "bsMiddle";
+    const targetEl = document.getElementById(targetId);
+    
+    // 2. On lance la disparition (fade out)
+    if (targetEl) targetEl.classList.add("bs-faded");
+    
+    // 3. On attend 800ms (durée de la transition CSS) pour changer les infos
+    setTimeout(() => {
+      updateBsIndices(false);
+      renderBigScreen();
+      
+      // 4. On relance l'apparition (fade in)
+      if (targetEl) targetEl.classList.remove("bs-faded");
+    }, 800);
+    
+  }, 30000);
+
+  // MOTEUR DE CHRONOMÈTRE : S'exécute chaque seconde pour la fluidité
+  bsTimerInterval = setInterval(() => {
+     if(isBigScreenActive) updateBsTimers();
+  }, 1000);
+}
+
+function updateBsIndices(isInit) {
+  if(!game || !game.challenges) return;
+
+  // On liste prioritairement les questions ouvertes ou en attente
+  bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
+     const st = getEffectiveStatus(game.challenges[i]);
+     return st === 'open' || st === 'pending';
+  });
+  
+  // S'il n'y a plus de questions actives, on boucle sur tout pour meubler l'écran
+  if (bsActiveIndices.length === 0) {
+     bsActiveIndices = game.challenges.map((c, i) => i);
+  }
+
+  if (isInit) {
+    bsLeftIndex = bsActiveIndices[0] || 0;
+    bsRightIndex = bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsLeftIndex;
+    bsToggle = 'left'; // Le prochain bloc à être remplacé sera la gauche
+  } else {
+    // Si on a plus de 2 questions à afficher, on procède à la rotation
+    if (bsActiveIndices.length > 2) {
+      const currentDisplayed = [bsLeftIndex, bsRightIndex];
+      // On cherche la prochaine question qui n'est pas déjà affichée à l'écran
+      let next = bsActiveIndices.find(idx => !currentDisplayed.includes(idx));
+      
+      // Si on a affiché toutes les questions actives, on relance la boucle
+      if (next === undefined) {
+         const maxDisplayed = Math.max(bsLeftIndex, bsRightIndex);
+         const nextPos = (bsActiveIndices.indexOf(maxDisplayed) + 1) % bsActiveIndices.length;
+         next = bsActiveIndices[nextPos];
+      }
+      
+      // Alternance : On remplace la gauche, puis 30s plus tard la droite (Chacune reste donc 1 min visible)
+      if (bsToggle === 'left') {
+         bsLeftIndex = next !== undefined ? next : bsActiveIndices[0];
+         bsToggle = 'right';
+      } else {
+         bsRightIndex = next !== undefined ? next : bsActiveIndices[1];
+         bsToggle = 'left';
+      }
+    }
+  }
+}
+
+function renderBigScreen() {
+  if (!isBigScreenActive || !game || !game.challenges) return;
+
+  // GÉNÉRATION DU QR CODE DE REJOINDRE
+  const currentUrl = window.location.href.split('?')[0];
+  const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
+  
+  document.getElementById("bsQrContainer").innerHTML = `
+    <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+    <div>
+      <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; font-weight:bold;">Scannez pour jouer</div>
+      <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.code}</div>
+    </div>
+  `;
+  
+  const leftCh = game.challenges[bsLeftIndex];
+  const rightCh = game.challenges[bsRightIndex];
+
+  let leftImgHtml = "";
+  if (leftCh && leftCh.imageUrl) {
+     // Réduit à 200px et marge réduite à 15px
+     leftImgHtml = `<div style="height:200px; width:100%; border-radius:16px; margin-bottom:15px; background:url('${leftCh.imageUrl}') center/cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></div>`;
+  }
+  
+  document.getElementById("bsLeft").innerHTML = `
+    <div style="font-size:22px; font-weight:800; letter-spacing:1.5px; margin-bottom:20px; color:#e2e8f0; text-transform:uppercase;">${leftCh ? leftCh.category : ''}</div>
+    ${leftImgHtml}
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${leftCh ? leftCh.question : ''}</div>
+       <div id="bsTimer-${bsLeftIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+      ${leftCh ? renderBsProgress(leftCh) : ''}
+    </div>
+  `;
+
+  // ================= COLONNE CENTRALE (Question + Graphique) =================
+  document.getElementById("bsMiddle").innerHTML = `
+    <canvas id="bsChart" style="width:100%; height:200px; margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${rightCh ? rightCh.question : ''}</div>
+       <div id="bsTimer-${bsRightIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+      ${rightCh ? renderBsProgress(rightCh) : ''}
+    </div>
+  `;
+
+  // On attend un instant que le canvas soit créé pour dessiner la courbe boursière
+  setTimeout(() => {
+    const histories = computeHistories();
+    if (histories && histories[bsRightIndex]) {
+       drawSingleChart(histories[bsRightIndex], "bsChart", bsRightIndex);
+    }
+  }, 100);
+
+  // ================= COLONNE DROITE (Leaderboard Fixe) =================
+  const playersList = game.players || [];
+  
+  // Le classement est uniquement basé sur l'argent réel du joueur (= paris résolus gagnés)
+  const leaderboard = playersList.map(p => {
+     return { name: p.name, score: p.balance || 0 };
+  }).sort((a,b) => b.score - a.score).slice(0, 10);
+
+  let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:30px; color:#e2e8f0; text-transform:uppercase;">LEADERBOARD</div>`;
+  
+  leaderboard.forEach((p, idx) => {
+     lbHtml += `
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:22px; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
+           <div style="display:flex; gap:20px; align-items:center;">
+              <span style="color:#a855f7; font-weight:900; width:30px; font-size:20px;">${idx+1}</span>
+              <span style="font-weight:500; text-transform:capitalize;">${p.name}</span>
+           </div>
+           <div style="font-weight:800;">${p.score.toFixed(0)}</div>
+        </div>
+     `;
+  });
+  document.getElementById("bsRight").innerHTML = lbHtml;
+
+  updateBsTimers(); // Met à l'heure immédiatement lors du changement
+}
+
+function renderBsProgress(ch) {
+  let probs = [];
+  if (typeof getLMSRProbs === 'function') {
+     probs = getLMSRProbs(ch.votes);
+  } else {
+     const t = ch.votes.reduce((a,b)=>a+b,0)||1;
+     probs = ch.votes.map(v=>v/t);
+  }
+  
+  const letters = ['A','B','C','D','E','F'];
+  const colors = ['#a855f7', '#d946ef', '#6366f1', '#f97316']; // Couleurs tech de l'image
+  
+  let html = '';
+  ch.answers.forEach((ans, i) => {
+     const pct = (probs[i]*100).toFixed(0);
+     const c = colors[i % colors.length];
+     html += `
+        <div style="display:flex; align-items:center; margin-bottom:15px;">
+           <div style="width:100%; background:rgba(255,255,255,0.05); border-radius:12px; height:45px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
+              <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.8; transition:width 1s ease-in-out;"></div>
+              <div style="position:absolute; top:0; left:20px; height:100%; display:flex; align-items:center; font-size:18px; font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+                 <span style="margin-right:15px; opacity:0.7;">${letters[i]}:</span> ${ans}
+              </div>
+           </div>
+           <div style="width:70px; text-align:right; font-size:22px; font-weight:800;">${pct}%</div>
+        </div>
+     `;
+  });
+  return html;
+}
+
+function updateBsTimers() {
+  if (!game || !game.challenges) return;
+
+  // 1. MISE À JOUR DU CHRONO GLOBAL
+  const globalEl = document.getElementById("bsGlobalTimer");
+  const now = Date.now();
+  const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+  const globalDiff = targetTime - now;
+
+  if (globalEl) {
+    if (globalDiff <= 0) {
+      globalEl.textContent = "SESSION TERMINÉE";
+    } else {
+      const h = Math.floor(globalDiff / 3600000);
+      const m = Math.floor((globalDiff % 3600000) / 60000);
+      const s = Math.floor((globalDiff % 60000) / 1000);
+      globalEl.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    }
+  }
+  
+  // 2. MISE À JOUR DES CHRONOS DES QUESTIONS
+  [bsLeftIndex, bsRightIndex].forEach(idx => {
+     const el = document.getElementById(`bsTimer-${idx}`);
+     if(!el) return;
+     const ch = game.challenges[idx];
+     if (!ch) return;
+     
+     const now = Date.now();
+     let diff = 0;
+     const effStatus = getEffectiveStatus(ch);
+     
+     if (effStatus === "pending") diff = ch.startTime - now;
+     else if (effStatus === "open") diff = ch.endTime - now;
+
+     if (effStatus === "closed" || effStatus === "resolved") {
+        el.textContent = "CLOS";
+     } else if (diff <= 0) {
+        el.textContent = "00:00";
+     } else {
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+     }
+  });
+}
 
 </script>
 
