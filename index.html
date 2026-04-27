@@ -394,9 +394,18 @@
     <h2>Gestion en temps réel</h2>
     <div id="gameTimer" style="font-weight:800; color:#f97316; font-size:18px; font-family:monospace;">00:00:00</div>
   </div>
-  <button onclick="confirmExitManage()" style="background:none; border:1px solid #4b5563; margin-top:10px; margin-bottom:15px; font-size:12px;">Quitter la gestion (Accueil)</button>
-  
-  <div id="manageChallengesContainer"></div>
+<button onclick="confirmExitManage()" style="background:none; border:1px solid #4b5563; margin-top:10px; margin-bottom:15px; font-size:12px;">Quitter la gestion (Accueil)</button>
+      
+      <div style="background:rgba(168,85,247,0.1); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(168,85,247,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h3 style="color:#a855f7; margin:0;">💬 Message aux joueurs</h3>
+          <span id="adminMessageFeedback" style="font-size:10px; color:#4ade80; font-weight:bold;"></span>
+        </div>
+        <textarea id="adminMessageInput" placeholder="Tapez une annonce (ex: Plus que 5 minutes !)..." style="width:100%; height:50px; background:rgba(0,0,0,0.3); color:white; border:1px solid #4b5563; border-radius:8px; padding:10px; font-family:inherit; resize:none; font-size:13px; box-sizing:border-box;"></textarea>
+        <button onclick="sendBroadcastMessage()" style="background:linear-gradient(135deg,#a855f7,#d946ef); margin-top:8px; padding:10px; font-size:13px;">Envoyer l'annonce</button>
+      </div>
+
+      <div id="manageChallengesContainer"></div>
 
   <div id="finalValidationZone" class="hidden" style="margin-top:20px; padding-top:20px; border-top:2px solid #f97316;">
     <h3>Fin de la session</h3>
@@ -475,9 +484,12 @@
     </div>
     <div id="challengesPlay"></div>
     
-    <div class="sticky-action-bar">
-      <button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; flex:0.4; font-size:12px; padding:12px 5px; box-shadow:none;">Mes Paris</button>
-      <button onclick="playNext()" style="flex:1; margin:0; padding:12px 5px; font-size:14px; box-shadow:0 10px 20px rgba(249,115,22,0.3);">Valider et Enregistrer</button>
+<div class="sticky-action-bar">
+      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; flex:0.3; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px;">
+        💬 <span id="msgUnreadBadgeGame" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
+      </button>
+      <button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; flex:0.4; font-size:12px; padding:10px 5px; box-shadow:none; border-radius:12px;">Mes Paris</button>
+      <button onclick="playNext()" style="flex:1; margin:0; padding:10px 5px; font-size:14px; box-shadow:0 10px 20px rgba(249,115,22,0.3); border-radius:12px;">Valider</button>
     </div>
   </div>
   <div class="msg" id="playMsg"></div>
@@ -506,9 +518,19 @@
   
   <div id="betError" class="msg err" style="margin-bottom:15px;"></div>
   
-  <div style="margin-top:auto;">
+<div style="margin-top:auto;">
     <button onclick="confirmBet()" style="background:linear-gradient(135deg,#22c55e,#16a34a);">Valider la mise</button>
     <button onclick="closeBetPanel()" style="background:none; border:1px solid #4b5563; margin-top:10px;">Annuler</button>
+  </div>
+</div>
+
+<div id="messagePanelOverlay" class="side-panel-overlay" onclick="closeMessagePanel()"></div>
+<div id="messagePanel" class="side-panel" style="max-height: 80vh;">
+  <h2 style="margin-bottom:15px; color:#a855f7;">Boîte de réception</h2>
+  <div id="messageList" style="overflow-y:auto; flex:1; margin-bottom:15px; padding-right:5px; display:flex; flex-direction:column; gap:10px;">
+     </div>
+  <div style="margin-top:auto;">
+    <button onclick="closeMessagePanel()" style="background:none; border:1px solid #4b5563; margin-top:10px;">Fermer</button>
   </div>
 </div>
 
@@ -520,6 +542,18 @@
   <button id="adminBtn" onclick="adminNext()">Suivant</button>
   <div class="msg" id="adminMsg"></div>
   <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Abandonner et Accueil</button>
+</div>
+
+<canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
+
+<div id="playerResult" style="display:none; text-align:center; padding:30px 15px; position:relative; z-index:10000; text-shadow: 0 4px 15px rgba(0,0,0,0.8);">
+  <h2 style="font-size:32px; margin-bottom:5px; color:#ffffff;">Session Terminée !</h2>
+  <p class="subtitle">Les prédictions sont closes.</p>
+  
+  <div id="medalDisplay" style="font-size:80px; margin:25px 0; text-shadow:0 10px 30px rgba(0,0,0,0.8);">👏</div>
+  <div id="rankDisplay" style="font-size:16px; color:#e2e8f0; margin-bottom:30px; line-height:1.5;">Vous avez fini à la place...</div>
+  
+  <button onclick="showScreen('results')" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); box-shadow:0 10px 20px rgba(59,130,246,0.3); font-size:16px;">Consulter le classement global</button>
 </div>
 
 <div id="results" class="card" style="display:none">
@@ -603,7 +637,13 @@
   }
 }
 function showScreen(screenId) {
-  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen'];
+  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult'];
+
+  // On cache le canvas de confettis si on quitte l'écran de résultat personnel
+  if (screenId !== 'playerResult') {
+     const canvas = document.getElementById("confettiCanvas");
+     if (canvas) canvas.style.display = "none";
+  }
 
   // 1. Actions de nettoyage et sécurité
   if (screenId === 'home') {
@@ -689,6 +729,7 @@ let selectedBetTypes = []; // NOUVEAU : Stocke 'YES' ou 'NO'
 let currentPlayChallengeIndex = 0;
 let currentAdminChallengeIndex = 0;
 let savedSetupData = null; 
+let playerReadMessagesCount = 0; // NOUVEAU : Suit le nombre de messages déjà lus par le joueur
 
 let currentPlayerMode = "easy"; 
 let currentPlayerBalance = 0;
@@ -1985,6 +2026,126 @@ function displayLeaderboard() {
   }
 }
 
+// ==============================================
+// GESTION DE LA CÉLÉBRATION ET DES CONFETTIS
+// ==============================================
+
+function showPlayerResult(pseudo) {
+  const playersList = game.players || [];
+  const totalPlayers = playersList.length;
+
+  // On calcule le vrai classement (identique au classement final)
+  const leaderboard = playersList.map(p => {
+    return { name: p.name, pts: parseFloat((p.balance || 0).toFixed(2)) };
+  }).sort((a, b) => b.pts - a.pts);
+
+  const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
+  
+  // S'il n'est pas classé (ex: Admin ou erreur), on l'envoie direct au classement global
+  if (myRankIndex === -1) {
+    displayLeaderboard();
+    showScreen('results');
+    return;
+  }
+
+  const myRank = myRankIndex + 1;
+  const medalEl = document.getElementById("medalDisplay");
+  const rankEl = document.getElementById("rankDisplay");
+
+  let medalHtml = "👏";
+  let confettiColors = null;
+
+  // Attribution de la médaille et des couleurs des confettis
+  if (myRank === 1) {
+    medalHtml = "🥇";
+    confettiColors = ['#fbbf24', '#f59e0b', '#d97706', '#fef3c7']; // Palette OR
+  } else if (myRank === 2) {
+    medalHtml = "🥈";
+    confettiColors = ['#d1d5db', '#9ca3af', '#6b7280', '#f3f4f6']; // Palette ARGENT
+  } else if (myRank === 3) {
+    medalHtml = "🥉";
+    confettiColors = ['#d97706', '#b45309', '#78350f', '#fcd34d']; // Palette BRONZE
+  }
+
+  medalEl.innerHTML = medalHtml;
+  rankEl.innerHTML = `Félicitations, vous avez fini à la place<br><strong style="font-size:32px; color:#3b82f6; display:block; margin-top:10px;">${myRank} / ${totalPlayers}</strong>`;
+
+  // On pré-calcule le classement global pour le bouton "Consulter"
+  displayLeaderboard(); 
+  showScreen('playerResult');
+
+  // On lance la pluie de confettis si le joueur est dans le top 3 !
+  if (confettiColors) {
+    startConfetti(confettiColors);
+  }
+}
+
+let confettiAnimId;
+let isConfettiFalling = false;
+
+function startConfetti(colors) {
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  canvas.style.display = "block";
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const pieces = [];
+  // Création de 120 morceaux de confettis
+  for (let i = 0; i < 120; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height, // Ils commencent au-dessus de l'écran
+      w: Math.random() * 10 + 6,
+      h: Math.random() * 6 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speed: Math.random() * 4 + 2,
+      angle: Math.random() * 360,
+      spin: (Math.random() - 0.5) * 0.2
+    });
+  }
+
+  isConfettiFalling = true;
+  // Les confettis s'arrêtent d'apparaître après 3.5 secondes pour éviter de tourner en boucle infinie
+  setTimeout(() => isConfettiFalling = false, 3500); 
+
+  function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+    
+    pieces.forEach(p => {
+      p.y += p.speed;
+      p.angle += p.spin;
+      
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+      
+      if (p.y <= canvas.height) active = true;
+
+      // Si le bout de papier touche le bas, on le remet en haut s'il pleut encore
+      if (p.y > canvas.height && isConfettiFalling) {
+        p.y = -10;
+        p.x = Math.random() * canvas.width;
+        active = true;
+      }
+    });
+
+    if (active) {
+      confettiAnimId = requestAnimationFrame(update);
+    } else {
+      canvas.style.display = "none";
+    }
+  }
+  
+  if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+  update();
+}
+
 function checkAccess() {
   const pseudo = document.getElementById("pseudo").value.trim();
   const inputCode = document.getElementById("accessCode").value.trim().toUpperCase();
@@ -2043,7 +2204,7 @@ function checkAccess() {
     const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     if (now > checkTime) {
       if (game.isResolved === true) {
-        displayLeaderboard(); showScreen('results'); 
+        showPlayerResult(pseudo); 
       } else {
         const existingPlayer = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
         if (existingPlayer) {
@@ -2068,9 +2229,20 @@ currentPlayerMode = modeToPlay;
         game = data.gameData;
         sessionConfig = data.sessionConfig;
 
-        // 1. SÉCURITÉ FIREBASE : On restaure les données qui s'effacent
+// 1. SÉCURITÉ FIREBASE : On restaure les données qui s'effacent
         if (!game.players) game.players = [];
+        if (!game.messages) game.messages = []; // On prépare le conteneur de messages
         game.currentPlayerName = pseudo;
+
+        // NOUVEAU : Traitement des messages entrants
+        updateMessageBadges();
+        const msgPanel = document.getElementById("messagePanel");
+        if (msgPanel && msgPanel.classList.contains("open")) {
+          // Si le joueur est en train de lire, on marque comme lu et on affiche direct
+          playerReadMessagesCount = game.messages.length;
+          renderMessageList();
+          updateMessageBadges();
+        }
 
         // 2. Mise à jour du solde local
         const me = game.players.find(p => p.name === pseudo);
@@ -2088,15 +2260,17 @@ currentPlayerMode = modeToPlay;
         document.getElementById("playerTitle").textContent = "Prédictions de " + pseudo;
         renderPlayChallenges();
 
-        // 4. Rafraîchissement du tableau de bord "Live" si le joueur y est
-        const recapEl = document.getElementById("playerRecap");
-        if (recapEl && recapEl.style.display === "block") {
-          if (game.isResolved) {
-             displayLeaderboard();
-             showScreen('results');
-          } else {
-             updateRecapUI(pseudo);
-          }
+        // 4. Déclenchement de la fin de jeu ou rafraîchissement
+        if (game.isResolved) {
+           // On s'assure qu'il n'est pas déjà sur un écran de fin pour éviter de relancer l'animation
+           if (document.getElementById("results").style.display !== "block" && document.getElementById("playerResult").style.display !== "block") {
+              showPlayerResult(pseudo);
+           }
+        } else {
+           const recapEl = document.getElementById("playerRecap");
+           if (recapEl && recapEl.style.display === "block") {
+              updateRecapUI(pseudo);
+           }
         }
       }
     });
@@ -2681,13 +2855,19 @@ function updateRecapUI(pseudo) {
     });
   }
 
-  // NOUVEAU : Barre collante pour retourner aux questions sans avoir à scroller
+// Barre collante avec intégration du bouton de messagerie
   summaryContainer.innerHTML += `
     <div style="padding-bottom: 90px;"></div>
     <div class="sticky-action-bar">
-      <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; width:100%; font-size:15px; box-shadow:0 10px 20px rgba(59,130,246,0.3);">Retourner aux questions</button>
+      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; flex:0.25; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px;">
+        💬 <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
+      </button>
+      <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>
     </div>
   `;
+
+  // On s'assure que la pastille de notification est à jour dès l'affichage
+  setTimeout(updateMessageBadges, 50);
 
   // Lancement du moteur de chronomètre
   startRecapSessionTimer();
@@ -3114,6 +3294,92 @@ function startAdminDashboardTimers() {
 
     if (needsRefresh) renderManageDashboard();
   }, 1000);
+}
+
+// ==========================================
+// GESTION DE LA MESSAGERIE (BROADCAST ADMIN)
+// ==========================================
+
+function sendBroadcastMessage() {
+  const input = document.getElementById("adminMessageInput");
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!game.messages) game.messages = [];
+  game.messages.push({
+    text: text,
+    timestamp: Date.now()
+  });
+
+  saveToCloud(); // Envoi sur Firebase instantanément
+  input.value = "";
+  
+  const msgFeedback = document.getElementById("adminMessageFeedback");
+  if(msgFeedback) {
+      msgFeedback.textContent = "Message envoyé !";
+      setTimeout(() => msgFeedback.textContent = "", 3000);
+  }
+}
+
+function openMessagePanel() {
+  const messages = game.messages || [];
+  playerReadMessagesCount = messages.length; // On marque tout comme lu
+  updateMessageBadges(); // On cache les pastilles rouges
+  renderMessageList(); // On dessine les messages
+  
+  document.getElementById("messagePanelOverlay").classList.add("open");
+  document.getElementById("messagePanel").classList.add("open");
+}
+
+function closeMessagePanel() {
+  document.getElementById("messagePanelOverlay").classList.remove("open");
+  document.getElementById("messagePanel").classList.remove("open");
+}
+
+function renderMessageList() {
+  const list = document.getElementById("messageList");
+  if (!list) return;
+  
+  const messages = game.messages || [];
+  
+  if (messages.length === 0) {
+    list.innerHTML = `<div style="text-align:center; color:#9ca3af; padding:20px; font-size:14px; font-style:italic;">Vous n'avez aucun message.</div>`;
+    return;
+  }
+  
+  // On affiche le message le plus récent en haut
+  const sortedMessages = [...messages].reverse();
+
+  list.innerHTML = sortedMessages.map(msg => {
+    const date = new Date(msg.timestamp);
+    const timeStr = date.getHours().toString().padStart(2,'0') + ":" + date.getMinutes().toString().padStart(2,'0');
+    return `
+      <div style="background:rgba(168,85,247,0.1); border-left:3px solid #a855f7; padding:10px 12px; border-radius:0 8px 8px 0;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+          <span style="font-size:10px; color:#a855f7; font-weight:bold; text-transform:uppercase;">Administrateur</span>
+          <span style="font-size:10px; color:#9ca3af;">${timeStr}</span>
+        </div>
+        <div style="font-size:14px; line-height:1.4; color:#f9fafb;">${msg.text}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateMessageBadges() {
+  const messages = game.messages || [];
+  const unread = messages.length - playerReadMessagesCount;
+  
+  const bGame = document.getElementById("msgUnreadBadgeGame");
+  const bRecap = document.getElementById("msgUnreadBadgeRecap");
+  
+  if (unread > 0) {
+    if (bGame) { bGame.textContent = unread; bGame.classList.remove("hidden"); }
+    if (bRecap) { bRecap.textContent = unread; bRecap.classList.remove("hidden"); }
+  } else {
+    if (bGame) bGame.classList.add("hidden");
+    if (bRecap) bRecap.classList.add("hidden");
+  }
 }
 
 // ==========================================
