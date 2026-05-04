@@ -899,13 +899,21 @@ function generateSetupFields() {
   if (isNaN(qty) || qty < 1) qty = 1;
   if (qty > 50) qty = 50; // Limite optionnelle pour éviter de faire ramer le navigateur
 
-  // NOUVEAU : On récupère les heures globales saisies par l'admin
+// NOUVEAU : On récupère les heures globales saisies par l'admin
   const gStart = document.getElementById("globalStartTime").value || "";
   const gEnd = document.getElementById("globalEndTime").value || "";
 
   const container = document.getElementById("dynamicSetupContainer");
   container.innerHTML = "";
   
+  // NOUVEAU : Bouton pour générer un jeu test aléatoire
+  const testBtn = document.createElement("button");
+  testBtn.type = "button";
+  testBtn.innerHTML = "🧪 Remplir avec un Jeu Test";
+  testBtn.style.cssText = "background: linear-gradient(135deg, #10b981, #059669); margin-bottom: 20px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);";
+  testBtn.onclick = fillTestGame;
+  container.appendChild(testBtn);
+
   // On initialise proprement les challenges avec des valeurs par défaut
   game.challenges = [];
   for (let i = 0; i < qty; i++) {
@@ -3470,6 +3478,111 @@ function setGlobalQuickTime(type) {
     const end = new Date(baseTime.getTime() + (180 * 60 * 1000));
     document.getElementById("globalEndTime").value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
   }
+}
+
+
+// ==========================================
+// MOTEUR DE JEU TEST (GÉNÉRATION ALÉATOIRE)
+// ==========================================
+
+const testQuestionBank = [
+  { c: "Future Spotlight", q: "Quelle technologie marquera le plus l'année 2026 ?", a: ["L'IA Générative", "L'Informatique Quantique", "La Réalité Mixte", "La Fusion Nucléaire"] },
+  { c: "Innovation Arena", q: "Quand aura lieu le premier vol habité vers Mars ?", a: ["Avant 2030", "Entre 2030 et 2035", "Après 2035", "Jamais"] },
+  { c: "Trend Signals", q: "Quelle cryptomonnaie aura la plus forte croissance ?", a: ["Bitcoin (BTC)", "Ethereum (ETH)", "Solana (SOL)", "Une nouvelle crypto"] },
+  { c: "Fun Facts", q: "Quelle est la couleur la plus populaire pour les logos de la Tech ?", a: ["Bleu", "Rouge", "Noir", "Vert"] },
+  { c: "Live traffic", q: "Combien de visiteurs sont attendus au salon aujourd'hui ?", a: ["Moins de 10 000", "Entre 10k et 50k", "Plus de 50 000"] },
+  { c: "Fun Facts", q: "Le premier nom de domaine enregistré était...", a: ["symbolics.com", "google.com", "apple.com", "ibm.com"] },
+  { c: "Future Spotlight", q: "Quel secteur sera le plus transformé par l'IA d'ici 5 ans ?", a: ["La Santé", "L'Éducation", "La Finance", "Les Transports"] },
+  { c: "Innovation Arena", q: "Quelle sera la principale source d'énergie en 2050 ?", a: ["Solaire", "Nucléaire", "Éolien", "Hydrogène"] }
+];
+
+function fillTestGame() {
+  const qty = parseInt(document.getElementById("challengesQty").value) || 1;
+  const gStart = document.getElementById("globalStartTime").value;
+  const gEnd = document.getElementById("globalEndTime").value;
+
+  if (!gStart || !gEnd) {
+     alert("Veuillez d'abord définir l'heure de début et de fin globale (Étape précédente) !");
+     return;
+  }
+
+  // On détermine au hasard quelle question commence direct et laquelle finit à la fin
+  const immediateIndex = Math.floor(Math.random() * qty);
+  const globalEndIndex = Math.floor(Math.random() * qty);
+
+  // On mélange la banque de questions
+  const shuffledBank = [...testQuestionBank].sort(() => 0.5 - Math.random());
+
+  for (let i = 0; i < qty; i++) {
+    // S'il y a plus de questions que notre banque, on boucle
+    const bankItem = shuffledBank[i % shuffledBank.length];
+    
+    // 1. Attribution du thème
+    const catSelect = document.querySelector(`.dynamic-cat-select[data-index="${i}"]`);
+    if (catSelect) {
+       catSelect.value = bankItem.c;
+       toggleCustomCat(i); 
+    }
+    
+    // 2. Attribution de la question
+    const qInput = document.querySelector(`.dynamic-que[data-index="${i}"]`);
+    if (qInput) qInput.value = bankItem.q;
+
+    // 3. Attribution des réponses (Nombre aléatoire entre 2 et le max disponible)
+    const container = document.getElementById(`ans-container-${i}`);
+    if (container) {
+       container.innerHTML = "";
+       const numAns = Math.floor(Math.random() * (bankItem.a.length - 1)) + 2; 
+       const selectedAnswers = bankItem.a.slice(0, numAns);
+
+       selectedAnswers.forEach((ansText, ansIdx) => {
+          const div = document.createElement("div");
+          div.style.display = "flex";
+          div.style.gap = "8px";
+          div.style.marginBottom = "8px";
+          div.innerHTML = `
+            <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse ${ansIdx+1}" style="flex:3;" value="${ansText}">
+            <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+          `;
+          container.appendChild(div);
+       });
+       
+       // 4. Lancer la probabilité aléatoire
+       setRandom(i);
+    }
+
+    // 5. Attribution des horaires aléatoires
+    const startInput = document.getElementById(`start-${i}`);
+    const endInput = document.getElementById(`end-${i}`);
+    
+    let randomStart = getRandomTimeBetween(gStart, gEnd);
+    let randomEnd = getRandomTimeBetween(gStart, gEnd);
+    
+    // Sécurité : On s'assure que la fin est toujours après le début
+    if (randomStart > randomEnd) {
+       const temp = randomStart;
+       randomStart = randomEnd;
+       randomEnd = temp;
+    }
+
+    if (startInput) startInput.value = (i === immediateIndex) ? gStart : randomStart;
+    if (endInput) endInput.value = (i === globalEndIndex) ? gEnd : randomEnd;
+  }
+}
+
+function getRandomTimeBetween(startStr, endStr) {
+    if (!startStr || !endStr) return startStr;
+    const s = startStr.split(':').map(Number);
+    const e = endStr.split(':').map(Number);
+    const sm = s[0]*60 + s[1];
+    let em = e[0]*60 + e[1];
+    
+    if (em < sm) em += 24*60; // Gère le passage à minuit si nécessaire
+    
+    const rm = Math.floor(Math.random() * (em - sm)) + sm;
+    const h = Math.floor(rm / 60) % 24;
+    const m = rm % 60;
+    return h.toString().padStart(2,'0') + ':' + m.toString().padStart(2,'0');
 }
 
 function startAdminDashboardTimers() {
