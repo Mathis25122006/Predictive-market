@@ -3093,13 +3093,14 @@ function cashOut(cIndex) {
   // 2. Gain réel récupéré
   const currentValue = Math.round(snap.pts * pAvg);
 
-  // 3. On retire le poids de la mise du pot (La cote s'effondre pour les autres)
+// 3. On retire le poids de la mise du pot (La cote s'effondre pour les autres)
   ch.votes[ansIndex] -= betWeight;
   if (ch.votes[ansIndex] < 0) ch.votes[ansIndex] = 0;
 
   // 4. Mise à jour du joueur
   player.balance += currentValue;
   snap.cashedOut = true; // Marque comme revendu
+  snap.cashedOutAmount = currentValue; // NOUVEAU : On mémorise la valeur récupérée pour le classement provisoire
   
   // 5. Sauvegarde et Rafraîchissement
   localStorage.setItem('savedGameData', JSON.stringify(game));
@@ -3850,19 +3851,23 @@ function startBigScreenEngine() {
 function updateBsIndices(isInit) {
   if(!game || !game.challenges) return;
 
-  // On liste prioritairement les questions ouvertes ou en attente
+  // NOUVEAU : On liste UNIQUEMENT les questions actuellement ouvertes (en cours)
   bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
      const st = getEffectiveStatus(game.challenges[i]);
-     return st === 'open' || st === 'pending';
+     return st === 'open';
   });
   
-  // S'il n'y a plus de questions actives, on boucle sur tout pour meubler l'écran
+  // S'il n'y a pas de questions ouvertes, on boucle sur les terminées pour meubler l'écran
+  // RÈGLE STRICTE : On exclut totalement les questions "pending" (pas encore lancées)
   if (bsActiveIndices.length === 0) {
-     bsActiveIndices = game.challenges.map((c, i) => i);
+     bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
+         return getEffectiveStatus(game.challenges[i]) !== 'pending';
+     });
   }
 
   if (isInit) {
-    bsLeftIndex = bsActiveIndices[0] || 0;
+    // Si tout est vide (ex: la partie n'a pas encore commencé), on gère le vide proprement
+    bsLeftIndex = bsActiveIndices.length > 0 ? bsActiveIndices[0] : undefined;
     bsRightIndex = bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsLeftIndex;
     bsToggle = 'left'; // Le prochain bloc à être remplacé sera la gauche
   } else {
@@ -3899,16 +3904,95 @@ function renderBigScreen() {
   const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
   
-  document.getElementById("bsQrContainer").innerHTML = `
-    <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
-    <div>
-      <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; font-weight:bold;">Scannez pour jouer</div>
-      <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.code}</div>
-    </div>
-  `;
-  
-  const leftCh = game.challenges[bsLeftIndex];
-  const rightCh = game.challenges[bsRightIndex];
+document.getElementById("bsQrContainer").innerHTML = `
+        <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+        <div>
+          <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; font-weight:bold;">Scannez pour jouer</div>
+          <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.code}</div>
+        </div>
+      `;
+
+      // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
+      if (game.isResolved) {
+         // 1. Réglage des colonnes (On cache la droite, on agrandit le milieu)
+         document.getElementById("bsLeft").style.flex = "1.2";
+         document.getElementById("bsLeft").style.overflowY = "auto";
+         document.getElementById("bsMiddle").style.flex = "2";
+         document.getElementById("bsMiddle").style.overflowY = "auto";
+         document.getElementById("bsRight").style.display = "none";
+
+         // 2. Classement Final (Colonne de gauche)
+         const playersList = game.players || [];
+         const leaderboard = playersList.map(p => ({ name: p.name, score: p.balance || 0 }))
+                                        .sort((a,b) => b.score - a.score).slice(0, 15);
+
+         let lbHtml = `<div style="font-size:32px; font-weight:900; letter-spacing:2px; margin-bottom:30px; color:#fbbf24; text-transform:uppercase; text-align:center;">🏆 PODIUM FINAL 🏆</div>`;
+
+         leaderboard.forEach((p, idx) => {
+            let color = "#e2e8f0";
+            let trophy = `<span style="color:#a855f7; font-weight:900; width:40px; font-size:24px;">${idx+1}</span>`;
+            let bg = "rgba(255,255,255,0.05)";
+            if(idx === 0) { color = "#fbbf24"; trophy = `<span style="font-size:32px; width:40px;">🥇</span>`; bg = "rgba(251,191,36,0.1)"; }
+            else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:28px; width:40px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
+            else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:28px; width:40px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
+
+            lbHtml += `
+               <div style="display:flex; justify-content:space-between; align-items:center; font-size:24px; margin-bottom:12px; padding:15px; border-radius:12px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color};">
+                  <div style="display:flex; gap:15px; align-items:center;">
+                     ${trophy}
+                     <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
+                  </div>
+                  <div style="font-weight:900;">${p.score.toFixed(0)} pts</div>
+               </div>
+            `;
+         });
+         document.getElementById("bsLeft").innerHTML = lbHtml;
+
+         // 3. Récapitulatif des réponses (Colonne de droite / Milieu élargi)
+         let recapHtml = `<div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:25px; color:#e2e8f0; text-transform:uppercase;">RÉCAPITULATIF DES RÉSULTATS</div>`;
+         recapHtml += `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px; padding-bottom: 20px;">`; // Grille pour afficher plus de questions
+
+         game.challenges.forEach((ch, i) => {
+            let answersHtml = '';
+            ch.answers.forEach((ans, aIdx) => {
+               const isCorrect = (ch.correct === aIdx);
+               const bgStyle = isCorrect ? 'background:rgba(34,197,94,0.2); border:1px solid #22c55e; color:#4ade80;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#9ca3af; opacity:0.6;';
+               const icon = isCorrect ? '✅' : '❌';
+
+               answersHtml += `
+                  <div style="${bgStyle} padding:8px 12px; border-radius:8px; margin-bottom:6px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+                     <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ans}</span>
+                     <span>${icon}</span>
+                  </div>
+               `;
+            });
+
+            recapHtml += `
+               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:15px; display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                     <div style="font-size:11px; color:#a855f7; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Challenge ${i+1} • ${ch.category}</div>
+                     <div style="font-size:16px; font-weight:600; color:white; margin-bottom:15px; line-height:1.3;">${ch.question}</div>
+                  </div>
+                  <div>${answersHtml}</div>
+               </div>
+            `;
+         });
+         recapHtml += `</div>`;
+         document.getElementById("bsMiddle").innerHTML = recapHtml;
+
+         updateBsTimers();
+         return; // Fin de l'affichage fin de jeu, on ignore le reste
+      }
+
+      // --- RETOUR AU LAYOUT NORMAL (Si le jeu est encore en cours) ---
+      document.getElementById("bsLeft").style.flex = "1";
+      document.getElementById("bsLeft").style.overflowY = "visible";
+      document.getElementById("bsMiddle").style.flex = "1";
+      document.getElementById("bsMiddle").style.overflowY = "visible";
+      document.getElementById("bsRight").style.display = "flex";
+
+      const leftCh = game.challenges[bsLeftIndex];
+      const rightCh = game.challenges[bsRightIndex];
 
   let leftImgHtml = "";
   if (leftCh && leftCh.imageUrl) {
@@ -3920,7 +4004,7 @@ function renderBigScreen() {
     <div style="font-size:22px; font-weight:800; letter-spacing:1.5px; margin-bottom:20px; color:#e2e8f0; text-transform:uppercase;">${leftCh ? leftCh.category : ''}</div>
     ${leftImgHtml}
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${leftCh ? leftCh.question : ''}</div>
+       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${leftCh ? leftCh.question : 'En attente de la prochaine question...'}</div>
        <div id="bsTimer-${bsLeftIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
     </div>
     <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
@@ -3932,7 +4016,7 @@ function renderBigScreen() {
   document.getElementById("bsMiddle").innerHTML = `
     <canvas id="bsChart" style="width:100%; height:200px; margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${rightCh ? rightCh.question : ''}</div>
+       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${rightCh ? rightCh.question : 'Bientôt disponible...'}</div>
        <div id="bsTimer-${bsRightIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
     </div>
     <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
@@ -3948,12 +4032,30 @@ function renderBigScreen() {
     }
   }, 100);
 
-  // ================= COLONNE DROITE (Leaderboard Fixe) =================
+// ================= COLONNE DROITE (Leaderboard Fixe) =================
   const playersList = game.players || [];
   
-  // Le classement est uniquement basé sur l'argent réel du joueur (= paris résolus gagnés)
+  // NOUVEAU : Calcul dynamique du score selon l'état du jeu
   const leaderboard = playersList.map(p => {
-     return { name: p.name, score: p.balance || 0 };
+     let displayScore = 0;
+     
+     if (game.isResolved) {
+        // FIN DU JEU : On affiche le solde final complet (incluant l'argent de départ)
+        displayScore = p.balance || 0;
+     } else {
+        // JEU EN COURS : On ne compte QUE l'argent remporté sur les défis terminés ou revendus
+        if (p.portfolio) {
+           p.portfolio.forEach(snap => {
+              if (snap.paidOut) {
+                 displayScore += snap.pts;
+              } else if (snap.cashedOut && snap.cashedOutAmount) {
+                 displayScore += snap.cashedOutAmount;
+              }
+           });
+        }
+     }
+     
+     return { name: p.name, score: displayScore };
   }).sort((a,b) => b.score - a.score).slice(0, 10);
 
   let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:30px; color:#e2e8f0; text-transform:uppercase;">LEADERBOARD</div>`;
