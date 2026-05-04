@@ -2,18 +2,21 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Prediction Game – 2 Challenges</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
- body {
+body {
    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
    background: radial-gradient(circle at top, #020617, #020617 40%, #020617 60%, #020617);
    background-color:#020617;
    color: #f9fafb;
-   padding: 16px;
+   /* NOUVEAU : Calcule dynamiquement les marges selon l'encoche de l'iPhone */
+   padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
+   min-height: 100vh;
+   box-sizing: border-box;
    max-width: 540px;
    margin: 0 auto;
  }
@@ -70,7 +73,7 @@
    display: block;
    margin-bottom: 4px;
  }
- input, select {
+input, select, textarea {
    width: 100%;
    padding: 10px 12px;
    border-radius: 999px;
@@ -78,7 +81,8 @@
    background: rgba(15,23,42,0.9);
    color: #f9fafb;
    margin-bottom: 10px;
-   font-size: 14px;
+   /* NOUVEAU : 16px empêche iOS de zoomer de force lors d'un clic */
+   font-size: 16px; 
    outline: none;
  }
  input::placeholder {
@@ -317,7 +321,8 @@
 </style>
 </head>
 <body>
-  <div id="globalBalance" class="hidden" style="position:fixed; top:16px; right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:1100; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+<!-- NOUVEAU : top: max(16px, env(safe-area-inset-top)) protège contre l'encoche -->
+  <div id="globalBalance" class="hidden" style="position:fixed; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:1100; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
   💰 <span id="globalBalanceAmt">0</span>
 </div>
 
@@ -529,7 +534,7 @@
   
   <div style="background:rgba(236,72,153,0.1); border:1px solid rgba(236,72,153,0.3); padding:10px; border-radius:10px; margin-bottom:15px;">
      <div style="font-size:12px; color:#9ca3af;">Gain potentiel estimé</div>
-     <div id="betPotential" style="font-size:20px; font-weight:bold; color:#ec4899;">0 pts</div>
+     <div id="betPotential" style="font-size:20px; font-weight:bold; color:#ec4899;">0 💰</div>
   </div>
   
   <div id="betError" class="msg err" style="margin-bottom:15px;"></div>
@@ -813,7 +818,7 @@ let game = {
 };
 
 // --- MOTEUR LMSR (Logarithmic Market Scoring Rule) ---
-const B_LIQUIDITY = 50; // Paramètre de liquidité. Plus il est haut, plus le marché est stable.
+const B_LIQUIDITY = 250; // Paramètre de liquidité. Plus il est haut, plus le marché est stable.
 
 function getLMSRProbs(votesArray) {
   const maxV = Math.max(...votesArray); // Prévention de l'overflow exponentiel
@@ -1407,7 +1412,7 @@ function renderPlayChallenges(){
         const isWin = snap && snap.ansIndex === ch.correct;
         label = isWin ? "GAGNÉ ! 🎉" : "TERMINÉ";
         detail = snap ? `<div style="font-size:11px; color:${isWin ? '#4ade80' : '#f87171'}; font-weight:bold; margin-top:5px;">
-          ${isWin ? `Gain encaissé : +${snap.pts} pts` : 'Perdu'}</div>` : "";
+          ${isWin ? `Gain encaissé : +${snap.pts} 💰` : 'Perdu'}</div>` : "";
       }
 
       block.innerHTML = `
@@ -1444,10 +1449,11 @@ function renderPlayChallenges(){
       ${betInfoHtml}
     `;
     
-    if (ch.imageUrl) {
+if (ch.imageUrl) {
       const img = document.createElement("img");
       img.src = ch.imageUrl;
-      img.style.cssText = "width:100%; border-radius:12px; margin:8px 0; box-shadow:0 4px 10px rgba(0,0,0,0.3);";
+      // NOUVEAU : max-height:180px et object-fit:cover empêchent l'image de prendre tout l'écran
+      img.style.cssText = "width:100%; max-height:180px; object-fit:cover; border-radius:12px; margin:8px 0; box-shadow:0 4px 10px rgba(0,0,0,0.3);";
       header.appendChild(img);
     }
 
@@ -1524,7 +1530,7 @@ ch.answers.forEach((a,i)=>{
       const ptsSpan = document.createElement("span");
       const pill = document.createElement("span");
       pill.className = "pts-pill";
-      pill.textContent = pts + " pts potentiels"; 
+      pill.textContent = pts + " 💰 potentiels"; 
       ptsSpan.appendChild(pill);
       meta.appendChild(ptsSpan);
     } else {
@@ -1708,7 +1714,7 @@ function openBetPanel(cIndex, ansIndex, betType) {
 
   document.getElementById("betAvailable").textContent = currentPlayerBalance + " unités";
   document.getElementById("betInput").value = "";
-  document.getElementById("betPotential").textContent = "0 pts";
+  document.getElementById("betPotential").textContent = "0 💰";
   document.getElementById("betError").textContent = "";
 
   document.getElementById("betPanelOverlay").classList.add("open");
@@ -1734,7 +1740,7 @@ function updatePotentialGain() {
   }
   
   if (val <= 0) {
-    document.getElementById("betPotential").textContent = "0 pts";
+    document.getElementById("betPotential").textContent = "0 💰";
     return;
   }
 
@@ -1774,7 +1780,7 @@ function updatePotentialGain() {
 // 4. Calcul du gain : Mise / Prix moyen
   const pts = (val / pAvg).toFixed(2); 
   
-  document.getElementById("betPotential").textContent = pts + " pts";
+  document.getElementById("betPotential").textContent = pts + " 💰";
 }
 
 function setBetMax() {
@@ -2933,7 +2939,7 @@ function updateRecapUI(pseudo) {
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
           <div style="font-size:11px; color:#9ca3af; text-transform:uppercase;">Gain Max Potentiel</div>
-          <div style="font-size:28px; font-weight:800; color:#3b82f6;">${maxScorePossible} <span style="font-size:14px;">pts</span></div>
+          <div style="font-size:28px; font-weight:800; color:#3b82f6;">${maxScorePossible} <span style="font-size:14px;">💰</span></div>
         </div>
         <div style="text-align:right;">
           <div style="font-size:11px; color:#9ca3af;">Rang Provisoire</div>
@@ -2947,7 +2953,7 @@ function updateRecapUI(pseudo) {
           ${provLeaderboard.slice(0, 3).map((p, i) => `
             <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
               <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
-              <span>${p.score} pts</span>
+              <span>${p.score} 💰</span>
             </div>
           `).join('')}
         </div>
@@ -2968,7 +2974,7 @@ function updateRecapUI(pseudo) {
           <div class="challenge-title">${ch.question}</div>
           <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
             <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]} ${typeBadge}</div>
-            <div style="color:#3b82f6; font-size:13px;">+${snap.pts} pts potentiels</div>
+            <div style="color:#3b82f6; font-size:13px;">+${snap.pts} 💰 potentiels</div>
           </div>
           ${getEffectiveStatus(ch) === "open" && snap.bet > 0 ? `
           <div style="margin-top:12px; text-align:right;">
@@ -4023,7 +4029,7 @@ document.getElementById("bsQrContainer").innerHTML = `
                      ${trophy}
                      <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
                   </div>
-                  <div style="font-weight:900;">${p.score.toFixed(0)} pts</div>
+                  <div style="font-weight:900;">${p.score.toFixed(0)} 💰</div>
                </div>
             `;
          });
