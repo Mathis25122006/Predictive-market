@@ -461,7 +461,7 @@
     <input id="pseudo" placeholder="Ex : Renaud">
     
 
-    <label>Adresse E-mail (Optionnel)</label>
+    <label>Adresse E-mail</label>
     <input id="playerEmail" type="email" placeholder="Ex: joueur@email.com" style="margin-bottom: 10px;">
     
     <div id="accessCodeContainer">
@@ -1150,6 +1150,7 @@ if (!isValid) {
   
 // Reset des variables de jeu
   game.players = [];
+  game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
   game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
   selectedAnswers = new Array(game.challenges.length).fill(null);
   selectedBets = new Array(game.challenges.length).fill(0);
@@ -2154,13 +2155,22 @@ function startConfetti(colors) {
 }
 
 function checkAccess() {
-  const pseudo = document.getElementById("pseudo").value.trim();
+  const pseudoInput = document.getElementById("pseudo").value.trim();
+  const emailEl = document.getElementById("playerEmail");
+  const emailInput = emailEl ? emailEl.value.trim() : "";
   const inputCode = document.getElementById("accessCode").value.trim().toUpperCase();
   const msg = document.getElementById("playMsg");
   const now = Date.now();
 
-  if(!pseudo || !inputCode) {
-    msg.textContent = "Pseudo et code requis.";
+  // 1. VÉRIFICATION STRICTE DE L'E-MAIL
+  if(!pseudoInput || !emailInput || !inputCode) {
+    msg.textContent = "Le pseudo, l'e-mail et le code sont obligatoires.";
+    msg.className = "msg err";
+    return;
+  }
+  
+  if(!emailInput.includes("@")) {
+    msg.textContent = "Veuillez entrer une adresse e-mail valide.";
     msg.className = "msg err";
     return;
   }
@@ -2176,18 +2186,12 @@ function checkAccess() {
       return;
     }
 
-    // Le téléphone récupère les données communes
     const data = snapshot.val();
     sessionConfig = data.sessionConfig;
     game = data.gameData;
 
-    // CORRECTION FIREBASE : Firebase supprime automatiquement les tableaux vides.
-    // Il faut donc recréer le tableau des joueurs s'il a disparu !
-    if (!game.players) {
-      game.players = [];
-    }
+    if (!game.players) game.players = [];
 
-    // --- Suite de la vérification habituelle ---
     let modeToPlay = null;
     if (sessionConfig.mode === 'both') {
       if (inputCode === sessionConfig.codeAdvanced) modeToPlay = 'advanced';
@@ -2208,16 +2212,19 @@ function checkAccess() {
       return;
     }
 
-const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+    const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     if (now > checkTime) {
+      // RECHERCHE PAR EMAIL
+      const existingPlayer = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
+      
       if (game.isResolved === true) {
-        showPlayerResult(pseudo); 
+        showPlayerResult(existingPlayer ? existingPlayer.name : pseudoInput); 
       } else {
-        const existingPlayer = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
         if (existingPlayer) {
-            currentPlayerMode = modeToPlay; game.currentPlayerName = pseudo;
+            currentPlayerMode = modeToPlay; 
+            game.currentPlayerName = existingPlayer.name;
             currentPlayerBalance = existingPlayer.balance || 0;
-            updateGlobalBalance(); renderPlayerRecap(pseudo);
+            updateGlobalBalance(); renderPlayerRecap(existingPlayer.name);
         } else {
             msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
             msg.className = "msg ok";
@@ -2226,84 +2233,69 @@ const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
       return;
     }
 
-// NOUVEAU : Enregistrement immédiat du joueur et de ses contacts (SÉCURISÉ)
-    const phoneEl = document.getElementById("playerPhone");
-    const phone = phoneEl ? phoneEl.value.trim() : ""; // Si la case n'existe pas, on met vide au lieu de planter
+    // SAUVEGARDE LOCALE
+    localStorage.setItem('monPredictionPseudo', pseudoInput);
+    localStorage.setItem('monPredictionEmail', emailInput);
 
-// ENREGISTREMENT DE L'EMAIL ET SAUVEGARDE LOCALE
-    const emailEl = document.getElementById("playerEmail");
-    const email = emailEl ? emailEl.value.trim() : "";
+    // L'EMAIL DEVIENT LA CLÉ UNIQUE D'IDENTIFICATION
+    let me = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
+    let finalPseudo = pseudoInput;
 
-    // NOUVEAU : On sauvegarde l'identité dans la mémoire du téléphone
-    localStorage.setItem('monPredictionPseudo', pseudo);
-    localStorage.setItem('monPredictionEmail', email);
-
-    let me = game.players.find(p => p.name.toLowerCase() === pseudo.toLowerCase());
     if (!me) {
-      // Si le joueur est nouveau, on lui crée un profil tout de suite
+      // Nouveau joueur
       let startBal = currentPlayerBalance === 0 && modeToPlay === 'advanced' ? (sessionConfig.initialBalance || 100) : currentPlayerBalance;
-      me = { name: pseudo, phone: phone, email: email, balance: startBal, portfolio: [] };
+      me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [] };
       game.players.push(me);
-      saveToCloud(); // On sauvegarde immédiatement pour la BDD
+      saveToCloud(); 
     } else {
-      // S'il se reconnecte et ajoute son téléphone, on met à jour
-      let updated = false;
-      if (phone && me.phone !== phone) { me.phone = phone; updated = true; }
-      if (email && me.email !== email) { me.email = email; updated = true; }
-      if (updated) saveToCloud();
+      // Si le joueur est retrouvé via son email, on force l'utilisation de son pseudo d'origine (Sécurité)
+      finalPseudo = me.name; 
     }
 
     currentPlayerMode = modeToPlay;
-    game.currentPlayerName = pseudo;
+    game.currentPlayerName = finalPseudo;
 
-    // NOUVEAU : Un seul écouteur en temps réel pour piloter toute l'interface joueur
+    // ÉCOUTEUR TEMPS RÉEL
     db.ref('sessions/' + inputCode).on('value', (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         game = data.gameData;
         sessionConfig = data.sessionConfig;
 
-// 1. SÉCURITÉ FIREBASE : On restaure les données qui s'effacent
         if (!game.players) game.players = [];
-        if (!game.messages) game.messages = []; // On prépare le conteneur de messages
-        game.currentPlayerName = pseudo;
+        if (!game.messages) game.messages = []; 
+        game.currentPlayerName = finalPseudo;
 
-        // NOUVEAU : Traitement des messages entrants
         updateMessageBadges();
         const msgPanel = document.getElementById("messagePanel");
         if (msgPanel && msgPanel.classList.contains("open")) {
-          // Si le joueur est en train de lire, on marque comme lu et on affiche direct
           playerReadMessagesCount = game.messages.length;
           renderMessageList();
           updateMessageBadges();
         }
 
-        // 2. Mise à jour du solde local
-        const me = game.players.find(p => p.name === pseudo);
-        if (me) {
-          currentPlayerBalance = me.balance;
+        const currentPlayer = game.players.find(p => p.name === finalPseudo);
+        if (currentPlayer) {
+          currentPlayerBalance = currentPlayer.balance;
           updateGlobalBalance();
         } else if (currentPlayerBalance === 0 && currentPlayerMode === 'advanced') {
           currentPlayerBalance = sessionConfig.initialBalance;
           updateGlobalBalance();
         }
 
-        // 3. Rafraîchissement de l'écran principal des questions
         document.getElementById("playerAuth").classList.add("hidden");
         document.getElementById("gameContent").classList.remove("hidden");
-        document.getElementById("playerTitle").textContent = "Prédictions de " + pseudo;
+        document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
         renderPlayChallenges();
 
-        // 4. Déclenchement de la fin de jeu ou rafraîchissement
         if (game.isResolved) {
-           // On s'assure qu'il n'est pas déjà sur un écran de fin pour éviter de relancer l'animation
            if (document.getElementById("results").style.display !== "block" && document.getElementById("playerResult").style.display !== "block") {
-              showPlayerResult(pseudo);
+              showPlayerResult(finalPseudo);
            }
         } else {
            const recapEl = document.getElementById("playerRecap");
            if (recapEl && recapEl.style.display === "block") {
-              updateRecapUI(pseudo);
+              updateRecapUI(finalPseudo);
            }
         }
       }
@@ -2662,10 +2654,11 @@ window.addEventListener('load', () => {
     console.log("Session restaurée : " + sessionConfig.code);
   }
 
-  // 2. Gestion du lien URL (Paramètre session et pseudo)
+// 2. Gestion du lien URL (Paramètre session, pseudo ET email)
           const urlParams = new URLSearchParams(window.location.search);
           const codeFromUrl = urlParams.get('session');
-          const pseudoFromUrl = urlParams.get('p'); // On attrape le pseudo s'il est dans le lien
+          const pseudoFromUrl = urlParams.get('p'); 
+          const emailFromUrl = urlParams.get('e'); // NOUVEAU : On attrape l'e-mail
 
         if (codeFromUrl) {
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -2680,18 +2673,14 @@ window.addEventListener('load', () => {
                   const qrContainer = document.getElementById("qrScannerContainer");
                   if (qrContainer) qrContainer.style.display = "none";
 
-                  // NOUVEAU : RECONNEXION AUTOMATIQUE INFAILLIBLE
-                  // On prend le pseudo du lien (Make.com), sinon on cherche dans la mémoire (Safari/Chrome)
+                  // RECONNEXION AUTOMATIQUE SÉCURISÉE PAR EMAIL
                   const finalPseudo = pseudoFromUrl || localStorage.getItem('monPredictionPseudo');
+                  const finalEmail = emailFromUrl || localStorage.getItem('monPredictionEmail');
                   
-                  if (finalPseudo) {
+                  if (finalPseudo && finalEmail) {
                      document.getElementById("pseudo").value = finalPseudo;
+                     document.getElementById("playerEmail").value = finalEmail;
                      
-                     // Si on a l'email en mémoire, on le remet, sinon ce n'est pas grave le pseudo suffit pour se connecter
-                     const savedEmail = localStorage.getItem('monPredictionEmail');
-                     if (savedEmail) document.getElementById("playerEmail").value = savedEmail;
-                     
-                     // On déclenche la connexion auto après une demi-seconde
                      setTimeout(() => {
                         checkAccess();
                      }, 500);
