@@ -3401,16 +3401,20 @@ function sendBroadcastMessage() {
 
 function sendFinalRankingAlert() {
   const sessionCode = sessionConfig.code;
+  
+  // NOUVEAU : On récupère l'adresse actuelle du site automatiquement
+  const currentUrl = window.location.href.split('?')[0];
+
   const contacts = (game.players || [])
     .map(p => ({ name: p.name, email: p.email }))
-    .filter(c => c.email); // On ne garde que ceux qui ont un mail
+    .filter(c => c.email);
 
   if (contacts.length === 0) return;
 
   const finalAlertText = `La session est terminée ! Découvrez dès maintenant votre position finale, votre médaille et le podium complet.`;
 
-  // L'URL de votre NOUVEAU Webhook Make.com
-  const webhookFinalUrl = "https://hook.eu1.make.com/bnqteei4jvln6i0fyfrtnwpzujd74pz8"; 
+  // Ton URL de Webhook Make pour le classement
+  const webhookFinalUrl = "https://hook.eu1.make.com/96judqntkqhoexn4e6619ddkij9cuh24"; 
   
   fetch(webhookFinalUrl, {
     method: "POST",
@@ -3418,7 +3422,8 @@ function sendFinalRankingAlert() {
     body: JSON.stringify({
       session: sessionCode,
       messageToSend: finalAlertText,
-      recipients: contacts
+      recipients: contacts,
+      gameUrl: currentUrl // On envoie l'URL propre ici !
     })
   }).catch(err => console.error("Erreur :", err));
 }
