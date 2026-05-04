@@ -302,7 +302,6 @@
 
 .hidden { display: none; }
 .dynamic-cat-custom { margin-top: 8px; }
-
 /* Animation de fondu pour les colonnes du grand écran */
 #bsLeft, #bsMiddle {
   transition: opacity 0.8s ease-in-out;
@@ -312,6 +311,9 @@
   opacity: 0 !important;
 }
 
+/* NOUVEAU : Masquer les barres de défilement pour un rendu propre sur TV */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 </head>
 <body>
@@ -2968,6 +2970,11 @@ function updateRecapUI(pseudo) {
             <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]} ${typeBadge}</div>
             <div style="color:#3b82f6; font-size:13px;">+${snap.pts} pts potentiels</div>
           </div>
+          ${getEffectiveStatus(ch) === "open" && snap.bet > 0 ? `
+          <div style="margin-top:12px; text-align:right;">
+            <button onclick="openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1); color:#f97316; border:1px solid #f97316; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold;">Revendre (Cash out)</button>
+          </div>
+          ` : ''}
         </div>
       `;
     });
@@ -2993,11 +3000,12 @@ function updateRecapUI(pseudo) {
 
 // Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
 function drawSingleChart(hist, canvasId, cIndex) {
-  const canvas = document.getElementById(canvasId);
+const canvas = document.getElementById(canvasId);
   if(!canvas) return;
   const ctx = canvas.getContext("2d");
   const w = canvas.width = canvas.clientWidth || 320;
-  const h = canvas.height;
+  // NOUVEAU : Le canvas prend la hauteur exacte que l'écran lui accorde
+  const h = canvas.height = canvas.clientHeight || 150; 
 
   ctx.clearRect(0,0,w,h);
 
@@ -3122,16 +3130,19 @@ function updateGlobalBalance() {
 let tempSellCIndex = null;
 let tempSellAnsIndex = null;
 let tempSellSnap = null;
+let tempSellType = 'YES'; // NOUVEAU
 
-function openSellPanel(cIndex, ansIndex) {
+function openSellPanel(cIndex, ansIndex, type) {
   const player = game.players.find(p => p.name === game.currentPlayerName);
-  tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex);
+  tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && (b.type === type || (!b.type && type === 'YES')));
   if(!tempSellSnap) return;
 
   tempSellCIndex = cIndex;
   tempSellAnsIndex = ansIndex;
+  tempSellType = type; // NOUVEAU
 
-  document.getElementById("sellAnswerName").textContent = game.challenges[cIndex].answers[ansIndex];
+  const typeLabel = type === 'YES' ? '<span style="color:#4ade80;">(OUI)</span>' : '<span style="color:#f87171;">(NON)</span>';
+  document.getElementById("sellAnswerName").innerHTML = `${game.challenges[cIndex].answers[ansIndex]} ${typeLabel}`;
   document.getElementById("sellMaxBet").textContent = tempSellSnap.bet + " unités";
   document.getElementById("sellInput").value = "";
   document.getElementById("sellInput").max = tempSellSnap.bet;
@@ -3172,16 +3183,29 @@ function updateSellPotential() {
   const fraction = sellVal / tempSellSnap.bet;
   const quantiteAVendre = tempSellSnap.pts * fraction;
 
-  // 2. Chute du prix (Slippage) AVEC LMSR
+// 2. Chute du prix (Slippage) AVEC LMSR (Gestion OUI / NON)
   const probsStart = getLMSRProbs(ch.votes);
-  const pStart = probsStart[tempSellAnsIndex];
+  const pStartYes = probsStart[tempSellAnsIndex];
+  const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
   
   const estimatedWithdraw = quantiteAVendre * pStart;
   
   let simulatedVotes = [...ch.votes];
-  simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+  if (tempSellType === 'YES') {
+      simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+  } else {
+      const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempSellAnsIndex];
+      for (let i = 0; i < simulatedVotes.length; i++) {
+          if (i !== tempSellAnsIndex) {
+              const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+              simulatedVotes[i] = Math.max(0, simulatedVotes[i] - (estimatedWithdraw * weight));
+          }
+      }
+  }
+  
   const probsEnd = getLMSRProbs(simulatedVotes);
-  const pEnd = probsEnd[tempSellAnsIndex];
+  const pEndYes = probsEnd[tempSellAnsIndex];
+  const pEnd = tempSellType === 'YES' ? pEndYes : (1 - pEndYes);
 
   let pAvg = (pStart + pEnd) / 2;
   if (pAvg <= 0.01) pAvg = 0.01;
@@ -3202,37 +3226,51 @@ const ch = game.challenges[tempSellCIndex];
   const quantiteAVendre = tempSellSnap.pts * fraction;
 
   // 2. Calcul du glissement et de l'argent récupéré AVEC LMSR
+  // 2. Calcul du glissement et de l'argent récupéré AVEC LMSR (Gestion OUI / NON)
   const probsStart = getLMSRProbs(ch.votes);
-  const pStart = probsStart[tempSellAnsIndex];
+  const pStartYes = probsStart[tempSellAnsIndex];
+  const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
   
   const estimatedWithdraw = quantiteAVendre * pStart;
   
   let simulatedVotes = [...ch.votes];
-  simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
-  const probsEnd = getLMSRProbs(simulatedVotes);
-  const pEnd = probsEnd[tempSellAnsIndex];
+  if (tempSellType === 'YES') {
+      simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+      ch.votes[tempSellAnsIndex] = simulatedVotes[tempSellAnsIndex];
+  } else {
+      const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempSellAnsIndex];
+      for (let i = 0; i < simulatedVotes.length; i++) {
+          if (i !== tempSellAnsIndex) {
+              const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+              simulatedVotes[i] = Math.max(0, simulatedVotes[i] - (estimatedWithdraw * weight));
+              ch.votes[i] = simulatedVotes[i];
+          }
+      }
+  }
 
-let pAvg = (pStart + pEnd) / 2;
+  const probsEnd = getLMSRProbs(simulatedVotes);
+  const pEndYes = probsEnd[tempSellAnsIndex];
+  const pEnd = tempSellType === 'YES' ? pEndYes : (1 - pEndYes);
+
+  let pAvg = (pStart + pEnd) / 2;
   if (pAvg <= 0.01) pAvg = 0.01;
 
   const recoveredMoney = parseFloat((quantiteAVendre * pAvg).toFixed(2)); 
 
-  // 3. On retire l'argent du pot global
-  ch.votes[tempSellAnsIndex] -= recoveredMoney;
-  if (ch.votes[tempSellAnsIndex] < 0) ch.votes[tempSellAnsIndex] = 0;
-
-  // 4. Le joueur récupère son argent
+  // 3. Le joueur récupère son argent
   currentPlayerBalance += recoveredMoney;
   updateGlobalBalance();
 
-  // 5. Mise à jour de son portefeuille (On soustrait la mise ET les parts)
+  // 4. Mise à jour de son portefeuille
+  tempSellSnap.cashedOutAmount = (tempSellSnap.cashedOutAmount || 0) + recoveredMoney; // Mémoire pour l'écran géant
   tempSellSnap.bet -= sellVal;
   tempSellSnap.pts -= quantiteAVendre;
 
-  // Si on a tout vendu (ou qu'il reste des poussières d'arrondi)
+  // Si on a tout vendu, on le marque comme revendu mais on le GARDE dans l'historique
   if (tempSellSnap.bet <= 0 || tempSellSnap.pts <= 0) {
-     const player = game.players.find(p => p.name === game.currentPlayerName);
-     player.portfolio = player.portfolio.filter(b => b !== tempSellSnap); 
+     tempSellSnap.bet = 0;
+     tempSellSnap.pts = 0;
+     tempSellSnap.cashedOut = true; 
   }
 
 const player = game.players.find(p => p.name === game.currentPlayerName);
@@ -3593,8 +3631,17 @@ function startAdminDashboardTimers() {
     const now = Date.now();
     let needsRefresh = false;
 
-    game.challenges.forEach((ch, i) => {
+game.challenges.forEach((ch, i) => {
       const effStatus = getEffectiveStatus(ch);
+      
+      // NOUVEAU : Détection automatique de l'ouverture pour envoyer l'email
+      if (effStatus === "open" && !ch.alertSent) {
+         ch.alertSent = true; // On verrouille immédiatement pour éviter le spam
+         sendNewQuestionAlert(ch);
+         saveToCloud(); // On sauvegarde sur Firebase que l'alerte a été envoyée
+         needsRefresh = true;
+      }
+
       const pTimer = document.getElementById(`admin-pending-timer-${i}`);
       const oTimer = document.getElementById(`admin-open-timer-${i}`);
 
@@ -3673,6 +3720,8 @@ function sendBroadcastMessage() {
   }
 }
 
+
+
 function sendFinalRankingAlert() {
   const sessionCode = sessionConfig.code;
   
@@ -3701,6 +3750,38 @@ function sendFinalRankingAlert() {
     })
   }).catch(err => console.error("Erreur :", err));
 }
+
+// --- NOUVEAU : ALERTE NOUVELLE QUESTION ---
+function sendNewQuestionAlert(ch) {
+  const sessionCode = sessionConfig.code;
+  const currentUrl = window.location.href.split('?')[0];
+  const joinUrl = `${currentUrl}?session=${sessionCode}`;
+
+  // On liste les joueurs qui ont un email
+  const contacts = (game.players || [])
+    .map(p => ({ name: p.name, email: p.email }))
+    .filter(c => c.email);
+
+  if (contacts.length === 0) return;
+
+  const alertText = `Une nouvelle question est disponible ! Allez parier dessus !`;
+  
+  // Remplacez cette URL par votre nouveau Webhook Make.com
+  const webhookUrl = "https://hook.eu1.make.com/h8pi2c5ebkr4duxei4c409ni4mchy1eb"; 
+
+  fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session: sessionCode,
+      messageToSend: alertText,
+      questionTitle: ch.question, // On envoie aussi le titre de la question pour Make
+      gameUrl: joinUrl,
+      recipients: contacts
+    })
+  }).catch(err => console.error("Erreur Webhook Nouvelle Question :", err));
+}
+
 
 function openMessagePanel() {
   const messages = game.messages || [];
@@ -3994,32 +4075,38 @@ document.getElementById("bsQrContainer").innerHTML = `
       const leftCh = game.challenges[bsLeftIndex];
       const rightCh = game.challenges[bsRightIndex];
 
-  let leftImgHtml = "";
+let leftImgHtml = "";
   if (leftCh && leftCh.imageUrl) {
-     // Réduit à 200px et marge réduite à 15px
-     leftImgHtml = `<div style="height:200px; width:100%; border-radius:16px; margin-bottom:15px; background:url('${leftCh.imageUrl}') center/cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></div>`;
+     // NOUVEAU : L'image devient le "ressort" principal avec flex: 1 1 0. Elle absorbe tout le manque de place.
+     leftImgHtml = `<div style="flex:1 1 0; min-height:0; width:100%; border-radius:16px; margin-bottom:2vh; background:url('${leftCh.imageUrl}') center/cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></div>`;
   }
   
   document.getElementById("bsLeft").innerHTML = `
-    <div style="font-size:22px; font-weight:800; letter-spacing:1.5px; margin-bottom:20px; color:#e2e8f0; text-transform:uppercase;">${leftCh ? leftCh.category : ''}</div>
+    <div style="font-size:clamp(16px, 2vh, 22px); font-weight:800; letter-spacing:1.5px; margin-bottom:1vh; flex-shrink:0; color:#e2e8f0; text-transform:uppercase;">${leftCh ? leftCh.category : ''}</div>
     ${leftImgHtml}
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${leftCh ? leftCh.question : 'En attente de la prochaine question...'}</div>
-       <div id="bsTimer-${bsLeftIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
+       <div style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;">${leftCh ? leftCh.question : 'En attente de la prochaine question...'}</div>
+       <div id="bsTimer-${bsLeftIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
     </div>
-    <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+    <!-- NOUVEAU : flex-shrink:0 garantit que les réponses ne seront JAMAIS coupées ni écrasées -->
+    <div style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;">
       ${leftCh ? renderBsProgress(leftCh) : ''}
     </div>
   `;
 
-  // ================= COLONNE CENTRALE (Question + Graphique) =================
+
+// ================= COLONNE CENTRALE (Question + Graphique) =================
   document.getElementById("bsMiddle").innerHTML = `
-    <canvas id="bsChart" style="width:100%; height:200px; margin-bottom:15px; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
-       <div style="font-size:26px; font-weight:600; line-height:1.4; max-width:75%;">${rightCh ? rightCh.question : 'Bientôt disponible...'}</div>
-       <div id="bsTimer-${bsRightIndex}" style="font-size:32px; font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+    <!-- NOUVEAU : Le graphique devient le ressort (flex: 1 1 0) pour absorber le manque de place -->
+    <div style="flex:1 1 0; min-height:0; width:100%; margin-bottom:2vh; display:flex;">
+        <canvas id="bsChart" style="width:100%; height:100%; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
     </div>
-    <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
+       <div style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;">${rightCh ? rightCh.question : 'Bientôt disponible...'}</div>
+       <div id="bsTimer-${bsRightIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+    </div>
+    <!-- NOUVEAU : flex-shrink:0 protège totalement la zone des réponses -->
+    <div style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;">
       ${rightCh ? renderBsProgress(rightCh) : ''}
     </div>
   `;
@@ -4088,23 +4175,24 @@ function renderBsProgress(ch) {
   const letters = ['A','B','C','D','E','F'];
   const colors = ['#a855f7', '#d946ef', '#6366f1', '#f97316']; // Couleurs tech de l'image
   
-  let html = '';
-  ch.answers.forEach((ans, i) => {
-     const pct = (probs[i]*100).toFixed(0);
-     const c = colors[i % colors.length];
-     html += `
-        <div style="display:flex; align-items:center; margin-bottom:15px;">
-           <div style="width:100%; background:rgba(255,255,255,0.05); border-radius:12px; height:45px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
-              <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.8; transition:width 1s ease-in-out;"></div>
-              <div style="position:absolute; top:0; left:20px; height:100%; display:flex; align-items:center; font-size:18px; font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
-                 <span style="margin-right:15px; opacity:0.7;">${letters[i]}:</span> ${ans}
-              </div>
-           </div>
-           <div style="width:70px; text-align:right; font-size:22px; font-weight:800;">${pct}%</div>
-        </div>
-     `;
-  });
-  return html;
+let html = '';
+      ch.answers.forEach((ans, i) => {
+         const pct = (probs[i]*100).toFixed(0);
+         const c = colors[i % colors.length];
+         // NOUVEAU : flex:1, min-height et max-height permettent à la réponse de se tasser si l'écran est petit !
+         html += `
+            <div style="display:flex; align-items:center; flex:1; min-height:30px; max-height:48px; margin-bottom:8px;">
+               <div style="width:100%; background:rgba(255,255,255,0.05); border-radius:12px; height:100%; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
+                  <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.8; transition:width 1s ease-in-out;"></div>
+                  <div style="position:absolute; top:0; left:15px; height:100%; display:flex; align-items:center; font-size:16px; font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); white-space:nowrap;">
+                     <span style="margin-right:10px; opacity:0.7;">${letters[i]}:</span> ${ans}
+                  </div>
+               </div>
+               <div style="width:60px; text-align:right; font-size:20px; font-weight:800;">${pct}%</div>
+            </div>
+         `;
+      });
+      return html;
 }
 
 function updateBsTimers() {
