@@ -1996,6 +1996,9 @@ function finish() {
   // On verrouille le jeu
   game.isResolved = true;
   saveToCloud(); 
+
+  // --- NOUVEAU : ENVOI DE L'ALERTE RÉSULTATS FINAUX ---
+  sendFinalRankingAlert();
   
   // On coupe l'écoute en temps réel de l'admin
   if (sessionConfig.code) {
@@ -3394,6 +3397,30 @@ function sendBroadcastMessage() {
       msgFeedback.textContent = "Message interne et alertes externes envoyés !";
       setTimeout(() => msgFeedback.textContent = "", 3000);
   }
+}
+
+function sendFinalRankingAlert() {
+  const sessionCode = sessionConfig.code;
+  const contacts = (game.players || [])
+    .map(p => ({ name: p.name, email: p.email }))
+    .filter(c => c.email); // On ne garde que ceux qui ont un mail
+
+  if (contacts.length === 0) return;
+
+  const finalAlertText = `La session est terminée ! Découvrez dès maintenant votre position finale, votre médaille et le podium complet.`;
+
+  // L'URL de votre NOUVEAU Webhook Make.com
+  const webhookFinalUrl = "https://hook.eu1.make.com/bnqteei4jvln6i0fyfrtnwpzujd74pz8"; 
+  
+  fetch(webhookFinalUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session: sessionCode,
+      messageToSend: finalAlertText,
+      recipients: contacts
+    })
+  }).catch(err => console.error("Erreur :", err));
 }
 
 function openMessagePanel() {
