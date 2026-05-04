@@ -771,17 +771,12 @@ function saveToCloud() {
     gameData: game
   };
 
-  // 1. Sauvegarde sur le code principal (Facile ou Unique)
-  if (sessionConfig.code) {
-    db.ref('sessions/' + sessionConfig.code).set(payload).catch(err => {
+  // NOUVEAU : On sauvegarde UNIQUEMENT sur la partie active en cours
+  const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+
+  if (activeCode) {
+    db.ref('sessions/' + activeCode).set(payload).catch(err => {
       console.error("Erreur de sauvegarde Cloud:", err);
-    });
-  }
-  
-  // 2. Sauvegarde miroir sur le code avancé (Si mode "Les deux")
-  if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
-    db.ref('sessions/' + sessionConfig.codeAdvanced).set(payload).catch(err => {
-      console.error("Erreur de sauvegarde Cloud (Avancé):", err);
     });
   }
 }
@@ -1177,11 +1172,23 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
 // On calcule la fin réelle du jeu basée sur la question qui finit le plus tard
   const maxEndTime = Math.max(...game.challenges.map(c => c.endTime));
   
-  sessionConfig.gameEndTime = maxEndTime; // NOUVEAU : Pour l'affichage exact des chronomètres (Admin et Joueurs)
-  sessionConfig.expiresAt = maxEndTime + (30 * 60 * 1000); // Sécurité cachée : Maintient la BDD ouverte 30 min après la fin
+sessionConfig.gameEndTime = maxEndTime; 
+  sessionConfig.expiresAt = maxEndTime + (30 * 60 * 1000); 
 
-  // SAUVEGARDE SUR LE SERVEUR
+  // NOUVEAU : On définit le code actif
+  window.currentActiveSessionCode = sessionConfig.code;
+
+  // SAUVEGARDE SUR LE SERVEUR (Mode Facile)
   saveToCloud();
+
+  // NOUVEAU : Création de la copie 100% indépendante pour le mode Avancé
+  if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
+     const advPayload = { 
+        sessionConfig: JSON.parse(JSON.stringify(sessionConfig)), 
+        gameData: JSON.parse(JSON.stringify(game)) 
+     };
+     db.ref('sessions/' + sessionConfig.codeAdvanced).set(advPayload).catch(err => console.error(err));
+  }
 
   // On garde une trace locale juste pour que l'admin retrouve sa propre partie
   localStorage.setItem('savedSessionConfig', JSON.stringify(sessionConfig));
@@ -2190,6 +2197,8 @@ function checkAccess() {
     sessionConfig = data.sessionConfig;
     game = data.gameData;
 
+    window.currentActiveSessionCode = inputCode;
+
     if (!game.players) game.players = [];
 
     let modeToPlay = null;
@@ -2411,6 +2420,8 @@ function checkManageAccess() {
     const data = snapshot.val();
     sessionConfig = data.sessionConfig;
     game = data.gameData;
+
+    window.currentActiveSessionCode = input;
 
     // Réparation Firebase si la liste des joueurs est vide
     if (!game.players) game.players = [];
@@ -3248,9 +3259,47 @@ function resolveChallenge(index) {
     });
   }
   
-  saveToCloud();
+saveToCloud();
+      
+  // --- NOUVEAU : LE PONT MAGIQUE POUR VALIDER L'AUTRE MODE ---
+  if (sessionConfig.mode === 'both') {
+     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+     if (otherCode) {
+         db.ref('sessions/' + otherCode).once('value').then(snap => {
+             if(snap.exists()) {
+                 let otherData = snap.val();
+                 let otherGame = otherData.gameData;
+                 
+                 otherGame.challenges[index].correct = correctIdx;
+                 otherGame.challenges[index].status = "resolved";
+                 
+                 if (otherGame.players) {
+                     otherGame.players.forEach(p => {
+                         if (p.portfolio) {
+                             const winningBets = p.portfolio.filter(b => b.cIndex === index && (
+                                 (b.type === 'YES' && b.ansIndex === correctIdx) ||
+                                 (b.type === 'NO' && b.ansIndex !== correctIdx) ||
+                                 (!b.type && b.ansIndex === correctIdx)
+                             ));
+                             winningBets.forEach(wBet => {
+                                 if (!wBet.paidOut) {
+                                     p.balance = parseFloat((p.balance + wBet.pts).toFixed(2));
+                                     wBet.paidOut = true; 
+                                 }
+                             });
+                         }
+                     });
+                 }
+                 db.ref('sessions/' + otherCode).set(otherData);
+             }
+         });
+     }
+  }
+
   renderManageDashboard();
 }
+
+
 
 function undoResolveChallenge(index) {
   if(!confirm("Voulez-vous vraiment annuler ce résultat ? L'argent gagné par les joueurs sur cette question leur sera automatiquement retiré jusqu'à la nouvelle publication.")) return;
@@ -3512,6 +3561,10 @@ function checkBigScreenAccess() {
     const data = snapshot.val();
     game = data.gameData;
     sessionConfig = data.sessionConfig;
+
+    window.currentActiveSessionCode = input;
+
+
     if (!game.players) game.players = [];
 
     if (!isBigScreenActive) {
