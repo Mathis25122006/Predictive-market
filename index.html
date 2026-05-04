@@ -1386,8 +1386,9 @@ function renderPlayChallenges(){
     
     // Si le joueur a DÉJÀ validé une mise sur cette question ouverte
     if (snap) {
+      const extraText = currentPlayerMode === 'advanced' ? " (Vous pouvez remiser pour augmenter votre position)." : " (Choix définitif).";
       betInfoHtml = `<div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:6px; border-radius:6px; margin-top:8px; font-size:11px; color:#3b82f6;">
-        ✅ Mise enregistrée : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}". (Vous pouvez remiser pour augmenter votre position).
+        ✅ Mise enregistrée : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}".${extraText}
       </div>`;
     }
 
@@ -1426,6 +1427,10 @@ function renderAnswersForChallenge(cIndex){
   const box = document.getElementById("answers-ch"+cIndex);
   box.innerHTML = "";
   
+  // NOUVEAU : On récupère la mise existante du joueur s'il y en a une
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const snap = player ? (player.portfolio || []).find(b => b.cIndex === cIndex) : null;
+  
   // CALCUL DES PROBABILITES LMSR
   const probs = getLMSRProbs(ch.votes);
 
@@ -1436,17 +1441,25 @@ ch.answers.forEach((a,i)=>{
     const safePct = pct <= 0 ? 0.001 : pct;
     const pts = +(1 / safePct).toFixed(2); // <-- Précision à 2 décimales
 
-    const div = document.createElement("div");
+ const div = document.createElement("div");
     div.className = "answer-btn";
     
     // En mode facile, on garde le clic sur toute la div. En avancé, on le désactive pour utiliser OUI/NON.
     if (currentPlayerMode === 'easy') {
-      if(selectedAnswers[cIndex] === i) div.classList.add("selected");
-      div.onclick = () => { 
-        selectedAnswers[cIndex] = i; 
-        selectedBets[cIndex] = 1; 
-        renderAnswersForChallenge(cIndex); 
-      };
+      if (snap) {
+         // S'il a déjà validé, on bloque le clic, on colore sa réponse et on grise les autres
+         if (snap.ansIndex === i) div.classList.add("selected");
+         div.style.cursor = "default";
+         if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
+      } else {
+         // S'il n'a pas encore validé, comportement normal
+         if(selectedAnswers[cIndex] === i) div.classList.add("selected");
+         div.onclick = () => { 
+           selectedAnswers[cIndex] = i; 
+           selectedBets[cIndex] = 1; 
+           renderAnswersForChallenge(cIndex); 
+         };
+      }
     }
 
     const top = document.createElement("div");
@@ -2054,16 +2067,28 @@ function showPlayerResult(pseudo) {
     return { name: p.name, pts: parseFloat((p.balance || 0).toFixed(2)) };
   }).sort((a, b) => b.pts - a.pts);
 
-  const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
-  
-  // S'il n'est pas classé (ex: Admin ou erreur), on l'envoie direct au classement global
-  if (myRankIndex === -1) {
-    displayLeaderboard();
-    showScreen('results');
-    return;
-  }
+const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
+      
+      // S'il n'est pas classé (ex: Admin ou erreur), on l'envoie direct au classement global
+      if (myRankIndex === -1) {
+        // NOUVEAU : On personnalise le message pour les retardataires
+        const resultsTitle = document.querySelector("#results h2");
+        const resultsMsg = document.querySelector("#results .msg");
+        if (resultsTitle) resultsTitle.innerHTML = "Le jeu a déjà été clôturé 🔒";
+        if (resultsMsg) resultsMsg.innerHTML = "Vous n'avez pas de compte actif pour cette session. Voici le Top 10 final :";
+        
+        displayLeaderboard();
+        showScreen('results');
+        return;
+      }
 
-  const myRank = myRankIndex + 1;
+      // NOUVEAU : On s'assure de remettre le texte normal pour les joueurs classés
+      const resultsTitleNormal = document.querySelector("#results h2");
+      const resultsMsgNormal = document.querySelector("#results .msg");
+      if (resultsTitleNormal) resultsTitleNormal.innerHTML = "Classement Final";
+      if (resultsMsgNormal) resultsMsgNormal.innerHTML = "Score calculé sur vos gains potentiels (100 - p) cumulés.";
+
+      const myRank = myRankIndex + 1;
   const medalEl = document.getElementById("medalDisplay");
   const rankEl = document.getElementById("rankDisplay");
 
@@ -2222,11 +2247,14 @@ function checkAccess() {
     }
 
     const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
-    if (now > checkTime) {
+    
+    // NOUVEAU : On bloque si le temps est écoulé OU si l'Admin a clôturé manuellement
+    if (now > checkTime || game.isResolved === true) {
       // RECHERCHE PAR EMAIL
       const existingPlayer = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
       
       if (game.isResolved === true) {
+        // Le jeu est clos. On envoie vers les résultats. S'il n'existe pas, la fonction affichera le message "Jeu clos".
         showPlayerResult(existingPlayer ? existingPlayer.name : pseudoInput); 
       } else {
         if (existingPlayer) {
@@ -2239,7 +2267,7 @@ function checkAccess() {
             msg.className = "msg ok";
         }
       }
-      return;
+      return; // TRÈS IMPORTANT : On arrête le code ici, le joueur ne sera jamais ajouté à la BDD !
     }
 
     // SAUVEGARDE LOCALE
@@ -3305,6 +3333,7 @@ function undoResolveChallenge(index) {
   if(!confirm("Voulez-vous vraiment annuler ce résultat ? L'argent gagné par les joueurs sur cette question leur sera automatiquement retiré jusqu'à la nouvelle publication.")) return;
 
   const ch = game.challenges[index];
+  const previousCorrectIdx = ch.correct; // NOUVEAU : Sauvegarde du bon index
   
 // 1. REPRISE DES GAINS : On annule les paiements effectués
   if (game.players) {
@@ -3326,11 +3355,47 @@ function undoResolveChallenge(index) {
     });
   }
   
-  // 2. RETOUR AU STATUT PRÉCÉDENT
+// 2. RETOUR AU STATUT PRÉCÉDENT
   ch.correct = null;
   ch.status = "closed";
   
   saveToCloud();
+
+  // --- NOUVEAU : SYNCHRONISATION DE L'ANNULATION ---
+  if (sessionConfig.mode === 'both') {
+     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+     if (otherCode) {
+         db.ref('sessions/' + otherCode).once('value').then(snap => {
+             if(snap.exists()) {
+                 let otherData = snap.val();
+                 let otherGame = otherData.gameData;
+                 
+                 otherGame.challenges[index].correct = null;
+                 otherGame.challenges[index].status = "closed";
+                 
+                 if (otherGame.players) {
+                     otherGame.players.forEach(p => {
+                         if (p.portfolio) {
+                             const winningBets = p.portfolio.filter(b => b.cIndex === index && (
+                                 (b.type === 'YES' && b.ansIndex === previousCorrectIdx) ||
+                                 (b.type === 'NO' && b.ansIndex !== previousCorrectIdx) ||
+                                 (!b.type && b.ansIndex === previousCorrectIdx)
+                             ));
+                             winningBets.forEach(wBet => {
+                                 if (wBet.paidOut) {
+                                     p.balance = parseFloat((p.balance - wBet.pts).toFixed(2));
+                                     wBet.paidOut = false; 
+                                 }
+                             });
+                         }
+                     });
+                 }
+                 db.ref('sessions/' + otherCode).set(otherData);
+             }
+         });
+     }
+  }
+
   renderManageDashboard();
 }
 
