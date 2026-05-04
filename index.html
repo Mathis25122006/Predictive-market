@@ -420,8 +420,18 @@
 <label>Nombre de Challenges</label>
     <input type="number" id="challengesQty" value="2" min="1" max="20" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 15px;">
     
-    <label>Durée totale de la session (minutes)</label>
-    <input type="number" id="sessionDuration" value="120" min="1">
+<div style="display:flex; gap:10px; margin-bottom:15px;">
+      <div style="flex:1;">
+        <label style="font-size:11px; color:#9ca3af;">Heure de début globale</label>
+        <input type="time" id="globalStartTime" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; margin-bottom:5px;" required>
+        <button type="button" onclick="setGlobalQuickTime('start')" style="background:#4b5563; font-size:9px; padding:4px; margin:0;">IMMÉDIAT</button>
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:11px; color:#9ca3af;">Heure de fin globale</label>
+        <input type="time" id="globalEndTime" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; margin-bottom:5px;" required>
+        <button type="button" onclick="setGlobalQuickTime('end')" style="background:#4b5563; font-size:9px; padding:4px; margin:0;">+ 3 HEURES</button>
+      </div>
+    </div>
 
     <div id="advancedParams" class="hidden">
       <label>Solde de base par joueur (Unités)</label>
@@ -592,7 +602,7 @@
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
      <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
 
-     <div style="text-align:center; flex:1;">
+     <div style="text-align:center; flex:1; cursor:pointer;" onclick="showScreen('home')">
         <div style="font-size:18px; font-weight:800; letter-spacing:0.1em; color:#a855f7;">VIVA TECHNOLOGY</div>
         <div style="font-size:38px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">LIVE PREDICTION GAME</div>
         <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:4px 18px; border-radius:999px;">
@@ -828,7 +838,8 @@ function captureSetupData() {
 
   savedSetupData = {
     qty: document.getElementById("challengesQty").value,
-    duration: document.getElementById("sessionDuration").value,
+    gStart: document.getElementById("globalStartTime").value,
+    gEnd: document.getElementById("globalEndTime").value,
     challenges: Array.from(cats).map((cat, i) => ({
       category: cat.value,
       question: ques[i].value,
@@ -855,7 +866,8 @@ function askResume() {
 function resumeSetup() {
   // 1. Restaurer la quantité et générer les champs
   document.getElementById("challengesQty").value = savedSetupData.qty;
-  document.getElementById("sessionDuration").value = savedSetupData.duration;
+  if(savedSetupData.gStart) document.getElementById("globalStartTime").value = savedSetupData.gStart;
+  if(savedSetupData.gEnd) document.getElementById("globalEndTime").value = savedSetupData.gEnd;
   generateSetupFields();
 
   // 2. Remplir les champs et ajouter les lignes de réponses manquantes
@@ -887,9 +899,12 @@ function generateSetupFields() {
   if (isNaN(qty) || qty < 1) qty = 1;
   if (qty > 50) qty = 50; // Limite optionnelle pour éviter de faire ramer le navigateur
 
+  // NOUVEAU : On récupère les heures globales saisies par l'admin
+  const gStart = document.getElementById("globalStartTime").value || "";
+  const gEnd = document.getElementById("globalEndTime").value || "";
+
   const container = document.getElementById("dynamicSetupContainer");
   container.innerHTML = "";
-  container.innerHTML = ""; // Reset
   
   // On initialise proprement les challenges avec des valeurs par défaut
   game.challenges = [];
@@ -931,12 +946,12 @@ function generateSetupFields() {
       <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:10px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border: 1px solid rgba(59,130,246,0.3);">
         <div style="flex:1;">
           <label style="font-size:11px; color:#9ca3af;">Début</label>
-          <input type="time" class="dynamic-start-time" id="start-${i}" data-index="${i}" style="margin-bottom:5px;">
+          <input type="time" class="dynamic-start-time" id="start-${i}" data-index="${i}" value="${gStart}" style="margin-bottom:5px;">
           <button type="button" onclick="quickTime(${i}, 'start')" style="background:#4b5563; font-size:9px; padding:4px; margin:0;">IMMÉDIAT</button>
         </div>
         <div style="flex:1;">
           <label style="font-size:11px; color:#9ca3af;">Fin</label>
-          <input type="time" class="dynamic-end-time" id="end-${i}" data-index="${i}" style="margin-bottom:5px;">
+          <input type="time" class="dynamic-end-time" id="end-${i}" data-index="${i}" value="${gEnd}" style="margin-bottom:5px;">
           <button type="button" onclick="quickTime(${i}, 'end')" style="background:#4b5563; font-size:9px; padding:4px; margin:0;">JUSQU'AU BOUT</button>
         </div>
       </div>
@@ -1064,8 +1079,15 @@ function setupNext() {
   const msg = document.getElementById("setupMsg");
   let isValid = true;
 
-  const duration = parseInt(document.getElementById("sessionDuration").value) || 60;
-  sessionConfig.expiresAt = Date.now() + (duration * 60 * 1000);
+  // NOUVEAU : On enregistre l'heure de début globale
+  const gStartVal = document.getElementById("globalStartTime").value;
+  if (gStartVal) {
+    const [h, m] = gStartVal.split(':');
+    const now = new Date();
+    sessionConfig.gameStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+  } else {
+    sessionConfig.gameStartTime = Date.now();
+  }
 
   game.challenges.forEach((ch, i) => {
     let catValue = selects[i].value;
@@ -1169,13 +1191,22 @@ const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
   console.log("Session créée avec le code : " + sessionConfig.code); // Pour debug
   
-// On calcule la fin réelle du jeu basée sur la question qui finit le plus tard
+// NOUVEAU : La fin globale est définie par l'heure saisie par l'admin (ou par la question la plus tardive)
+  const gEndVal = document.getElementById("globalEndTime").value;
   const maxEndTime = Math.max(...game.challenges.map(c => c.endTime));
   
-sessionConfig.gameEndTime = maxEndTime; 
-  sessionConfig.expiresAt = maxEndTime + (30 * 60 * 1000); 
+  if (gEndVal) {
+      const [h, m] = gEndVal.split(':');
+      const now = new Date();
+      sessionConfig.gameEndTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+  } else {
+      sessionConfig.gameEndTime = maxEndTime; 
+  }
+  
+  // Sécurité cachée : Maintient la BDD ouverte 30 min après la fin
+  sessionConfig.expiresAt = sessionConfig.gameEndTime + (30 * 60 * 1000); 
 
-  // NOUVEAU : On définit le code actif
+  // On définit le code actif
   window.currentActiveSessionCode = sessionConfig.code;
 
   // SAUVEGARDE SUR LE SERVEUR (Mode Facile)
@@ -3406,14 +3437,40 @@ function quickTime(index, type) {
   if (type === 'start') {
     input.value = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
   } else {
-    // On utilise la durée globale de la session
-    const duration = parseInt(document.getElementById("sessionDuration").value) || 60;
-    const end = new Date(now.getTime() + (duration * 60 * 1000));
-    input.value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
+    // NOUVEAU : Si on clique sur "JUSQU'AU BOUT", on prend l'heure de fin globale, ou par défaut dans 2h
+    const globalEnd = document.getElementById("globalEndTime").value;
+    if (globalEnd) {
+      input.value = globalEnd;
+    } else {
+      const end = new Date(now.getTime() + (120 * 60 * 1000));
+      input.value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
+    }
   }
 }
 
 let adminDashboardTimerInterval = null;
+
+
+// NOUVEAU : Fonction pour remplir rapidement les heures globales
+function setGlobalQuickTime(type) {
+  const now = new Date();
+  if (type === 'start') {
+    // Met l'heure actuelle
+    document.getElementById("globalStartTime").value = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+  } else {
+    // NOUVEAU : On calcule + 3 heures par rapport à l'heure de DÉBUT (ou l'heure actuelle si vide)
+    const startInput = document.getElementById("globalStartTime").value;
+    let baseTime = now;
+    
+    if (startInput) {
+      const [h, m] = startInput.split(':');
+      baseTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(h), parseInt(m));
+    }
+    
+    const end = new Date(baseTime.getTime() + (180 * 60 * 1000));
+    document.getElementById("globalEndTime").value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
+  }
+}
 
 function startAdminDashboardTimers() {
   if (adminDashboardTimerInterval) clearInterval(adminDashboardTimerInterval);
