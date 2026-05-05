@@ -1100,6 +1100,10 @@ function setupNext() {
     const [h, m] = gStartVal.split(':');
     const now = new Date();
     sessionConfig.gameStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+    // NOUVEAU : Si l'heure générée est "ce matin" alors qu'on est le soir, on la pousse à demain
+    if (sessionConfig.gameStartTime < now.getTime() - (12 * 3600 * 1000)) {
+        sessionConfig.gameStartTime += 24 * 3600 * 1000;
+    }
   } else {
     sessionConfig.gameStartTime = Date.now();
   }
@@ -1118,6 +1122,7 @@ function setupNext() {
     if (startTimes[i] && startTimes[i].value) {
       const [h, m] = startTimes[i].value.split(':');
       ch.startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+      if (ch.startTime < now.getTime() - (12 * 3600 * 1000)) ch.startTime += 24 * 3600 * 1000;
     } else {
       ch.startTime = Date.now();
     }
@@ -1126,6 +1131,10 @@ function setupNext() {
     if (endTimes[i] && endTimes[i].value) {
       const [h, m] = endTimes[i].value.split(':');
       ch.endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+      // NOUVEAU : Si l'heure de fin est plus petite que l'heure de début (passage de minuit), on ajoute 1 jour !
+      if (ch.endTime < ch.startTime) {
+          ch.endTime += 24 * 3600 * 1000;
+      }
     } else {
       ch.endTime = sessionConfig.expiresAt;
     }
@@ -1214,6 +1223,10 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
       const [h, m] = gEndVal.split(':');
       const now = new Date();
       sessionConfig.gameEndTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+      // NOUVEAU : Correction du passage à minuit pour la fin globale
+      if (sessionConfig.gameEndTime < sessionConfig.gameStartTime) {
+          sessionConfig.gameEndTime += 24 * 3600 * 1000;
+      }
   } else {
       sessionConfig.gameEndTime = maxEndTime; 
   }
