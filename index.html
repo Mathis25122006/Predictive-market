@@ -657,67 +657,29 @@ input, select, textarea {
   <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Abandonner et Accueil</button>
 </div>
 
-<div id="onboarding" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#020617; z-index:9000; overflow:hidden; touch-action:none;">
+<div id="tutorialOverlay" class="hidden" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.85); z-index:9999; backdrop-filter:blur(5px); touch-action:none; flex-direction:column; align-items:center; justify-content:center;">
   
-  <div style="position:absolute; top:max(20px, env(safe-area-inset-top)); left:15px; right:15px; bottom:calc(max(30px, env(safe-area-inset-bottom)) + 25px); background:linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%); border-radius:20px; padding:24px 24px 12px 24px; display:flex; flex-direction:column; box-shadow:0 15px 35px rgba(0,0,0,0.6);">
-    <div style="flex-shrink:0;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:clamp(2px, 0.5vh, 6px);">
-        <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
-        <div style="text-align:right;">
-           <div style="color:#fde047; font-size:14px; font-weight:900; font-family:monospace;">--:--</div>
-           <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">TEMPS RESTANT</div>
-        </div>
-      </div>
-      <div style="font-size:clamp(14px, 2.5vh, 20px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">LIVE TRAFFIC</div>
-      <div style="width:100%; height:clamp(60px, 12vh, 140px); background:rgba(0,0,0,0.3); border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); display:flex; align-items:center; justify-content:center; font-size:40px;">🚶‍♂️🚶‍♀️</div>
-      <div style="font-size:clamp(13px, 2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb;">Combien de visiteurs sont attendus au salon aujourd'hui ?</div>
-    </div>
-    <div style="flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; gap:clamp(2px, 0.8vh, 6px); min-height:0; margin-top:2px;">
-       <div style="background:rgba(15,23,42,0.6); padding:clamp(4px, 1vh, 10px) 12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; min-height:28px;">
-          <div style="font-weight:600; font-size:clamp(10px, 1.5vh, 13px); color:#f9fafb;">Moins de 60,000</div>
-          <div style="font-weight:800; font-size:clamp(11px, 1.6vh, 14px); color:#f9fafb;">31 pt</div>
-       </div>
-       <div style="background:rgba(147, 51, 234, 0.4); border:2px solid #a855f7; padding:clamp(4px, 1vh, 10px) 12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; min-height:28px;">
-          <div style="font-weight:600; font-size:clamp(10px, 1.5vh, 13px); color:#f9fafb;">60,000 - 70,000</div>
-          <div style="font-weight:800; font-size:clamp(11px, 1.6vh, 14px); color:#f9fafb;">48 pt</div>
-       </div>
-       <div style="background:rgba(15,23,42,0.6); padding:clamp(4px, 1vh, 10px) 12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; min-height:28px;">
-          <div style="font-weight:600; font-size:clamp(10px, 1.5vh, 13px); color:#f9fafb;">Plus de 70,000</div>
-          <div style="font-weight:800; font-size:clamp(11px, 1.6vh, 14px); color:#f9fafb;">16 pt</div>
-       </div>
-    </div>
-    <div style="flex-shrink:0; margin-top:auto; padding-top:clamp(4px, 1vh, 12px);">
-      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-         <div><div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">SCORE</div><div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">100 <span style="font-size:11px; font-weight:normal; color:#9ca3af;">pts</span></div></div>
-         <div style="text-align:right;"><div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">LEADERBOARD</div><div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">-</div></div>
-      </div>
-      <button style="background:linear-gradient(90deg, #9333ea, #db2777); border-radius:999px; font-weight:800; padding:clamp(10px, 1.5vh, 14px); width:100%; font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; margin-top:clamp(6px, 1vh, 12px); border:none; color:white;">Suivant</button>
-    </div>
+  <div id="tutoStep1" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(147,51,234,0.2); border:1px solid #a855f7; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="font-size:30px; margin-bottom:10px;">👑</div>
+    <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">VOTRE FIL ROUGE</h3>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Cette première carte est spéciale. C'est votre défi principal qui durera tout au long de l'événement !</p>
+    <button onclick="nextTuto(2)" style="background:linear-gradient(135deg,#a855f7,#d946ef); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">Compris !</button>
   </div>
 
-  <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.85); backdrop-filter:blur(5px); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9001;">
-    
-    <div id="tutoStep1" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(147,51,234,0.2); border:1px solid #a855f7; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-      <div style="font-size:30px; margin-bottom:10px;">👑</div>
-      <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">VOTRE FIL ROUGE</h3>
-      <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Cette première carte est spéciale. C'est votre défi principal qui durera tout au long de l'événement !</p>
-      <button onclick="nextTuto(2)" style="background:linear-gradient(135deg,#a855f7,#d946ef); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">Compris !</button>
-    </div>
-
-    <div id="tutoStep2" class="hidden" style="position:absolute; top:45%; transform:translateY(-50%); left:5%; right:5%; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-      <div style="font-size:30px; margin-bottom:10px;">👇</div>
-      <h3 style="color:#60a5fa; margin-bottom:10px; font-weight:900;">FAITES VOS JEUX</h3>
-      <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Touchez l'une des réponses proposées au centre de la carte pour placer votre prédiction.</p>
-      <button onclick="nextTuto(3)" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est noté</button>
-    </div>
-
-    <div id="tutoStep3" class="hidden" style="position:absolute; bottom:calc(max(30px, env(safe-area-inset-bottom)) + 25px); left:5%; right:5%; background:rgba(249,115,22,0.2); border:1px solid #f97316; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-      <div style="font-size:30px; margin-bottom:10px;" class="swipe-anim">👆</div>
-      <h3 style="color:#fb923c; margin-bottom:10px; font-weight:900;">PASSEZ À LA SUITE</h3>
-      <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Glissez la carte vers le haut (ou utilisez le bouton) pour découvrir le défi suivant !</p>
-      <button onclick="finishTuto()" style="background:linear-gradient(135deg,#f97316,#ec4899); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est parti ! 🚀</button>
-    </div>
+  <div id="tutoStep2" class="hidden" style="position:absolute; top:45%; transform:translateY(-50%); left:5%; right:5%; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="font-size:30px; margin-bottom:10px;">👇</div>
+    <h3 style="color:#60a5fa; margin-bottom:10px; font-weight:900;">FAITES VOS JEUX</h3>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Touchez l'une des réponses proposées au centre de la carte pour placer votre prédiction.</p>
+    <button onclick="nextTuto(3)" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est noté</button>
   </div>
+
+  <div id="tutoStep3" class="hidden" style="position:absolute; bottom:calc(max(30px, env(safe-area-inset-bottom)) + 25px); left:5%; right:5%; background:rgba(249,115,22,0.2); border:1px solid #f97316; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+    <div style="font-size:30px; margin-bottom:10px;" class="swipe-anim">👆</div>
+    <h3 style="color:#fb923c; margin-bottom:10px; font-weight:900;">PASSEZ À LA SUITE</h3>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Glissez la carte vers le haut pour découvrir le défi suivant !</p>
+    <button onclick="closeTuto()" style="background:linear-gradient(135deg,#f97316,#ec4899); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est parti ! 🚀</button>
+  </div>
+
 </div>
 
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
@@ -813,8 +775,8 @@ input, select, textarea {
   }
 }
 function showScreen(screenId) {
-  // NOUVEAU : Ajout de 'onboarding' à la liste des écrans
-  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'onboarding'];
+  // CORRECTION : On retire onboarding
+  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult'];
 
   // On cache le canvas de confettis si on quitte l'écran de résultat personnel
   if (screenId !== 'playerResult') {
@@ -1853,6 +1815,16 @@ function renderPlayChallenges(){
 
 updateCardStack(); 
 
+  // CORRECTION : Lancement du tutoriel par-dessus la vraie première carte si le joueur ne l'a jamais vu
+  if (!localStorage.getItem('hasSeenTutorial') && cardsElements.length > 0 && window.currentCardIndex === 0) {
+     const tutoOverlay = document.getElementById("tutorialOverlay");
+     if (tutoOverlay) {
+        tutoOverlay.classList.remove("hidden");
+        tutoOverlay.style.display = "flex";
+        nextTuto(1); // Force l'étape 1
+     }
+  }
+
   startPlayScreenTimers();
 }
 
@@ -2001,10 +1973,14 @@ function nextTuto(step) {
   document.getElementById("tutoStep" + step).classList.remove("hidden");
 }
 
-// NOUVEAU : Quand l'utilisateur a fini le tuto, on sauvegarde et on lance l'application normalement
-function finishTuto() {
+// CORRECTION : Fermeture du calque transparent en jeu
+function closeTuto() {
+  const overlay = document.getElementById("tutorialOverlay");
+  if (overlay) {
+      overlay.classList.add("hidden");
+      overlay.style.display = "none";
+  }
   localStorage.setItem('hasSeenTutorial', 'true');
-  checkStartupUrl(); // Fonction qui gère l'arrivée sur l'accueil ou la connexion auto
 }
 
 function playNext() {
@@ -3145,7 +3121,17 @@ function confirmExitManage() {
 
 // On regroupe toute la logique de chargement à la fin pour être sûr que les variables existent
 // NOUVEAU : Logique de démarrage séparée pour pouvoir être appelée après le tutoriel
-function checkStartupUrl() {
+window.addEventListener('load', () => {
+  // 1. Restauration localStorage
+  const savedConfig = localStorage.getItem('savedSessionConfig');
+  const savedGame = localStorage.getItem('savedGameData');
+  
+  if (savedConfig && savedGame) {
+    sessionConfig = JSON.parse(savedConfig);
+    game = JSON.parse(savedGame);
+  }
+
+  // 2. Gestion du lien URL (Paramètre session, pseudo ET email)
   const urlParams = new URLSearchParams(window.location.search);
   const codeFromUrl = urlParams.get('session');
   const pseudoFromUrl = urlParams.get('p'); 
@@ -3174,28 +3160,6 @@ function checkStartupUrl() {
          setTimeout(() => checkAccess(), 500);
       }
     }
-  } else {
-    // Si aucun paramètre, on affiche l'écran d'accueil normal
-    showScreen('home');
-  }
-}
-
-window.addEventListener('load', () => {
-  // 1. Restauration localStorage de l'admin
-  const savedConfig = localStorage.getItem('savedSessionConfig');
-  const savedGame = localStorage.getItem('savedGameData');
-  
-  if (savedConfig && savedGame) {
-    sessionConfig = JSON.parse(savedConfig);
-    game = JSON.parse(savedGame);
-  }
-
-  // 2. NOUVEAU : Si c'est la toute première ouverture de l'App, on lance l'Onboarding
-  if (!localStorage.getItem('hasSeenTutorial')) {
-     showScreen('onboarding');
-  } else {
-     // Sinon, on lance l'application normalement
-     checkStartupUrl();
   }
 });
 
