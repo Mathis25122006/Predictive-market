@@ -324,8 +324,10 @@ input, select, textarea {
 #challengesPlay {
   height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   position: relative;
-  overflow: hidden; /* Empêche le scroll natif, on utilise les animations tactiles */
+  overflow: hidden; 
   padding: 10px;
+  /* NOUVEAU : Bloque totalement le rebond de la page (pull-to-refresh) et le scroll système */
+  touch-action: none; 
 }
 
 #challengesPlay::-webkit-scrollbar { display: none; }
@@ -1630,11 +1632,16 @@ function renderPlayChallenges(){
     const footer = document.createElement("div");
     footer.style.cssText = "margin-top: auto; padding-top: 15px;";
     
+    // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
+    const hintText = cIndex > 0 
+       ? `<div style="text-align:center; color:#9ca3af; font-size:10px; margin-top:8px;">↑ Glissez haut pour passer • ↓ Bas pour revenir</div>` 
+       : `<div style="text-align:center; color:#9ca3af; font-size:10px; margin-top:8px;">↑ Glissez vers le haut pour passer</div>`;
+
     // Le bouton Next se transforme en bouton Valider sur la dernière carte
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
-       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Valider mes paris</button>`
-       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Next Card</button>`;
+       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Valider mes paris</button>${hintText}`
+       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Suivant</button>${hintText}`;
 
     footer.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-end;">
@@ -1664,76 +1671,93 @@ function renderPlayChallenges(){
 
   function updateCardStack() {
     cardsElements.forEach((card, i) => {
-      card.classList.remove('active-card', 'stacked-1', 'stacked-2');
+      card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'fly-away');
+      card.style.transform = ''; 
+      card.style.opacity = '';
+      card.style.pointerEvents = '';
+
       if (i === currentCardIndex) {
         card.classList.add('active-card');
       } else if (i === currentCardIndex + 1) {
         card.classList.add('stacked-1');
       } else if (i === currentCardIndex + 2) {
         card.classList.add('stacked-2');
+      } else if (i < currentCardIndex) {
+        // NOUVEAU : Les cartes précédentes sont cachées en haut en attente d'être rappelées
+        card.style.transform = 'translateY(-150%) rotate(10deg)';
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
+      } else {
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
       }
     });
   }
 
-  // Fonction appelée par le bouton "Next Card" et par le glissement de doigt
   window.swipeNextCard = function() {
-    if(currentCardIndex >= cardsElements.length) return;
+    if(currentCardIndex >= cardsElements.length - 1) return;
     const activeCard = cardsElements[currentCardIndex];
-    activeCard.classList.add('fly-away'); // Active l'animation CSS (S'envole en haut à droite)
+    activeCard.classList.add('fly-away'); 
     currentCardIndex++;
-    setTimeout(updateCardStack, 100); // Fait remonter la carte suivante fluide
+    setTimeout(updateCardStack, 100); 
+  };
+
+  // NOUVEAU : Fonction pour ramener la carte précédente
+  window.swipePrevCard = function() {
+    if(currentCardIndex <= 0) return;
+    currentCardIndex--;
+    updateCardStack(); 
   };
 
   // --- Moteur Tactile (Touch Events) ---
   let startY = 0; let startX = 0;
   let isDragging = false;
 
+  // NOUVEAU : passive: false est requis pour bloquer le scroll natif
   containerEl.addEventListener('touchstart', (e) => {
     const activeCard = cardsElements[currentCardIndex];
-    // On ignore si on ne touche pas la carte active
     if(!activeCard || !activeCard.contains(e.target)) return;
-    
-    // Sécurité : Si le joueur fait défiler les réponses vers le bas, on ne swipe pas la carte
-    if(activeCard.scrollTop > 5) return; 
     
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     isDragging = true;
-    activeCard.style.transition = 'none'; // Désactive la fluidité pour coller parfaitement au doigt
-  }, {passive: true});
+    activeCard.style.transition = 'none'; 
+  }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
     if(!isDragging) return;
+    
+    // NOUVEAU : Empêche totalement le scroll de la page ! Le doigt ne bouge QUE la carte.
+    e.preventDefault(); 
+    
     const activeCard = cardsElements[currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
     const deltaX = e.touches[0].clientX - startX;
     
-    // On permet de jeter la carte uniquement vers le haut
-    if (deltaY < 0) {
-      const rotate = deltaY * 0.05; // La carte penche légèrement en glissant
-      activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
-    }
-  }, {passive: true});
+    // On permet de glisser vers le haut (Passer) ou vers le bas (Revenir)
+    const rotate = deltaY * 0.05; 
+    activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+  }, {passive: false});
 
   containerEl.addEventListener('touchend', (e) => {
     if(!isDragging) return;
     isDragging = false;
     const activeCard = cardsElements[currentCardIndex];
-    // On remet la fluidité CSS
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
     
-    // Si on a jeté la carte suffisamment haut (plus de 80px)
-    if (deltaY < -80) {
-      swipeNextCard();
+    // NOUVEAU : Logique bidirectionnelle
+    if (deltaY < -80 && currentCardIndex < cardsElements.length - 1) {
+      swipeNextCard(); // Swipe Haut = Suivante
+    } else if (deltaY > 80 && currentCardIndex > 0) {
+      swipePrevCard(); // Swipe Bas = Précédente
     } else {
-      // Sinon elle retombe délicatement à sa place initiale (Effet ressort)
-      activeCard.style.transform = '';
+      activeCard.style.transform = ''; // Annule le mouvement si pas assez glissé
     }
   });
 
-  updateCardStack(); // Initialisation des positions au chargement de la page
+  updateCardStack(); 
 
   // On lance la boucle de rafraîchissement des décomptes
   startPlayScreenTimers();
