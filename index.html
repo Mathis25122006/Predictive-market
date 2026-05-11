@@ -320,38 +320,42 @@ input, select, textarea {
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 
+/* --- NOUVEAU : INTERFACE MOBILE (DESIGN CARTE VIOLET/ORANGE) --- */
 #challengesPlay {
-  height: calc(100vh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  /* La carte prend maintenant quasiment tout l'écran ! */
+  height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   display: flex;
   flex-direction: column;
-  gap: 15px; /* Petit espace entre les cartes */
-  padding-bottom: 15px; 
+  gap: 10px;
+  padding-bottom: 10px; 
   scroll-behavior: smooth;
 }
 
-#challengesPlay::-webkit-scrollbar { 
-  display: none;
-}
+#challengesPlay::-webkit-scrollbar { display: none; }
 
 #challengesPlay .challenge-block {
-  scroll-snap-align: start; /* S'aimante parfaitement en haut du conteneur */
-  scroll-snap-stop: always; /* Oblige le scroll à s'arrêter sur chaque carte (pas de saut de 3 cartes d'un coup) */
-  flex: 0 0 100%; /* La carte prend exactement 100% de la hauteur disponible */
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  flex: 0 0 100%;
   box-sizing: border-box;
   
-  /* Design de la carte */
-  background: linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)) !important;
-  border-radius: 24px !important;
-  padding: 20px !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+  /* Design exact de votre capture d'écran */
+  background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
+  border-radius: 20px !important;
+  padding: 24px !important;
+  border: none !important; 
   margin-bottom: 0 !important;
   
-  /* Permet au contenu interne (réponses) de défiler si la carte est trop petite sur un vieil iPhone */
+  /* Flexbox pour repousser le footer (score/bouton) tout en bas */
+  display: flex;
+  flex-direction: column;
   overflow-y: auto; 
 }
+
+/* On cache l'ancienne barre du bas pour l'écran de jeu */
+#gameContent .sticky-action-bar { display: none !important; }
 </style>
 </head>
 <body>
@@ -389,11 +393,11 @@ input, select, textarea {
   </div>
 </div>
 
-<div class="vivatech-logo">
+<div id="mainLogo" class="vivatech-logo">
   <div class="vivatech-logo-mark"><span>VIVA TECHNOLOGY</span></div>
 </div>
 
-<h1>Prediction Game</h1>
+<h1 id="mainTitle">Prediction Game</h1>
 
 <div id="home" class="card">
   <h2>Bienvenue</h2>
@@ -765,6 +769,13 @@ function showScreen(screenId) {
   });
 
   // 3. Logiques spécifiques selon l'écran affiché
+  
+  // NOUVEAU : On cache le logo et le titre sur l'écran de jeu pour un rendu 100% plein écran
+  const mainLogo = document.getElementById('mainLogo');
+  const mainTitle = document.getElementById('mainTitle');
+  if (mainLogo) mainLogo.style.display = (screenId === 'play') ? 'none' : 'flex';
+  if (mainTitle) mainTitle.style.display = (screenId === 'play') ? 'none' : 'block';
+
   if (screenId === 'play') {
     // Initialiser la vue QR si on est sur mobile
     if (typeof initAccessView === 'function') {
@@ -1547,41 +1558,76 @@ function renderPlayChallenges(){
       return;
     }
 
-// 3. QUESTION OUVERTE (OPEN) - Rendu normal
+// 3. QUESTION OUVERTE (OPEN) - Rendu style Carte Premium
     const snap = player ? (player.portfolio || []).find(b => b.cIndex === cIndex) : null;
     let betInfoHtml = "";
     
-    // Si le joueur a DÉJÀ validé une mise sur cette question ouverte
     if (snap) {
-      const extraText = currentPlayerMode === 'advanced' ? " (Vous pouvez remiser pour augmenter votre position)." : " (Choix définitif).";
-      betInfoHtml = `<div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:6px; border-radius:6px; margin-top:8px; font-size:11px; color:#3b82f6;">
-        ✅ Mise enregistrée : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}".${extraText}
+      const extraText = currentPlayerMode === 'advanced' ? " (Vous pouvez remiser)." : "";
+      betInfoHtml = `<div style="color:#fde047; font-size:12px; margin-top:10px; font-weight:bold;">
+        ✅ Mise : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}".${extraText}
       </div>`;
     }
 
     const header = document.createElement("div");
     header.className = "challenge-header";
-    header.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div class="chip">${ch.category}</div>
-        <div id="open-timer-${cIndex}" style="font-size:12px; font-weight:800; color:#f87171; font-family:monospace; background:rgba(248,113,113,0.1); padding:2px 8px; border-radius:4px;">--:--</div>
-      </div>
-      <div class="challenge-title" style="margin-top:5px;">${ch.question}</div>
-      ${betInfoHtml}
-    `;
     
-if (ch.imageUrl) {
-      const img = document.createElement("img");
-      img.src = ch.imageUrl;
-      // NOUVEAU : max-height:180px et object-fit:cover empêchent l'image de prendre tout l'écran
-      img.style.cssText = "width:100%; max-height:180px; object-fit:cover; border-radius:12px; margin:8px 0; box-shadow:0 4px 10px rgba(0,0,0,0.3);";
-      header.appendChild(img);
+    // Calcul du Leaderboard
+    const provLeaderboard = (game.players || []).map(p => ({ name: p.name, score: p.balance })).sort((a,b)=>b.score - a.score);
+    const myRankIdx = provLeaderboard.findIndex(p => p.name === game.currentPlayerName);
+    const myRank = myRankIdx >= 0 ? (myRankIdx + 1) : "-";
+    const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
+
+    let imgHtml = "";
+    if (ch.imageUrl) {
+        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:200px; object-fit:cover; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
     }
 
+    header.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+        <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
+        <div style="text-align:right;">
+           <div style="color:#fde047; font-size:14px; font-weight:900;">+50%</div>
+           <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">BONUS POINTS</div>
+        </div>
+      </div>
+      <div style="font-size:24px; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5);">${ch.category}</div>
+      ${imgHtml}
+      <div style="font-size:16px; font-weight:600; line-height:1.4; margin-bottom:15px; color:#f9fafb;">
+         ${ch.question}
+         ${betInfoHtml}
+      </div>
+    `;
+
     const answersBox = document.createElement("div");
-answersBox.id = "answers-ch" + cIndex;
+    answersBox.id = "answers-ch" + cIndex;
+    
+    const footer = document.createElement("div");
+    footer.style.cssText = "margin-top: auto; padding-top: 15px;";
+    
+    // Le bouton Next se transforme en bouton Valider sur la dernière carte
+    const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
+    const btnHtml = isLastCard 
+       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Valider mes paris</button>`
+       : `<button onclick="document.getElementById('challengesPlay').scrollBy({top: window.innerHeight, behavior: 'smooth'})" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Next Card</button>`;
+
+    footer.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+         <div>
+            <div style="font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">SCORE</div>
+            <div style="font-size:20px; font-weight:900; color:#f9fafb;">${currentPlayerBalance} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">pts</span></div>
+         </div>
+         <div style="text-align:right;">
+            <div style="font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">LEADERBOARD</div>
+            <div style="font-size:20px; font-weight:900; color:#f9fafb;">${myRank} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">${myRankSuffix}</span></div>
+         </div>
+      </div>
+      ${btnHtml}
+    `;
+
     block.appendChild(header);
     block.appendChild(answersBox);
+    block.appendChild(footer);
     container.appendChild(block);
     renderAnswersForChallenge(cIndex);
   });
@@ -1611,10 +1657,12 @@ ch.answers.forEach((a,i)=>{
 
  const div = document.createElement("div");
     div.className = "answer-btn";
+    // NOUVEAU STYLE : Look de la carte (Fond semi-transparent, texte clair)
+    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: 14px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;";
     
-    // --- CORRECTION : Logique de clic restaurée (Facile et Avancé) ---
+    // --- Logique de clic et surbrillance ---
     if (snap) {
-       if (snap.ansIndex === i) div.classList.add("selected");
+       if (snap.ansIndex === i) div.style.background = "rgba(147, 51, 234, 0.4)"; // Surlignage violet
        if (currentPlayerMode === 'easy') {
            div.style.cursor = "default";
            if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
@@ -1622,7 +1670,7 @@ ch.answers.forEach((a,i)=>{
            div.onclick = () => openBetPanel(cIndex, i, 'YES');
        }
     } else {
-       if(selectedAnswers[cIndex] === i) div.classList.add("selected");
+       if(selectedAnswers[cIndex] === i) div.style.background = "rgba(147, 51, 234, 0.4)"; 
        div.onclick = () => { 
          if (currentPlayerMode === 'easy') {
              selectedAnswers[cIndex] = i; 
@@ -1634,55 +1682,26 @@ ch.answers.forEach((a,i)=>{
        };
     }
 
-    const top = document.createElement("div");
-    top.className = "answer-title";
-
     const label = document.createElement("div");
-    label.className = "answer-label";
+    label.style.cssText = "font-weight: 600; font-size: 14px; color: #f9fafb; flex:1; padding-right:10px;";
     label.textContent = a;
 
-    const chip = document.createElement("div");
-    chip.className = "answer-chip";
-    chip.textContent = (pct*100).toFixed(1) + " %";
-
-    top.appendChild(label);
-    top.appendChild(chip);
-
-    // --- CORRECTION : Déclaration de meta AVANT de l'utiliser ---
-    const meta = document.createElement("div");
-    meta.className = "answer-meta";
-
-    // NOUVEAU : On n'affiche le gain potentiel que pour le mode FACILE
+    const ptsSpan = document.createElement("div");
+    ptsSpan.style.cssText = "font-weight: 800; font-size: 16px; color: #f9fafb; white-space:nowrap;";
+    
+    // Affichage des points (Facile) ou des % (Avancé)
     if (currentPlayerMode === 'easy') {
-      const ptsSpan = document.createElement("span");
-      const pill = document.createElement("span");
-      pill.className = "pts-pill";
-      pill.textContent = pts + " 💰 potentiels"; 
-      ptsSpan.appendChild(pill);
-      meta.appendChild(ptsSpan);
-    } else if (currentPlayerMode === 'advanced') {
-      // Pour le mode Avancé, on affiche uniquement la mise en attente (s'il y en a une)
-      if (selectedAnswers[cIndex] === i && selectedBets[cIndex] > 0) {
-        const betSpan = document.createElement("span");
-        betSpan.style.color = "#3b82f6";
-        betSpan.style.fontSize = "11px";
-        betSpan.style.marginLeft = "8px";
-        betSpan.textContent = `En attente : ${selectedBets[cIndex]} u`;
-        meta.appendChild(betSpan);
-      }
+        ptsSpan.innerHTML = `${pts} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">pt</span>`;
+    } else {
+        if (selectedAnswers[cIndex] === i && selectedBets[cIndex] > 0) {
+            ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Attente: ${selectedBets[cIndex]}u</span>`;
+        } else {
+            ptsSpan.innerHTML = `${(pct*100).toFixed(0)} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
+        }
     }
 
-    const gauge = document.createElement("div");
-    gauge.className = "gauge";
-    const gaugeFill = document.createElement("div");
-    gaugeFill.className = "gauge-fill";
-    gaugeFill.style.width = (pct*100) + "%";
-    gauge.appendChild(gaugeFill);
-
-    div.appendChild(top);
-    div.appendChild(meta);
-    div.appendChild(gauge);
-
+    div.appendChild(label);
+    div.appendChild(ptsSpan);
     box.appendChild(div);
   });
 }
