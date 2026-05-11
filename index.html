@@ -322,25 +322,24 @@ input, select, textarea {
 
 /* --- NOUVEAU : INTERFACE MOBILE (DESIGN CARTE VIOLET/ORANGE) --- */
 #challengesPlay {
-  /* NOUVEAU : Le conteneur se fige sur TOUT l'écran pour devenir une application 100% immersive */
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  width: 100vw; height: 100vh;
-  background: #020617; /* Fond noir uni derrière les cartes (couvre le reste de la page) */
-  z-index: 800; /* Assez haut pour couvrir le jeu, mais sous les popups de paris */
+  width: 100%; height: 100%; /* Plus sûr que 100vh sur mobile */
+  background: #020617; 
+  z-index: 800; 
   overflow: hidden; 
-  touch-action: none; /* Bloque le scroll natif d'iOS et Android */
+  touch-action: none; 
 }
 
 #challengesPlay::-webkit-scrollbar { display: none; }
 
 #challengesPlay .challenge-block {
   position: absolute;
-  /* Marges de sécurité parfaites : la carte prend toute la place sans jamais toucher les bords ou l'encoche */
-  top: max(15px, env(safe-area-inset-top)); 
+  top: max(20px, env(safe-area-inset-top)); 
   left: 15px; 
   right: 15px; 
-  bottom: max(15px, env(safe-area-inset-bottom));
+  /* CORRECTION : Marge étendue pour que le bouton 'Suivant' ne soit plus jamais coupé par l'iPhone */
+  bottom: calc(max(30px, env(safe-area-inset-bottom)) + 25px);
   box-sizing: border-box;
   
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
@@ -1507,7 +1506,15 @@ function startPlayScreenTimers() {
     const now = Date.now();
     let needsRefresh = false;
 
+    // NOUVEAU : On récupère les indices du joueur pour ne rafraîchir que SES cartes
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+
     game.challenges.forEach((ch, i) => {
+      // CORRECTION MAJEURE : On ignore les questions qui ne sont pas sur l'écran du joueur
+      // Cela empêche le jeu de tourner en boucle et de bloquer le Swipe !
+      if (!myIndices.includes(i)) return;
+
       const effStatus = getEffectiveStatus(ch);
       const pendingTimer = document.getElementById(`pending-timer-${i}`);
       const openTimer = document.getElementById(`open-timer-${i}`);
@@ -1620,8 +1627,8 @@ function renderPlayChallenges(){
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
         <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
         <div style="text-align:right;">
-           <div style="color:#fde047; font-size:14px; font-weight:900;">+50%</div>
-           <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">BONUS POINTS</div>
+           <div id="open-timer-${cIndex}" style="color:#fde047; font-size:14px; font-weight:900; font-family:monospace;">--:--</div>
+           <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">TEMPS RESTANT</div>
         </div>
       </div>
       <div style="font-size:24px; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5);">${ch.category}</div>
@@ -1636,7 +1643,8 @@ function renderPlayChallenges(){
     answersBox.id = "answers-ch" + cIndex;
     
     const footer = document.createElement("div");
-    footer.style.cssText = "margin-top: auto; padding-top: 15px;";
+    // CORRECTION : Ajout de padding-bottom pour assurer l'espace de clic
+    footer.style.cssText = "margin-top: auto; padding-top: 15px; padding-bottom: 15px;";
     
     // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
     const hintText = cIndex > 0 
@@ -1670,10 +1678,14 @@ function renderPlayChallenges(){
     renderAnswersForChallenge(cIndex);
   });
   
-  // --- NOUVEAU : Moteur de Swipe (Cartes Empilées type Panini/Tinder) ---
+// --- NOUVEAU : Moteur de Swipe (Cartes Empilées type Panini/Tinder) ---
   const containerEl = document.getElementById("challengesPlay");
   const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
-  let currentCardIndex = 0;
+  
+  // CORRECTION : On utilise une variable globale pour ne pas revenir à la carte 1 à chaque clic
+  if (typeof window.currentCardIndex === 'undefined' || window.currentCardIndex >= cardsElements.length) {
+      window.currentCardIndex = 0;
+  }
 
   function updateCardStack() {
     cardsElements.forEach((card, i) => {
@@ -1682,14 +1694,13 @@ function renderPlayChallenges(){
       card.style.opacity = '';
       card.style.pointerEvents = '';
 
-      if (i === currentCardIndex) {
+      if (i === window.currentCardIndex) {
         card.classList.add('active-card');
-      } else if (i === currentCardIndex + 1) {
+      } else if (i === window.currentCardIndex + 1) {
         card.classList.add('stacked-1');
-      } else if (i === currentCardIndex + 2) {
+      } else if (i === window.currentCardIndex + 2) {
         card.classList.add('stacked-2');
-      } else if (i < currentCardIndex) {
-        // NOUVEAU : Les cartes précédentes sont cachées en haut en attente d'être rappelées
+      } else if (i < window.currentCardIndex) {
         card.style.transform = 'translateY(-150%) rotate(10deg)';
         card.style.opacity = '0';
         card.style.pointerEvents = 'none';
@@ -1701,27 +1712,24 @@ function renderPlayChallenges(){
   }
 
   window.swipeNextCard = function() {
-    if(currentCardIndex >= cardsElements.length - 1) return;
-    const activeCard = cardsElements[currentCardIndex];
+    if(window.currentCardIndex >= cardsElements.length - 1) return;
+    const activeCard = cardsElements[window.currentCardIndex];
     activeCard.classList.add('fly-away'); 
-    currentCardIndex++;
+    window.currentCardIndex++;
     setTimeout(updateCardStack, 100); 
   };
 
-  // NOUVEAU : Fonction pour ramener la carte précédente
   window.swipePrevCard = function() {
-    if(currentCardIndex <= 0) return;
-    currentCardIndex--;
+    if(window.currentCardIndex <= 0) return;
+    window.currentCardIndex--;
     updateCardStack(); 
   };
 
-  // --- Moteur Tactile (Touch Events) ---
   let startY = 0; let startX = 0;
   let isDragging = false;
 
-  // NOUVEAU : passive: false est requis pour bloquer le scroll natif
   containerEl.addEventListener('touchstart', (e) => {
-    const activeCard = cardsElements[currentCardIndex];
+    const activeCard = cardsElements[window.currentCardIndex];
     if(!activeCard || !activeCard.contains(e.target)) return;
     
     startY = e.touches[0].clientY;
@@ -1731,17 +1739,13 @@ function renderPlayChallenges(){
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
-    // NOUVEAU : On annule le comportement de base de l'écran DANS TOUS LES CAS.
-    // L'écran derrière ne pourra physiquement plus bouger d'un seul pixel.
     e.preventDefault(); 
-
     if(!isDragging) return;
     
-    const activeCard = cardsElements[currentCardIndex];
+    const activeCard = cardsElements[window.currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
     const deltaX = e.touches[0].clientX - startX;
     
-    // On permet de glisser vers le haut (Passer) ou vers le bas (Revenir)
     const rotate = deltaY * 0.05; 
     activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
   }, {passive: false});
@@ -1749,24 +1753,22 @@ function renderPlayChallenges(){
   containerEl.addEventListener('touchend', (e) => {
     if(!isDragging) return;
     isDragging = false;
-    const activeCard = cardsElements[currentCardIndex];
+    const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
     
-    // NOUVEAU : Logique bidirectionnelle
-    if (deltaY < -80 && currentCardIndex < cardsElements.length - 1) {
-      swipeNextCard(); // Swipe Haut = Suivante
-    } else if (deltaY > 80 && currentCardIndex > 0) {
-      swipePrevCard(); // Swipe Bas = Précédente
+    if (deltaY < -80 && window.currentCardIndex < cardsElements.length - 1) {
+      swipeNextCard(); 
+    } else if (deltaY > 80 && window.currentCardIndex > 0) {
+      swipePrevCard(); 
     } else {
-      activeCard.style.transform = ''; // Annule le mouvement si pas assez glissé
+      activeCard.style.transform = ''; 
     }
   });
 
   updateCardStack(); 
 
-  // On lance la boucle de rafraîchissement des décomptes
   startPlayScreenTimers();
 }
 
@@ -2679,6 +2681,9 @@ document.getElementById("playerAuth").classList.add("hidden");
         // NOUVEAU : On efface le message "Connexion au serveur..." une fois que l'écran de jeu s'affiche
         const playMsg = document.getElementById("playMsg");
         if (playMsg) playMsg.textContent = "";
+        
+        // CORRECTION : On initialise la pile de cartes à 0 uniquement lors de la première connexion
+        window.currentCardIndex = 0; 
         
         renderPlayChallenges();
 
