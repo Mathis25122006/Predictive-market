@@ -319,45 +319,38 @@ input, select, textarea {
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* --- NOUVEAU : INTERFACE MOBILE TYPE "CARTES" --- */
+
 #challengesPlay {
-  /* Hauteur dynamique : 100vh - Header - Footer - Safe Areas */
   height: calc(100vh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-top: 10px;
-  /* padding-bottom ultra-large pour permettre à la TOUTE DERNIÈRE carte de s'aimanter au centre */
-  padding-bottom: 50vh; 
+  gap: 15px; /* Petit espace entre les cartes */
+  padding-bottom: 15px; 
   scroll-behavior: smooth;
 }
 
 #challengesPlay::-webkit-scrollbar { 
-  display: none; /* Cache la barre de défilement pour un look natif iOS/Android */
+  display: none;
 }
 
 #challengesPlay .challenge-block {
-  scroll-snap-align: center;
-  flex: 0 0 auto;
-  background: linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)) !important;
-  border-radius: 28px !important;
-  padding: 24px !important;
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
-  margin-bottom: 0 !important; /* Le gap gère l'espacement désormais */
+  scroll-snap-align: start; /* S'aimante parfaitement en haut du conteneur */
+  scroll-snap-stop: always; /* Oblige le scroll à s'arrêter sur chaque carte (pas de saut de 3 cartes d'un coup) */
+  flex: 0 0 100%; /* La carte prend exactement 100% de la hauteur disponible */
+  box-sizing: border-box;
   
-  /* Base de l'animation (carte rétrécie et un peu transparente) */
-  transform: scale(0.85) translateY(30px);
-  opacity: 0.4;
-  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-/* Classe dynamique ajoutée par le JS quand la carte est au centre */
-#challengesPlay .challenge-block.is-visible {
-  transform: scale(1) translateY(0);
-  opacity: 1;
+  /* Design de la carte */
+  background: linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)) !important;
+  border-radius: 24px !important;
+  padding: 20px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+  margin-bottom: 0 !important;
+  
+  /* Permet au contenu interne (réponses) de défiler si la carte est trop petite sur un vieil iPhone */
+  overflow-y: auto; 
 }
 </style>
 </head>
@@ -466,7 +459,7 @@ input, select, textarea {
   <div id="setupStepQty">
     <h2>Configuration</h2>
 <label>Nombre de Challenges</label>
-    <input type="number" id="challengesQty" value="2" min="1" max="20" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 15px;">
+    <input type="number" id="challengesQty" value="5" min="1" max="20" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 15px;">
     
 <div style="margin-bottom:15px; background:rgba(59,130,246,0.1); padding:15px; border-radius:12px; border:1px solid #3b82f6;">
       <label style="color:#3b82f6; font-weight:bold;">Nombre de questions par joueur</label>
@@ -1593,31 +1586,6 @@ answersBox.id = "answers-ch" + cIndex;
     renderAnswersForChallenge(cIndex);
   });
   
-  // --- NOUVEAU : Animation des cartes au défilement ---
-  const containerEl = document.getElementById("challengesPlay");
-  const cards = containerEl.querySelectorAll('.challenge-block');
-  
-  // L'observateur détecte quand une carte arrive au centre de l'écran
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible'); // Grossit et s'illumine
-      } else {
-        entry.target.classList.remove('is-visible'); // Rétrécit et se floute
-      }
-    });
-  }, {
-    root: containerEl,
-    threshold: 0.5 // L'animation se déclenche quand 50% de la carte est visible
-  });
-
-  cards.forEach(card => observer.observe(card));
-  
-  // On force l'animation sur la toute première carte pour qu'elle apparaisse joliment à l'ouverture
-  setTimeout(() => {
-     if(cards[0]) cards[0].classList.add('is-visible');
-  }, 50);
-
   // On lance la boucle de rafraîchissement des décomptes
   startPlayScreenTimers();
 }
