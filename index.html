@@ -1621,20 +1621,22 @@ function renderPlayChallenges(){
 
     let imgHtml = "";
     if (ch.imageUrl) {
-        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:200px; object-fit:cover; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+        // NOUVEAU : clamp() adapte l'image entre 70px (petit tel) et 140px max. Margin réduit.
+        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:clamp(70px, 18vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
     }
 
+    // NOUVEAU : Toutes les polices et marges s'adaptent dynamiquement à la hauteur de l'écran avec clamp() ou vh
     header.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">
         <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
         <div style="text-align:right;">
            <div id="open-timer-${cIndex}" style="color:#fde047; font-size:14px; font-weight:900; font-family:monospace;">--:--</div>
            <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">TEMPS RESTANT</div>
         </div>
       </div>
-      <div style="font-size:24px; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5);">${ch.category}</div>
+      <div style="font-size:clamp(18px, 3vh, 24px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
       ${imgHtml}
-      <div style="font-size:16px; font-weight:600; line-height:1.4; margin-bottom:15px; color:#f9fafb;">
+      <div style="font-size:clamp(13px, 2.2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:6px; color:#f9fafb;">
          ${ch.question}
          ${betInfoHtml}
       </div>
@@ -1642,12 +1644,12 @@ function renderPlayChallenges(){
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
-    // NOUVEAU : La zone de réponses devient scrollable indépendamment !
-    answersBox.style.cssText = "flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; margin-top: 5px; padding-right: 5px; -webkit-overflow-scrolling: touch;";
+    // NOUVEAU : Plus de scroll. Les réponses s'étirent ou se tassent pour occuper 100% de la place restante.
+    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; gap: 4px; margin-top: 2px;";
     
     const footer = document.createElement("div");
-    // NOUVEAU : flex-shrink: 0 empêche le footer d'être poussé hors de l'écran par les réponses
-    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: 15px; padding-bottom: 15px;";
+    // NOUVEAU : Le padding supérieur s'écrase sur les petits écrans
+    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(6px, 1.5vh, 15px); padding-bottom: 10px;";
     
     // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
     const hintText = cIndex > 0 
@@ -1736,12 +1738,7 @@ function renderPlayChallenges(){
     const activeCard = cardsElements[window.currentCardIndex];
     if(!activeCard || !activeCard.contains(e.target)) return;
     
-    // CORRECTION : Si on touche la zone de réponses et qu'elle a besoin d'être scrollée, on ne Swipe pas !
-    const scrollableAnswers = e.target.closest('[id^="answers-ch"]');
-    if (scrollableAnswers && scrollableAnswers.scrollHeight > scrollableAnswers.clientHeight) {
-        return; 
-    }
-
+    // Plus d'exception de scroll : on peut attraper la carte n'importe où !
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     isDragging = true;
@@ -1749,12 +1746,8 @@ function renderPlayChallenges(){
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
-    // CORRECTION : On autorise le défilement naturel si on est sur la liste des réponses
-    const scrollableAnswers = e.target.closest('[id^="answers-ch"]');
-    if (scrollableAnswers && scrollableAnswers.scrollHeight > scrollableAnswers.clientHeight) {
-        return; 
-    }
-    e.preventDefault(); // Sinon on bloque la page pour le moteur de Swipe
+    // Verrouille totalement l'écran pour garantir un swipe ultra fluide
+    e.preventDefault(); 
 
     if(!isDragging) return;
     
@@ -1809,8 +1802,8 @@ ch.answers.forEach((a,i)=>{
 
  const div = document.createElement("div");
     div.className = "answer-btn";
-    // NOUVEAU STYLE : Look de la carte (Fond semi-transparent, texte clair)
-    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: 14px 16px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;";
+    // NOUVEAU STYLE : Padding dynamique (clamp), flexibilité activée (flex: 1), et retrait du margin (géré par le parent)
+    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(6px, 1.5vh, 12px) 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; max-height: 48px;";
     
     // --- Logique de clic et surbrillance ---
     if (snap) {
