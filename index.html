@@ -4826,12 +4826,12 @@ function updateBsTimers() {
 }
 
 
-/// ==========================================
-// MOTEUR DU SIMULATEUR DE BOTS (ARRIVÉE PROGRESSIVE)
+// ==========================================
+// MOTEUR DU SIMULATEUR DE BOTS (PLANIFICATION LINÉAIRE)
 // ==========================================
 let simulationInterval = null;
 let simulationActive = false;
-window.simTargetBotCount = 0; // Objectif de joueurs à atteindre
+window.pendingSimBots = []; // File d'attente des bots avec leur heure d'arrivée prévue
 
 function startSimulation() {
   const code = document.getElementById("simCodeInput").value.trim().toUpperCase();
@@ -4840,7 +4840,7 @@ function startSimulation() {
   
   if (!code) { msg.textContent = "Veuillez entrer un code de session."; msg.className = "msg err"; return; }
   
-  msg.textContent = "Initialisation de la simulation..."; msg.className = "msg ok";
+  msg.textContent = "Calcul du planning des bots..."; msg.className = "msg ok";
   
   db.ref('sessions/' + code).once('value').then(snapshot => {
     if (!snapshot.exists()) {
@@ -4848,28 +4848,53 @@ function startSimulation() {
     }
     
     const data = snapshot.val();
-    sessionConfig = data.sessionConfig;
+    sessionConfig = data.sessionConfig; // RécupèreStartTime et EndTime
     game = data.gameData;
     window.currentActiveSessionCode = code;
-    window.simTargetBotCount = botCount;
     
     if (!game.players) game.players = [];
     
-    // On démarre l'état actif
+    // --- 1. CALCUL DE LA PLAGE HORAIRE DISPONIBLE ---
+    const now = Date.now();
+    // On commence soit maintenant, soit au début du jeu si celui-ci n'a pas commencé
+    const startTime = Math.max(now, sessionConfig.gameStartTime);
+    const endTime = sessionConfig.gameEndTime; //
+    const windowSize = endTime - startTime;
+
+    if (windowSize <= 0) {
+      msg.textContent = "Erreur : La session est déjà terminée ou l'heure de fin est invalide.";
+      msg.className = "msg err";
+      return;
+    }
+
+    // --- 2. PLANIFICATION DE LA FILE D'ATTENTE ---
+    window.pendingSimBots = [];
+    const currentBotsCount = game.players.filter(p => p.name.startsWith("Bot_")).length;
+    const totalToReach = botCount;
+    const botsToAdd = totalToReach - currentBotsCount;
+
+    if (botsToAdd <= 0) {
+      logSim(`ℹ️ L'objectif de ${totalToReach} bots est déjà atteint.`);
+    } else {
+      for (let i = 0; i < botsToAdd; i++) {
+        window.pendingSimBots.push({
+          num: currentBotsCount + i + 1,
+          // Attribue un moment aléatoire unique entre le début et la fin pour chaque bot
+          arrivalTime: startTime + (Math.random() * windowSize)
+        });
+      }
+      logSim(`📢 Planning créé : ${botsToAdd} nouveaux bots programmés jusqu'à la fin de la session.`);
+    }
+    
+    // 3. Activation du moteur
     simulationActive = true;
     document.getElementById("startSimBtn").classList.add("hidden");
     document.getElementById("stopSimBtn").classList.remove("hidden");
-    msg.textContent = "Simulation en cours : Arrivée progressive des joueurs...";
+    msg.textContent = "Simulation en cours : Arrivée linéaire activée.";
     
-    // On vide les logs pour le nouveau départ
-    document.getElementById("simLogs").innerHTML = "<em>Lancement du moteur de flux...</em>";
-    logSim(`📢 Objectif : ${botCount} bots. Ils vont arriver progressivement.`);
-
-    // On écoute Firebase pour la synchronisation
     db.ref('sessions/' + code).on('value', simUpdateState);
     
     if(simulationInterval) clearInterval(simulationInterval);
-    // Vérification toutes les 3 secondes
     simulationInterval = setInterval(simulationTick, 3000); 
     
   }).catch(err => {
@@ -4880,55 +4905,58 @@ function startSimulation() {
 function simulationTick() {
   if (!simulationActive || !game || !game.players) return;
   
+  const now = Date.now();
   let madeChanges = false;
-  const currentBots = game.players.filter(p => p.name.startsWith("Bot_"));
   const n = sessionConfig.n || 1;
 
-  // --- 1. LOGIQUE D'ARRIVÉE PROGRESSIVE ---
-  // On a 40% de chance qu'un nouveau bot rejoigne le jeu à chaque tick
-  if (currentBots.length < window.simTargetBotCount && Math.random() < 0.4) {
-      const nextBotNum = currentBots.length + 1;
-      const botName = "Bot_" + nextBotNum;
-      
-      let startBal = sessionConfig.initialBalance || 100;
-      const newBot = { 
-        name: botName, 
-        email: `bot${nextBotNum}@sim.com`, 
-        balance: startBal, 
-        portfolio: [], 
-        assignedIndices: [] 
-      };
+  // --- 1. GESTION DES ARRIVÉES (File d'attente planifiée) ---
+  if (window.pendingSimBots.length > 0) {
+    // On récupère tous les bots dont l'heure d'arrivée est passée
+    const arrivals = window.pendingSimBots.filter(b => now >= b.arrivalTime);
+    
+    if (arrivals.length > 0) {
+      arrivals.forEach(b => {
+        const botName = "Bot_" + b.num;
+        let startBal = sessionConfig.initialBalance || 100;
+        const newBot = { 
+          name: botName, 
+          email: `bot${b.num}@sim.com`, 
+          balance: startBal, 
+          portfolio: [], 
+          assignedIndices: [] 
+        };
 
-      // Attribution des questions (reprend la logique de checkAccess)
-      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
-                                         .filter(item => getEffectiveStatus(item.ch) === "open");
-      const golden = activeIndices.find(item => item.ch.isGolden === true);
-      let finalSelection = [];
-      if (golden) {
-        finalSelection.push(golden.idx);
-        activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
-      }
-      activeIndices.sort(() => 0.5 - Math.random());
-      while (finalSelection.length < n && activeIndices.length > 0) {
-        finalSelection.push(activeIndices.shift().idx);
-      }
-      
-      newBot.assignedIndices = finalSelection;
-      game.players.push(newBot);
-      
-      logSim(`🚀 <strong>${botName}</strong> vient de rejoindre la partie !`);
+        // Attribution des questions (incluant le Fil Rouge)
+        let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
+                                           .filter(item => getEffectiveStatus(item.ch) === "open");
+        const golden = activeIndices.find(item => item.ch.isGolden === true);
+        let finalSelection = [];
+        if (golden) {
+          finalSelection.push(golden.idx);
+          activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
+        }
+        activeIndices.sort(() => 0.5 - Math.random());
+        while (finalSelection.length < n && activeIndices.length > 0) {
+          finalSelection.push(activeIndices.shift().idx);
+        }
+        
+        newBot.assignedIndices = finalSelection;
+        game.players.push(newBot);
+        logSim(`🚀 <strong>${botName}</strong> entre en jeu (Arrivée planifiée).`);
+      });
+
+      // On retire les arrivants de la file d'attente
+      window.pendingSimBots = window.pendingSimBots.filter(b => now < b.arrivalTime);
       madeChanges = true;
+    }
   }
 
-  // --- 2. LOGIQUE DE JEU (BOTS DÉJÀ PRÉSENTS) ---
-  // Environ 15% des bots présents agissent à chaque tick pour simuler une activité humaine
-  const botsReadyToPlay = game.players.filter(p => p.name.startsWith("Bot_"));
-  const activeBots = botsReadyToPlay.filter(() => Math.random() < 0.15);
+  // --- 2. LOGIQUE DE JEU (Paris des bots présents) ---
+  const botsInGame = game.players.filter(p => p.name.startsWith("Bot_"));
+  const activeBots = botsInGame.filter(() => Math.random() < 0.15);
   
   activeBots.forEach(bot => {
     if (!bot.assignedIndices) return;
-    
-    // Questions ouvertes où le bot n'a pas encore misé
     const availableToBet = bot.assignedIndices.filter(idx => {
       const ch = game.challenges[idx];
       const hasNotBet = !bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx);
@@ -4941,14 +4969,12 @@ function simulationTick() {
       const ansIndex = Math.floor(Math.random() * ch.answers.length);
       
       let betAmount = 1; 
-      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
-        const maxPossible = Math.min(bot.balance, 20); // Un bot ne mise pas tout d'un coup
+      if (currentPlayerMode === 'advanced') {
+        const maxPossible = Math.min(bot.balance, 20);
         betAmount = maxPossible > 5 ? Math.floor(Math.random() * (maxPossible - 5 + 1)) + 5 : maxPossible;
       }
       
       if (betAmount <= 0) return;
-
-      // Calcul LMSR
       const probsStart = getLMSRProbs(ch.votes);
       const pStart = probsStart[ansIndex];
       let simulatedVotes = [...ch.votes];
@@ -4964,17 +4990,20 @@ function simulationTick() {
       bot.balance -= betAmount;
       ch.votes = simulatedVotes;
       
-      logSim(`🎯 <strong>${bot.name}</strong> a parié sur "${ch.answers[ansIndex]}"`);
+      logSim(`🎯 <strong>${bot.name}</strong> a misé sur une question ouverte.`);
       madeChanges = true;
     }
   });
   
-  if (madeChanges) {
-    saveToCloud();
-  }
+  if (madeChanges) saveToCloud();
 }
 
-// Les fonctions utilitaires (simUpdateState, stopSimulation, logSim) restent identiques à la version précédente
+function logSim(text) {
+  const logs = document.getElementById("simLogs");
+  const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+  logs.innerHTML = `<div><span style="color:#60a5fa">[${time}]</span> ${text}</div>` + logs.innerHTML;
+}
+
 function simUpdateState(snapshot) {
   if (simulationActive && snapshot.exists()) {
     const data = snapshot.val();
@@ -4986,19 +5015,11 @@ function simUpdateState(snapshot) {
 function stopSimulation() {
   simulationActive = false;
   if (simulationInterval) clearInterval(simulationInterval);
-  if (window.currentActiveSessionCode) {
-    db.ref('sessions/' + window.currentActiveSessionCode).off('value', simUpdateState);
-  }
+  if (window.currentActiveSessionCode) db.ref('sessions/' + window.currentActiveSessionCode).off('value', simUpdateState);
   document.getElementById("startSimBtn").classList.remove("hidden");
   document.getElementById("stopSimBtn").classList.add("hidden");
   document.getElementById("simMsg").textContent = "Simulation arrêtée.";
   logSim("🛑 La simulation est stoppée.");
-}
-
-function logSim(text) {
-  const logs = document.getElementById("simLogs");
-  const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-  logs.innerHTML = `<div><span style="color:#60a5fa">[${time}]</span> ${text}</div>` + logs.innerHTML;
 }
 
 </script>
