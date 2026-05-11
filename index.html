@@ -4826,11 +4826,12 @@ function updateBsTimers() {
 }
 
 
-// ==========================================
-// MOTEUR DU SIMULATEUR DE BOTS (TEMPS RÉEL)
+/// ==========================================
+// MOTEUR DU SIMULATEUR DE BOTS (ARRIVÉE PROGRESSIVE)
 // ==========================================
 let simulationInterval = null;
 let simulationActive = false;
+window.simTargetBotCount = 0; // Objectif de joueurs à atteindre
 
 function startSimulation() {
   const code = document.getElementById("simCodeInput").value.trim().toUpperCase();
@@ -4839,7 +4840,7 @@ function startSimulation() {
   
   if (!code) { msg.textContent = "Veuillez entrer un code de session."; msg.className = "msg err"; return; }
   
-  msg.textContent = "Connexion au serveur..."; msg.className = "msg ok";
+  msg.textContent = "Initialisation de la simulation..."; msg.className = "msg ok";
   
   db.ref('sessions/' + code).once('value').then(snapshot => {
     if (!snapshot.exists()) {
@@ -4850,60 +4851,25 @@ function startSimulation() {
     sessionConfig = data.sessionConfig;
     game = data.gameData;
     window.currentActiveSessionCode = code;
+    window.simTargetBotCount = botCount;
     
     if (!game.players) game.players = [];
     
-    // 1. Création et inscription des Bots
-    let newBotsAdded = 0;
-    const n = sessionConfig.n || 1;
-    
-    for (let i = 1; i <= botCount; i++) {
-      const botName = "Bot_" + i;
-      let bot = game.players.find(p => p.name === botName);
-      
-      if (!bot) {
-        let startBal = sessionConfig.initialBalance || 100;
-        bot = { name: botName, email: `bot${i}@sim.com`, balance: startBal, portfolio: [], assignedIndices: [] };
-        
-        // Attribution des questions comme un vrai joueur
-        let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}));
-        const golden = activeIndices.find(item => item.ch.isGolden === true);
-        let finalSelection = [];
-        
-        if (golden) {
-          finalSelection.push(golden.idx);
-          activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
-        }
-        
-        activeIndices.sort(() => 0.5 - Math.random());
-        while (finalSelection.length < n && activeIndices.length > 0) {
-          finalSelection.push(activeIndices.shift().idx);
-        }
-        
-        bot.assignedIndices = finalSelection;
-        game.players.push(bot);
-        newBotsAdded++;
-      }
-    }
-    
-    if (newBotsAdded > 0) {
-      saveToCloud();
-      logSim(`✅ ${newBotsAdded} bots ajoutés avec succès.`);
-    } else {
-      logSim(`ℹ️ Bots existants reconnus, reprise du jeu.`);
-    }
-    
-    // 2. Démarrage de la boucle de jeu
+    // On démarre l'état actif
     simulationActive = true;
     document.getElementById("startSimBtn").classList.add("hidden");
     document.getElementById("stopSimBtn").classList.remove("hidden");
-    msg.textContent = "Simulation en cours d'exécution...";
+    msg.textContent = "Simulation en cours : Arrivée progressive des joueurs...";
     
-    // On écoute Firebase pour fusionner les actions des vrais joueurs en même temps
+    // On vide les logs pour le nouveau départ
+    document.getElementById("simLogs").innerHTML = "<em>Lancement du moteur de flux...</em>";
+    logSim(`📢 Objectif : ${botCount} bots. Ils vont arriver progressivement.`);
+
+    // On écoute Firebase pour la synchronisation
     db.ref('sessions/' + code).on('value', simUpdateState);
     
     if(simulationInterval) clearInterval(simulationInterval);
-    // Le moteur vérifie les actions possibles toutes les 3 secondes
+    // Vérification toutes les 3 secondes
     simulationInterval = setInterval(simulationTick, 3000); 
     
   }).catch(err => {
@@ -4911,6 +4877,104 @@ function startSimulation() {
   });
 }
 
+function simulationTick() {
+  if (!simulationActive || !game || !game.players) return;
+  
+  let madeChanges = false;
+  const currentBots = game.players.filter(p => p.name.startsWith("Bot_"));
+  const n = sessionConfig.n || 1;
+
+  // --- 1. LOGIQUE D'ARRIVÉE PROGRESSIVE ---
+  // On a 40% de chance qu'un nouveau bot rejoigne le jeu à chaque tick
+  if (currentBots.length < window.simTargetBotCount && Math.random() < 0.4) {
+      const nextBotNum = currentBots.length + 1;
+      const botName = "Bot_" + nextBotNum;
+      
+      let startBal = sessionConfig.initialBalance || 100;
+      const newBot = { 
+        name: botName, 
+        email: `bot${nextBotNum}@sim.com`, 
+        balance: startBal, 
+        portfolio: [], 
+        assignedIndices: [] 
+      };
+
+      // Attribution des questions (reprend la logique de checkAccess)
+      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
+                                         .filter(item => getEffectiveStatus(item.ch) === "open");
+      const golden = activeIndices.find(item => item.ch.isGolden === true);
+      let finalSelection = [];
+      if (golden) {
+        finalSelection.push(golden.idx);
+        activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
+      }
+      activeIndices.sort(() => 0.5 - Math.random());
+      while (finalSelection.length < n && activeIndices.length > 0) {
+        finalSelection.push(activeIndices.shift().idx);
+      }
+      
+      newBot.assignedIndices = finalSelection;
+      game.players.push(newBot);
+      
+      logSim(`🚀 <strong>${botName}</strong> vient de rejoindre la partie !`);
+      madeChanges = true;
+  }
+
+  // --- 2. LOGIQUE DE JEU (BOTS DÉJÀ PRÉSENTS) ---
+  // Environ 15% des bots présents agissent à chaque tick pour simuler une activité humaine
+  const botsReadyToPlay = game.players.filter(p => p.name.startsWith("Bot_"));
+  const activeBots = botsReadyToPlay.filter(() => Math.random() < 0.15);
+  
+  activeBots.forEach(bot => {
+    if (!bot.assignedIndices) return;
+    
+    // Questions ouvertes où le bot n'a pas encore misé
+    const availableToBet = bot.assignedIndices.filter(idx => {
+      const ch = game.challenges[idx];
+      const hasNotBet = !bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx);
+      return ch && getEffectiveStatus(ch) === "open" && hasNotBet;
+    });
+    
+    if (availableToBet.length > 0) {
+      const cIndex = availableToBet[Math.floor(Math.random() * availableToBet.length)];
+      const ch = game.challenges[cIndex];
+      const ansIndex = Math.floor(Math.random() * ch.answers.length);
+      
+      let betAmount = 1; 
+      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
+        const maxPossible = Math.min(bot.balance, 20); // Un bot ne mise pas tout d'un coup
+        betAmount = maxPossible > 5 ? Math.floor(Math.random() * (maxPossible - 5 + 1)) + 5 : maxPossible;
+      }
+      
+      if (betAmount <= 0) return;
+
+      // Calcul LMSR
+      const probsStart = getLMSRProbs(ch.votes);
+      const pStart = probsStart[ansIndex];
+      let simulatedVotes = [...ch.votes];
+      simulatedVotes[ansIndex] += betAmount;
+      const probsEnd = getLMSRProbs(simulatedVotes);
+      const pEnd = probsEnd[ansIndex];
+      let pAvg = (pStart + pEnd) / 2;
+      if (pAvg <= 0.01) pAvg = 0.01;
+      const pts = +(betAmount / pAvg).toFixed(2);
+      
+      if (!bot.portfolio) bot.portfolio = [];
+      bot.portfolio.push({ cIndex, ansIndex, bet: betAmount, pts, type: 'YES' });
+      bot.balance -= betAmount;
+      ch.votes = simulatedVotes;
+      
+      logSim(`🎯 <strong>${bot.name}</strong> a parié sur "${ch.answers[ansIndex]}"`);
+      madeChanges = true;
+    }
+  });
+  
+  if (madeChanges) {
+    saveToCloud();
+  }
+}
+
+// Les fonctions utilitaires (simUpdateState, stopSimulation, logSim) restent identiques à la version précédente
 function simUpdateState(snapshot) {
   if (simulationActive && snapshot.exists()) {
     const data = snapshot.val();
@@ -4933,86 +4997,8 @@ function stopSimulation() {
 
 function logSim(text) {
   const logs = document.getElementById("simLogs");
-  const time = new Date().toLocaleTimeString();
+  const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
   logs.innerHTML = `<div><span style="color:#60a5fa">[${time}]</span> ${text}</div>` + logs.innerHTML;
-}
-
-function simulationTick() {
-  if (!simulationActive || !game || !game.players) return;
-  
-  // On récupère uniquement les bots
-  const bots = game.players.filter(p => p.name.startsWith("Bot_"));
-  if (bots.length === 0) return;
-  
-  // À chaque itération (3s), environ 15% des bots essaient de faire une action pour étaler l'activité
-  const activeBots = bots.filter(() => Math.random() < 0.15);
-  let madeChanges = false;
-  
-  activeBots.forEach(bot => {
-    if (!bot.portfolio) bot.portfolio = [];
-    if (!bot.assignedIndices) return;
-    
-    // On filtre les questions qui sont actuellement "open"
-    const openAssigned = bot.assignedIndices.filter(idx => {
-      const ch = game.challenges[idx];
-      return ch && getEffectiveStatus(ch) === "open";
-    });
-    
-    // On filtre les questions où le bot n'a pas encore misé
-    const availableToBet = openAssigned.filter(idx => {
-      return !bot.portfolio.some(b => b.cIndex === idx);
-    });
-    
-    if (availableToBet.length > 0) {
-      // 1. Choix d'une question aléatoire disponible
-      const cIndex = availableToBet[Math.floor(Math.random() * availableToBet.length)];
-      const ch = game.challenges[cIndex];
-      
-      // 2. Choix d'une réponse aléatoire
-      const ansIndex = Math.floor(Math.random() * ch.answers.length);
-      
-      // 3. Choix du montant de la mise
-      let betAmount = 1; // Mode facile par défaut
-      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
-        const maxBet = Math.min(bot.balance, 25); // Un bot mise max 25 crédits à la fois
-        if (maxBet >= 5) {
-          betAmount = Math.floor(Math.random() * (maxBet - 5 + 1)) + 5;
-        } else if (maxBet > 0) {
-          betAmount = maxBet;
-        } else {
-          return; // Le bot est ruiné
-        }
-      }
-      
-      // 4. Calcul de l'impact financier (LMSR)
-      const probsStart = getLMSRProbs(ch.votes);
-      const pStartYes = probsStart[ansIndex];
-      
-      let simulatedVotes = [...ch.votes];
-      simulatedVotes[ansIndex] += betAmount;
-      
-      const probsEnd = getLMSRProbs(simulatedVotes);
-      const pEndYes = probsEnd[ansIndex];
-      
-      let pAvg = (pStartYes + pEndYes) / 2;
-      if (pAvg <= 0.01) pAvg = 0.01;
-      if (pAvg >= 0.99) pAvg = 0.99;
-      
-      const pts = +(betAmount / pAvg).toFixed(2);
-      
-      // 5. Validation de la transaction
-      bot.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: betAmount, pts: pts, type: 'YES' });
-      bot.balance -= betAmount;
-      ch.votes = simulatedVotes;
-      
-      logSim(`🎯 <strong>${bot.name}</strong> a misé ${betAmount}u sur "${ch.answers[ansIndex]}".`);
-      madeChanges = true;
-    }
-  });
-  
-  if (madeChanges) {
-    saveToCloud(); // On synchronise avec les vrais joueurs et le grand écran
-  }
 }
 
 </script>
