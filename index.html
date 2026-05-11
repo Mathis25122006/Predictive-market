@@ -322,36 +322,61 @@ input, select, textarea {
 
 /* --- NOUVEAU : INTERFACE MOBILE (DESIGN CARTE VIOLET/ORANGE) --- */
 #challengesPlay {
-  /* La carte prend maintenant quasiment tout l'écran ! */
   height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 10px; 
-  scroll-behavior: smooth;
+  position: relative;
+  overflow: hidden; /* Empêche le scroll natif, on utilise les animations tactiles */
+  padding: 10px;
 }
 
 #challengesPlay::-webkit-scrollbar { display: none; }
 
 #challengesPlay .challenge-block {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-  flex: 0 0 100%;
+  position: absolute;
+  top: 10px; left: 10px; right: 10px; bottom: 10px;
   box-sizing: border-box;
   
-  /* Design exact de votre capture d'écran */
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
   border-radius: 20px !important;
   padding: 24px !important;
   border: none !important; 
   margin-bottom: 0 !important;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
   
-  /* Flexbox pour repousser le footer (score/bouton) tout en bas */
   display: flex;
   flex-direction: column;
   overflow-y: auto; 
+  
+  /* Animation de base (quand on relâche la carte ou qu'elle remonte) */
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out;
+  transform-origin: center bottom;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none; /* Désactive le clic sur les cartes cachées */
+}
+
+/* Effets d'empilement (Stack) des cartes suivantes */
+#challengesPlay .challenge-block.active-card {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  z-index: 10;
+  pointer-events: auto; /* Seule la carte du dessus est jouable */
+}
+#challengesPlay .challenge-block.stacked-1 {
+  transform: translateY(15px) scale(0.95);
+  opacity: 0.8;
+  z-index: 9;
+}
+#challengesPlay .challenge-block.stacked-2 {
+  transform: translateY(30px) scale(0.90);
+  opacity: 0.5;
+  z-index: 8;
+}
+
+/* Animation quand la carte est jetée hors de l'écran */
+#challengesPlay .challenge-block.fly-away {
+  transform: translate(120%, -120%) rotate(25deg) !important;
+  opacity: 0 !important;
+  pointer-events: none;
 }
 
 /* On cache l'ancienne barre du bas pour l'écran de jeu */
@@ -1609,7 +1634,7 @@ function renderPlayChallenges(){
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
        ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Valider mes paris</button>`
-       : `<button onclick="document.getElementById('challengesPlay').scrollBy({top: window.innerHeight, behavior: 'smooth'})" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Next Card</button>`;
+       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Next Card</button>`;
 
     footer.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-end;">
@@ -1632,6 +1657,84 @@ function renderPlayChallenges(){
     renderAnswersForChallenge(cIndex);
   });
   
+  // --- NOUVEAU : Moteur de Swipe (Cartes Empilées type Panini/Tinder) ---
+  const containerEl = document.getElementById("challengesPlay");
+  const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
+  let currentCardIndex = 0;
+
+  function updateCardStack() {
+    cardsElements.forEach((card, i) => {
+      card.classList.remove('active-card', 'stacked-1', 'stacked-2');
+      if (i === currentCardIndex) {
+        card.classList.add('active-card');
+      } else if (i === currentCardIndex + 1) {
+        card.classList.add('stacked-1');
+      } else if (i === currentCardIndex + 2) {
+        card.classList.add('stacked-2');
+      }
+    });
+  }
+
+  // Fonction appelée par le bouton "Next Card" et par le glissement de doigt
+  window.swipeNextCard = function() {
+    if(currentCardIndex >= cardsElements.length) return;
+    const activeCard = cardsElements[currentCardIndex];
+    activeCard.classList.add('fly-away'); // Active l'animation CSS (S'envole en haut à droite)
+    currentCardIndex++;
+    setTimeout(updateCardStack, 100); // Fait remonter la carte suivante fluide
+  };
+
+  // --- Moteur Tactile (Touch Events) ---
+  let startY = 0; let startX = 0;
+  let isDragging = false;
+
+  containerEl.addEventListener('touchstart', (e) => {
+    const activeCard = cardsElements[currentCardIndex];
+    // On ignore si on ne touche pas la carte active
+    if(!activeCard || !activeCard.contains(e.target)) return;
+    
+    // Sécurité : Si le joueur fait défiler les réponses vers le bas, on ne swipe pas la carte
+    if(activeCard.scrollTop > 5) return; 
+    
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    activeCard.style.transition = 'none'; // Désactive la fluidité pour coller parfaitement au doigt
+  }, {passive: true});
+
+  containerEl.addEventListener('touchmove', (e) => {
+    if(!isDragging) return;
+    const activeCard = cardsElements[currentCardIndex];
+    const deltaY = e.touches[0].clientY - startY;
+    const deltaX = e.touches[0].clientX - startX;
+    
+    // On permet de jeter la carte uniquement vers le haut
+    if (deltaY < 0) {
+      const rotate = deltaY * 0.05; // La carte penche légèrement en glissant
+      activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+    }
+  }, {passive: true});
+
+  containerEl.addEventListener('touchend', (e) => {
+    if(!isDragging) return;
+    isDragging = false;
+    const activeCard = cardsElements[currentCardIndex];
+    // On remet la fluidité CSS
+    activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
+    
+    const deltaY = e.changedTouches[0].clientY - startY;
+    
+    // Si on a jeté la carte suffisamment haut (plus de 80px)
+    if (deltaY < -80) {
+      swipeNextCard();
+    } else {
+      // Sinon elle retombe délicatement à sa place initiale (Effet ressort)
+      activeCard.style.transform = '';
+    }
+  });
+
+  updateCardStack(); // Initialisation des positions au chargement de la page
+
   // On lance la boucle de rafraîchissement des décomptes
   startPlayScreenTimers();
 }
