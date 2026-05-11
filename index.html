@@ -390,15 +390,39 @@ input, select, textarea {
 /* On cache l'ancienne barre du bas pour l'écran de jeu */
 #gameContent .sticky-action-bar { display: none !important; }
 
-/* --- NOUVEAU : Animation du doigt qui glisse pour le tutoriel --- */
-@keyframes swipeUpAnim {
-  0% { transform: translateY(10px); opacity: 0.5; }
-  50% { transform: translateY(-10px); opacity: 1; }
-  100% { transform: translateY(10px); opacity: 0.5; }
+/* --- NOUVEAU : DESIGN DU TUTORIEL INTERACTIF --- */
+/* --- NOUVEAU : DESIGN DU TUTORIEL INTERACTIF --- */
+.card-tuto-bg {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(2,6,23,0.7); backdrop-filter: blur(6px);
+  z-index: 50; border-radius: inherit; pointer-events: auto;
 }
-.swipe-anim {
-  animation: swipeUpAnim 1.5s infinite ease-in-out;
+.tuto-highlight {
+  position: relative !important;
+  z-index: 51 !important; /* Passe au-dessus du flou */
+  pointer-events: auto !important;
+  background: rgba(15,23,42,0.95) !important;
+  box-shadow: 0 0 0 3px #a855f7, 0 0 25px 8px rgba(168,85,247,0.6) !important;
+  border-radius: 12px;
 }
+
+/* Animation des mains Swipe */
+@keyframes swipeHandAnim {
+  0% { transform: translateY(15px); opacity: 0; }
+  20% { transform: translateY(15px); opacity: 1; }
+  50% { transform: translateY(-15px); opacity: 1; }
+  80% { transform: translateY(-15px); opacity: 0; }
+  100% { transform: translateY(15px); opacity: 0; }
+}
+@keyframes swipeDownAnim {
+  0% { transform: translateY(-15px); opacity: 0; }
+  20% { transform: translateY(-15px); opacity: 1; }
+  50% { transform: translateY(15px); opacity: 1; }
+  80% { transform: translateY(15px); opacity: 0; }
+  100% { transform: translateY(-15px); opacity: 0; }
+}
+.swipe-up-hand { animation: swipeHandAnim 2s infinite ease-in-out; }
+.swipe-down-hand { animation: swipeDownAnim 2s infinite ease-in-out; animation-delay: 1s; }
 </style>
 </head>
 <body>
@@ -652,34 +676,40 @@ input, select, textarea {
 
   <div id="adminChallenges"></div>
 
-  <button id="adminBtn" onclick="adminNext()">Suivant</button>
+<button id="adminBtn" onclick="adminNext()">Suivant</button>
   <div class="msg" id="adminMsg"></div>
   <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Abandonner et Accueil</button>
 </div>
 
-<div id="tutorialOverlay" class="hidden" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.85); z-index:9999; backdrop-filter:blur(5px); touch-action:none; flex-direction:column; align-items:center; justify-content:center;">
-  
-  <div id="tutoStep1" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(147,51,234,0.2); border:1px solid #a855f7; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+<div id="tutoContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10002; pointer-events:none;">
+  <div id="tutoStep1" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(147,51,234,0.95); border:1px solid #d946ef; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.8); pointer-events:auto;">
     <div style="font-size:30px; margin-bottom:10px;">👑</div>
     <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">VOTRE FIL ROUGE</h3>
-    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Cette première carte est spéciale. C'est votre défi principal qui durera tout au long de l'événement !</p>
-    <button onclick="nextTuto(2)" style="background:linear-gradient(135deg,#a855f7,#d946ef); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">Compris !</button>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Voici l'en-tête du défi en surbrillance. Cette première carte est spéciale, c'est votre question principale.</p>
+    <button onclick="nextTuto(2)" style="background:#020617; border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">Suivant</button>
   </div>
 
-  <div id="tutoStep2" class="hidden" style="position:absolute; top:45%; transform:translateY(-50%); left:5%; right:5%; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+  <div id="tutoStep2" class="hidden" style="position:absolute; top:25%; left:5%; right:5%; background:rgba(59,130,246,0.95); border:1px solid #60a5fa; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.8); pointer-events:auto;">
     <div style="font-size:30px; margin-bottom:10px;">👇</div>
-    <h3 style="color:#60a5fa; margin-bottom:10px; font-weight:900;">FAITES VOS JEUX</h3>
-    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Touchez l'une des réponses proposées au centre de la carte pour placer votre prédiction.</p>
-    <button onclick="nextTuto(3)" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est noté</button>
+    <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">FAITES VOS JEUX</h3>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:0;">Touchez l'une des réponses en surbrillance pour faire votre prédiction et passer à la suite.</p>
   </div>
 
-  <div id="tutoStep3" class="hidden" style="position:absolute; bottom:calc(max(30px, env(safe-area-inset-bottom)) + 25px); left:5%; right:5%; background:rgba(249,115,22,0.2); border:1px solid #f97316; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-    <div style="font-size:30px; margin-bottom:10px;" class="swipe-anim">👆</div>
-    <h3 style="color:#fb923c; margin-bottom:10px; font-weight:900;">PASSEZ À LA SUITE</h3>
-    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Glissez la carte vers le haut pour découvrir le défi suivant !</p>
-    <button onclick="closeTuto()" style="background:linear-gradient(135deg,#f97316,#ec4899); border:none; border-radius:999px; color:white; padding:10px 20px; font-size:14px; font-weight:bold;">C'est parti ! 🚀</button>
+  <div id="tutoStep3" class="hidden" style="position:absolute; top:15%; left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.8); pointer-events:auto;">
+    <div style="font-size:30px; margin-bottom:10px;">💰</div>
+    <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">GÉREZ VOS CRÉDITS</h3>
+    <p id="tutoNText" style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:15px;">Attention, gérez vos crédits intelligemment car vous avez N questions à disposition.</p>
+    <p style="font-size:12px; color:#fde047; font-style:italic;">Misez une somme en bas de l'écran et validez pour continuer.</p>
   </div>
 
+  <div id="tutoStep4" class="hidden" style="position:absolute; bottom:calc(max(30px, env(safe-area-inset-bottom)) + 25px); left:5%; right:5%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:16px; padding:20px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.8); pointer-events:none;">
+    <div style="display:flex; justify-content:center; gap:40px; margin-bottom:10px;">
+        <div class="swipe-up-hand" style="font-size:40px;">👆</div>
+        <div class="swipe-down-hand" style="font-size:40px;">👇</div>
+    </div>
+    <h3 style="color:#fde047; margin-bottom:10px; font-weight:900;">NAVIGUEZ</h3>
+    <p style="font-size:14px; color:#e2e8f0; line-height:1.4; margin-bottom:0;">Glissez la carte vers le HAUT pour passer, et vers le BAS pour revenir. Essayez maintenant !</p>
+  </div>
 </div>
 
 <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;"></canvas>
@@ -1783,10 +1813,11 @@ function renderPlayChallenges(){
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
-    // Verrouille totalement l'écran pour garantir un swipe ultra fluide
     e.preventDefault(); 
-
     if(!isDragging) return;
+    
+    // TUTORIEL : On empêche de glisser la carte pendant les étapes d'explication (1, 2, 3)
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
@@ -1799,6 +1830,9 @@ function renderPlayChallenges(){
   containerEl.addEventListener('touchend', (e) => {
     if(!isDragging) return;
     isDragging = false;
+    
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4) return;
+    
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
@@ -1806,24 +1840,19 @@ function renderPlayChallenges(){
     
     if (deltaY < -80 && window.currentCardIndex < cardsElements.length - 1) {
       swipeNextCard(); 
+      if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
     } else if (deltaY > 80 && window.currentCardIndex > 0) {
       swipePrevCard(); 
+      if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
     } else {
       activeCard.style.transform = ''; 
     }
   });
 
-updateCardStack(); 
+  updateCardStack(); 
 
-  // CORRECTION : Lancement du tutoriel par-dessus la vraie première carte si le joueur ne l'a jamais vu
-  if (!localStorage.getItem('hasSeenTutorial') && cardsElements.length > 0 && window.currentCardIndex === 0) {
-     const tutoOverlay = document.getElementById("tutorialOverlay");
-     if (tutoOverlay) {
-        tutoOverlay.classList.remove("hidden");
-        tutoOverlay.style.display = "flex";
-        nextTuto(1); // Force l'étape 1
-     }
-  }
+  // NOUVEAU : Déclenchement in-game systématique à chaque nouvelle session
+  startTuto();
 
   startPlayScreenTimers();
 }
@@ -1868,8 +1897,12 @@ const div = document.createElement("div");
              selectedAnswers[cIndex] = i; 
              selectedBets[cIndex] = 1; 
              renderAnswersForChallenge(cIndex); 
+             // TUTO : En mode facile, pas de mise. On passe direct à l'étape du Swipe (4)
+             if (window.currentTutoStep === 2) nextTuto(4); 
          } else {
              openBetPanel(cIndex, i, 'YES');
+             // TUTO : En mode avancé, on affiche l'avertissement de gestion (3)
+             if (window.currentTutoStep === 2) nextTuto(3);
          }
        };
     }
@@ -1965,22 +1998,70 @@ function updateAdminButton(){
   }
 }
 
-// --- NOUVEAU : Fonctions de gestion du Tutoriel ---
-function nextTuto(step) {
-  document.getElementById("tutoStep1").classList.add("hidden");
-  document.getElementById("tutoStep2").classList.add("hidden");
-  document.getElementById("tutoStep3").classList.add("hidden");
-  document.getElementById("tutoStep" + step).classList.remove("hidden");
+// ==========================================
+// MOTEUR DU TUTORIEL INTERACTIF (Flou & Clic)
+// ==========================================
+window.sessionTutoDone = false; // Se réinitialise si on quitte et relance l'application
+window.currentTutoStep = 0;
+
+function startTuto() {
+  if (window.sessionTutoDone) return;
+  const containerEl = document.getElementById("challengesPlay");
+  if (!containerEl) return;
+  const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
+  
+  if (cardsElements.length === 0 || window.currentCardIndex !== 0) return;
+  
+  document.getElementById("tutoContainer").style.display = "block";
+  nextTuto(1);
 }
 
-// CORRECTION : Fermeture du calque transparent en jeu
-function closeTuto() {
-  const overlay = document.getElementById("tutorialOverlay");
-  if (overlay) {
-      overlay.classList.add("hidden");
-      overlay.style.display = "none";
+function clearTutoHighlights() {
+  document.querySelectorAll('.tuto-highlight').forEach(el => el.classList.remove('tuto-highlight'));
+  const oldBg = document.getElementById("cardTutoBackdrop");
+  if (oldBg) oldBg.remove();
+}
+
+function nextTuto(step) {
+  window.currentTutoStep = step;
+  clearTutoHighlights();
+  
+  [1, 2, 3, 4].forEach(s => {
+     const el = document.getElementById("tutoStep" + s);
+     if (el) el.classList.add("hidden");
+  });
+  
+  document.getElementById("tutoStep" + step).classList.remove("hidden");
+  
+  const activeCard = document.querySelector('.challenge-block.active-card');
+  if (!activeCard) return;
+
+  // Création du fond flou interne pour les étapes 1 et 2
+  if (step === 1 || step === 2) {
+     let backdrop = document.createElement("div");
+     backdrop.id = "cardTutoBackdrop";
+     backdrop.className = "card-tuto-bg";
+     activeCard.appendChild(backdrop);
   }
-  localStorage.setItem('hasSeenTutorial', 'true');
+
+  // Éclairage de la zone ciblée
+  if (step === 1) {
+    const header = activeCard.querySelector('.challenge-header');
+    if (header) header.classList.add('tuto-highlight');
+  } else if (step === 2) {
+    const answersBox = activeCard.querySelector('[id^="answers-ch"]');
+    if (answersBox) answersBox.classList.add('tuto-highlight');
+  } else if (step === 3) {
+    const n = sessionConfig.n || 1;
+    document.getElementById("tutoNText").innerHTML = `Attention, vous devez gérer vos crédits intelligemment car vous allez avoir <strong>${n} questions</strong> à votre disposition.`;
+  }
+}
+
+function closeTuto() {
+  document.getElementById("tutoContainer").style.display = "none";
+  clearTutoHighlights();
+  window.sessionTutoDone = true;
+  window.currentTutoStep = 0;
 }
 
 function playNext() {
@@ -2086,6 +2167,10 @@ function openBetPanel(cIndex, ansIndex, betType) {
 function closeBetPanel() {
   document.getElementById("betPanelOverlay").classList.remove("open");
   document.getElementById("betPanel").classList.remove("open");
+  // TUTO : Si le joueur clique sur Annuler en plein tuto, il doit re-cliquer sur une réponse
+  if (window.currentTutoStep === 3) {
+      nextTuto(2);
+  }
 }
 
 function updatePotentialGain() {
@@ -2169,11 +2254,18 @@ function confirmBet() {
 // On enregistre le choix, la mise ET le type de pari (OUI/NON)
   selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
   selectedBets[tempBetCIndex] = val;
-  selectedBetTypes[tempBetCIndex] = tempBetType; // NOUVEAU
+  selectedBetTypes[tempBetCIndex] = tempBetType; 
 
-  // On ferme et on actualise l'écran
-  closeBetPanel();
-  renderAnswersForChallenge(tempBetCIndex);
+  // TUTO : Si le tuto est à l'étape 3, valider la mise déclenche l'étape 4 (Swipe)
+  if (window.currentTutoStep === 3) {
+      window.currentTutoStep = 4; // Protège de l'annulation de closeBetPanel
+      closeBetPanel();
+      renderAnswersForChallenge(tempBetCIndex);
+      nextTuto(4);
+  } else {
+      closeBetPanel();
+      renderAnswersForChallenge(tempBetCIndex);
+  }
 }
 // ----------------------------------------------
 
