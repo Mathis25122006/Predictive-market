@@ -1621,22 +1621,22 @@ function renderPlayChallenges(){
 
     let imgHtml = "";
     if (ch.imageUrl) {
-        // NOUVEAU : clamp() adapte l'image entre 70px (petit tel) et 140px max. Margin réduit.
-        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:clamp(70px, 18vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+        // CORRECTION : L'image s'écrase jusqu'à 80px si la place manque, et les marges se réduisent
+        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:clamp(80px, 15vh, 160px); object-fit:cover; border-radius:12px; margin-bottom:clamp(6px, 1.5vh, 15px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
     }
 
-    // NOUVEAU : Toutes les polices et marges s'adaptent dynamiquement à la hauteur de l'écran avec clamp() ou vh
+    // CORRECTION : Toutes les polices et marges utilisent clamp() pour se tasser si nécessaire
     header.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 4px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(4px, 1vh, 10px);">
         <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
         <div style="text-align:right;">
            <div id="open-timer-${cIndex}" style="color:#fde047; font-size:14px; font-weight:900; font-family:monospace;">--:--</div>
            <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">TEMPS RESTANT</div>
         </div>
       </div>
-      <div style="font-size:clamp(18px, 3vh, 24px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
+      <div style="font-size:clamp(18px, 3vh, 24px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(6px, 1vh, 15px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
       ${imgHtml}
-      <div style="font-size:clamp(13px, 2.2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:6px; color:#f9fafb;">
+      <div style="font-size:clamp(13px, 2.2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:clamp(6px, 1.5vh, 15px); color:#f9fafb;">
          ${ch.question}
          ${betInfoHtml}
       </div>
@@ -1644,12 +1644,12 @@ function renderPlayChallenges(){
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
-    // NOUVEAU : Plus de scroll. Les réponses s'étirent ou se tassent pour occuper 100% de la place restante.
-    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-evenly; gap: 4px; margin-top: 2px;";
+    // CORRECTION : Plus de scroll. La boîte est élastique (min-height:0) et répartit l'espace.
+    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; margin-top: 5px; min-height: 0;";
     
     const footer = document.createElement("div");
-    // NOUVEAU : Le padding supérieur s'écrase sur les petits écrans
-    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(6px, 1.5vh, 15px); padding-bottom: 10px;";
+    // CORRECTION : Padding légèrement ajustable pour sauver de l'espace en bas
+    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(8px, 1.5vh, 15px); padding-bottom: clamp(10px, 2vh, 15px);";
     
     // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
     const hintText = cIndex > 0 
@@ -1802,8 +1802,8 @@ ch.answers.forEach((a,i)=>{
 
  const div = document.createElement("div");
     div.className = "answer-btn";
-    // NOUVEAU STYLE : Padding dynamique (clamp), flexibilité activée (flex: 1), et retrait du margin (géré par le parent)
-    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(6px, 1.5vh, 12px) 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; max-height: 48px;";
+    // CORRECTION : Paddings et marges dynamiques. flex: 1 1 auto permet de tasser les boutons.
+    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(6px, 1.2vh, 14px) 16px; border-radius: 12px; margin-bottom: clamp(4px, 0.8vh, 8px); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; min-height: 35px; max-height: 55px; overflow: hidden;";
     
     // --- Logique de clic et surbrillance ---
     if (snap) {
@@ -1828,11 +1828,13 @@ ch.answers.forEach((a,i)=>{
     }
 
     const label = document.createElement("div");
-    label.style.cssText = "font-weight: 600; font-size: 14px; color: #f9fafb; flex:1; padding-right:10px;";
+    // CORRECTION : font-size s'adapte jusqu'à 11px si l'écran est surchargé
+    label.style.cssText = "font-weight: 600; font-size: clamp(11px, 2vh, 14px); color: #f9fafb; flex:1; padding-right:10px; line-height: 1.1;";
     label.textContent = a;
 
     const ptsSpan = document.createElement("div");
-    ptsSpan.style.cssText = "font-weight: 800; font-size: 16px; color: #f9fafb; white-space:nowrap;";
+    // CORRECTION : Le score s'adapte également
+    ptsSpan.style.cssText = "font-weight: 800; font-size: clamp(12px, 2.2vh, 16px); color: #f9fafb; white-space:nowrap;";
     
     // Affichage des points (Facile) ou des % (Avancé)
     if (currentPlayerMode === 'easy') {
