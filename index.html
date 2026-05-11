@@ -343,7 +343,8 @@ input, select, textarea {
   
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
   border-radius: 20px !important;
-  padding: 24px !important;
+  /* CORRECTION : Le padding inférieur passe de 24px à 12px pour coller le footer plus bas ! */
+  padding: 24px 24px 12px 24px !important;
   border: none !important; 
   margin-bottom: 0 !important;
   box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
@@ -1648,29 +1649,29 @@ function renderPlayChallenges(){
     answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: clamp(2px, 0.8vh, 6px); min-height: 0; margin-top: 2px;";
     
     const footer = document.createElement("div");
-    // CORRECTION : On réduit légèrement les espaces du footer en cas de petit écran
-    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(6px, 1.5vh, 15px); padding-bottom: clamp(6px, 1.5vh, 15px);";
+    // CORRECTION : On enlève le padding inférieur du footer pour laisser la carte gérer le bord
+    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(4px, 1vh, 12px); padding-bottom: 0;";
     
     // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
     const hintText = cIndex > 0 
-       ? `<div style="text-align:center; color:#9ca3af; font-size:10px; margin-top:8px;">↑ Glissez haut pour passer • ↓ Bas pour revenir</div>` 
-       : `<div style="text-align:center; color:#9ca3af; font-size:10px; margin-top:8px;">↑ Glissez vers le haut pour passer</div>`;
+       ? `<div style="text-align:center; color:#9ca3af; font-size:9px; margin-top:clamp(4px, 0.8vh, 8px);">↑ Glissez haut pour passer • ↓ Bas pour revenir</div>` 
+       : `<div style="text-align:center; color:#9ca3af; font-size:9px; margin-top:clamp(4px, 0.8vh, 8px);">↑ Glissez vers le haut pour passer</div>`;
 
-    // Le bouton Next se transforme en bouton Valider sur la dernière carte
+    // CORRECTION : Les boutons et le score rétrécissent dynamiquement
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
-       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Valider mes paris</button>${hintText}`
-       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: 14px; width: 100%; box-shadow: none; font-size:14px; text-transform:uppercase; margin-top:15px;">Suivant</button>${hintText}`;
+       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: none; font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; margin-top:clamp(6px, 1vh, 12px);">Valider mes paris</button>${hintText}`
+       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: none; font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; margin-top:clamp(6px, 1vh, 12px);">Suivant</button>${hintText}`;
 
     footer.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-end;">
          <div>
-            <div style="font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">SCORE</div>
-            <div style="font-size:20px; font-weight:900; color:#f9fafb;">${currentPlayerBalance} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">pts</span></div>
+            <div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">SCORE</div>
+            <div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">${currentPlayerBalance} <span style="font-size:11px; font-weight:normal; color:#9ca3af;">pts</span></div>
          </div>
          <div style="text-align:right;">
-            <div style="font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">LEADERBOARD</div>
-            <div style="font-size:20px; font-weight:900; color:#f9fafb;">${myRank} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">${myRankSuffix}</span></div>
+            <div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">LEADERBOARD</div>
+            <div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">${myRank} <span style="font-size:11px; font-weight:normal; color:#9ca3af;">${myRankSuffix}</span></div>
          </div>
       </div>
       ${btnHtml}
@@ -1800,10 +1801,10 @@ ch.answers.forEach((a,i)=>{
     const safePct = pct <= 0 ? 0.001 : pct;
     const pts = +(1 / safePct).toFixed(2); // <-- Précision à 2 décimales
 
- const div = document.createElement("div");
+const div = document.createElement("div");
     div.className = "answer-btn";
-    // CORRECTION : Le padding s'adapte, le margin-bottom est supprimé (remplacé par le "gap" du parent), flex permet l'écrasement.
-    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(6px, 1.2vh, 14px) 14px; border-radius: 12px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; min-height: 32px; max-height: 55px; overflow: hidden;";
+    // CORRECTION : Boutons de réponse bien plus fins (min-height à 28px, padding vertical très réduit)
+    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(4px, 1vh, 10px) 12px; border-radius: 10px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; min-height: 28px; max-height: 46px; overflow: hidden;";
     
     // --- Logique de clic et surbrillance ---
     if (snap) {
@@ -1828,13 +1829,13 @@ ch.answers.forEach((a,i)=>{
     }
 
     const label = document.createElement("div");
-    // CORRECTION : Le texte de la réponse peut descendre jusqu'à 11px
-    label.style.cssText = "font-weight: 600; font-size: clamp(11px, 1.6vh, 14px); color: #f9fafb; flex:1; padding-right:10px; line-height: 1.1;";
+    // CORRECTION : La police descend à 10px pour que tout tienne
+    label.style.cssText = "font-weight: 600; font-size: clamp(10px, 1.5vh, 13px); color: #f9fafb; flex:1; padding-right:10px; line-height: 1.1;";
     label.textContent = a;
 
     const ptsSpan = document.createElement("div");
-    // CORRECTION : Le gain / pourcentage peut descendre jusqu'à 12px
-    ptsSpan.style.cssText = "font-weight: 800; font-size: clamp(12px, 1.8vh, 16px); color: #f9fafb; white-space:nowrap;";
+    // CORRECTION : La police de la valeur descend aussi
+    ptsSpan.style.cssText = "font-weight: 800; font-size: clamp(11px, 1.6vh, 14px); color: #f9fafb; white-space:nowrap;";
     
     // Affichage des points (Facile) ou des % (Avancé)
     if (currentPlayerMode === 'easy') {
