@@ -322,19 +322,25 @@ input, select, textarea {
 
 /* --- NOUVEAU : INTERFACE MOBILE (DESIGN CARTE VIOLET/ORANGE) --- */
 #challengesPlay {
-  height: calc(100vh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  position: relative;
+  /* NOUVEAU : Le conteneur se fige sur TOUT l'écran pour devenir une application 100% immersive */
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100vh;
+  background: #020617; /* Fond noir uni derrière les cartes (couvre le reste de la page) */
+  z-index: 800; /* Assez haut pour couvrir le jeu, mais sous les popups de paris */
   overflow: hidden; 
-  padding: 10px;
-  /* NOUVEAU : Bloque totalement le rebond de la page (pull-to-refresh) et le scroll système */
-  touch-action: none; 
+  touch-action: none; /* Bloque le scroll natif d'iOS et Android */
 }
 
 #challengesPlay::-webkit-scrollbar { display: none; }
 
 #challengesPlay .challenge-block {
   position: absolute;
-  top: 10px; left: 10px; right: 10px; bottom: 10px;
+  /* Marges de sécurité parfaites : la carte prend toute la place sans jamais toucher les bords ou l'encoche */
+  top: max(15px, env(safe-area-inset-top)); 
+  left: 15px; 
+  right: 15px; 
+  bottom: max(15px, env(safe-area-inset-bottom));
   box-sizing: border-box;
   
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
@@ -387,7 +393,7 @@ input, select, textarea {
 </head>
 <body>
 <!-- NOUVEAU : top: max(16px, env(safe-area-inset-top)) protège contre l'encoche -->
-  <div id="globalBalance" class="hidden" style="position:fixed; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:1100; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+  <div id="globalBalance" class="hidden" style="position:fixed; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:700; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
   💰 <span id="globalBalanceAmt">0</span>
 </div>
 
@@ -1725,10 +1731,11 @@ function renderPlayChallenges(){
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
-    if(!isDragging) return;
-    
-    // NOUVEAU : Empêche totalement le scroll de la page ! Le doigt ne bouge QUE la carte.
+    // NOUVEAU : On annule le comportement de base de l'écran DANS TOUS LES CAS.
+    // L'écran derrière ne pourra physiquement plus bouger d'un seul pixel.
     e.preventDefault(); 
+
+    if(!isDragging) return;
     
     const activeCard = cardsElements[currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
