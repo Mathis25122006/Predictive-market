@@ -318,6 +318,47 @@ input, select, textarea {
 /* NOUVEAU : Masquer les barres de défilement pour un rendu propre sur TV */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- NOUVEAU : INTERFACE MOBILE TYPE "CARTES" --- */
+#challengesPlay {
+  /* Hauteur dynamique : 100vh - Header - Footer - Safe Areas */
+  height: calc(100vh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 10px;
+  /* padding-bottom ultra-large pour permettre à la TOUTE DERNIÈRE carte de s'aimanter au centre */
+  padding-bottom: 50vh; 
+  scroll-behavior: smooth;
+}
+
+#challengesPlay::-webkit-scrollbar { 
+  display: none; /* Cache la barre de défilement pour un look natif iOS/Android */
+}
+
+#challengesPlay .challenge-block {
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+  background: linear-gradient(145deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)) !important;
+  border-radius: 28px !important;
+  padding: 24px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
+  margin-bottom: 0 !important; /* Le gap gère l'espacement désormais */
+  
+  /* Base de l'animation (carte rétrécie et un peu transparente) */
+  transform: scale(0.85) translateY(30px);
+  opacity: 0.4;
+  transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Classe dynamique ajoutée par le JS quand la carte est au centre */
+#challengesPlay .challenge-block.is-visible {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
 </style>
 </head>
 <body>
@@ -427,7 +468,18 @@ input, select, textarea {
 <label>Nombre de Challenges</label>
     <input type="number" id="challengesQty" value="2" min="1" max="20" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 15px;">
     
-<div style="display:flex; gap:10px; margin-bottom:15px;">
+<div style="margin-bottom:15px; background:rgba(59,130,246,0.1); padding:15px; border-radius:12px; border:1px solid #3b82f6;">
+      <label style="color:#3b82f6; font-weight:bold;">Nombre de questions par joueur</label>
+      <p class="subtitle" style="font-size:11px; margin-bottom:8px;">Chaque joueur devra parier sur exactement ce nombre de défis.</p>
+      <input type="number" id="questionsPerPlayer" value="3" min="1" style="width:100%; border-color:#3b82f6;">
+    </div>
+
+    <div style="margin-bottom:15px;">
+      <label style="font-size:11px; color:#9ca3af;">Date de la session</label>
+      <input type="date" id="globalDate" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white;" required>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
       <div style="flex:1;">
         <label style="font-size:11px; color:#9ca3af;">Heure de début globale</label>
         <input type="time" id="globalStartTime" style="width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; margin-bottom:5px;" required>
@@ -845,6 +897,7 @@ function captureSetupData() {
 
   savedSetupData = {
     qty: document.getElementById("challengesQty").value,
+    gDate: document.getElementById("globalDate").value, // NOUVEAU
     gStart: document.getElementById("globalStartTime").value,
     gEnd: document.getElementById("globalEndTime").value,
     challenges: Array.from(cats).map((cat, i) => ({
@@ -873,6 +926,7 @@ function askResume() {
 function resumeSetup() {
   // 1. Restaurer la quantité et générer les champs
   document.getElementById("challengesQty").value = savedSetupData.qty;
+  if(savedSetupData.gDate) document.getElementById("globalDate").value = savedSetupData.gDate; // NOUVEAU
   if(savedSetupData.gStart) document.getElementById("globalStartTime").value = savedSetupData.gStart;
   if(savedSetupData.gEnd) document.getElementById("globalEndTime").value = savedSetupData.gEnd;
   generateSetupFields();
@@ -900,11 +954,23 @@ function resumeSetup() {
 }
 
 function generateSetupFields() {
-  let qty = parseInt(document.getElementById("challengesQty").value);
+  const qtyInput = document.getElementById("challengesQty");
+  const nInput = document.getElementById("questionsPerPlayer");
+  const msg = document.getElementById("setupMsg");
   
-  // Sécurité : si la saisie est vide ou invalide, on met 1 par défaut
+  let qty = parseInt(qtyInput.value);
+  const n = parseInt(nInput.value) || 1;
+
+  // NOUVEAU : Validation bloquante dès le premier "Suivant"
+  if (qty < n) {
+    msg.textContent = `Erreur : Le nombre total de défis (${qty}) ne peut pas être inférieur au nombre exigé par joueur (${n}).`;
+    msg.className = "msg err";
+    return;
+  }
+  msg.textContent = ""; // On efface les erreurs précédentes
+
   if (isNaN(qty) || qty < 1) qty = 1;
-  if (qty > 50) qty = 50; // Limite optionnelle pour éviter de faire ramer le navigateur
+  if (qty > 50) qty = 50; 
 
 // NOUVEAU : On récupère les heures globales saisies par l'admin
   const gStart = document.getElementById("globalStartTime").value || "";
@@ -940,7 +1006,13 @@ function generateSetupFields() {
     const div = document.createElement("div");
     div.className = "setup-challenge";
     div.innerHTML = `
-      <div class="top-row"><strong>Challenge ${i + 1}</strong></div>
+      <div class="top-row" style="margin-bottom:10px;">
+        <strong>Challenge ${i + 1}</strong>
+        <label style="display:inline-flex; align-items:center; gap:5px; margin:0; color:#fbbf24; font-weight:bold; cursor:pointer;">
+          <input type="radio" name="filRouge" value="${i}" ${i === 0 ? 'checked' : ''} style="width:auto; margin:0;">
+          Fil Rouge
+        </label>
+      </div>
       <label>Catégorie</label>
      <select class="dynamic-cat-select" data-index="${i}" onchange="toggleCustomCat(${i})">
         <option value="Live traffic" ${ch.category === "Live traffic" || ch.category === "" ? "selected" : ""}>Live traffic</option>
@@ -1095,15 +1167,21 @@ function setupNext() {
   let isValid = true;
 
   // NOUVEAU : On enregistre l'heure de début globale
+// NOUVEAU : On récupère la date et l'heure de début
+  const gDateVal = document.getElementById("globalDate").value;
   const gStartVal = document.getElementById("globalStartTime").value;
+  const now = new Date();
+  
+  // On définit le jour (soit celui choisi, soit aujourd'hui par défaut)
+  let baseDate = now;
+  if (gDateVal) {
+    const [y, month, d] = gDateVal.split('-').map(Number);
+    baseDate = new Date(y, month - 1, d);
+  }
+
   if (gStartVal) {
     const [h, m] = gStartVal.split(':');
-    const now = new Date();
-    sessionConfig.gameStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
-    // NOUVEAU : Si l'heure générée est "ce matin" alors qu'on est le soir, on la pousse à demain
-    if (sessionConfig.gameStartTime < now.getTime() - (12 * 3600 * 1000)) {
-        sessionConfig.gameStartTime += 24 * 3600 * 1000;
-    }
+    sessionConfig.gameStartTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), h, m).getTime();
   } else {
     sessionConfig.gameStartTime = Date.now();
   }
@@ -1117,11 +1195,11 @@ function setupNext() {
     ch.question = ques[i].value.trim();
 
     // --- NOUVEAU : Gestion des horaires par question ---
-   const now = new Date();
     // Heure de début prévue
     if (startTimes[i] && startTimes[i].value) {
       const [h, m] = startTimes[i].value.split(':');
-      ch.startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
+      // CORRECTION : On utilise 'baseDate' (le jour choisi) au lieu de 'now' !
+      ch.startTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), h, m).getTime();
       if (ch.startTime < now.getTime() - (12 * 3600 * 1000)) ch.startTime += 24 * 3600 * 1000;
     } else {
       ch.startTime = Date.now();
@@ -1130,8 +1208,8 @@ function setupNext() {
     // Heure de fin prévue
     if (endTimes[i] && endTimes[i].value) {
       const [h, m] = endTimes[i].value.split(':');
-      ch.endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime();
-      // NOUVEAU : Si l'heure de fin est plus petite que l'heure de début (passage de minuit), on ajoute 1 jour !
+      // CORRECTION : On utilise 'baseDate' ici aussi !
+      ch.endTime = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), h, m).getTime();
       if (ch.endTime < ch.startTime) {
           ch.endTime += 24 * 3600 * 1000;
       }
@@ -1236,6 +1314,48 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
 
   // On définit le code actif
   window.currentActiveSessionCode = sessionConfig.code;
+
+  // --- NOUVEAU : VALIDATION DE LA CONTRAINTE "n" ET FIL ROUGE ---
+  const n = parseInt(document.getElementById("questionsPerPlayer").value) || 1;
+  sessionConfig.n = n;
+  const totalQty = game.challenges.length;
+
+  if (totalQty < n) {
+    msg.textContent = `Erreur : Le nombre total de défis créés (${totalQty}) ne peut pas être inférieur au nombre exigé par joueur (${n}).`;
+    msg.className = "msg err";
+    return;
+  }
+
+  // 1. Récupérer et vérifier la question "Fil Rouge"
+  const filRougeRadio = document.querySelector('input[name="filRouge"]:checked');
+  if (!filRougeRadio) {
+    msg.textContent = "Erreur : Vous devez sélectionner une question comme Fil Rouge.";
+    msg.className = "msg err";
+    return;
+  }
+  const goldenIndex = parseInt(filRougeRadio.value);
+  game.challenges.forEach((ch, i) => ch.isGolden = (i === goldenIndex));
+  const goldenQuestion = game.challenges[goldenIndex];
+
+  if (goldenQuestion.startTime > sessionConfig.gameStartTime || goldenQuestion.endTime < sessionConfig.gameEndTime) {
+    msg.textContent = `Erreur : La question Fil Rouge (Challenge ${goldenIndex + 1}) doit durer du début (${document.getElementById("globalStartTime").value}) à la fin de la session (${document.getElementById("globalEndTime").value}).`;
+    msg.className = "msg err";
+    return;
+  }
+
+  // 2. Vérifier la densité (Au moins n questions actives à chaque instant)
+  let timelineValid = true;
+  game.challenges.forEach(checkCh => {
+    const timeToTest = checkCh.startTime + 1000; 
+    const activeCount = game.challenges.filter(ch => timeToTest >= ch.startTime && timeToTest < ch.endTime).length;
+    if (activeCount < n) timelineValid = false;
+  });
+
+  if (!timelineValid) {
+    msg.textContent = `Erreur : Votre planning ne garantit pas ${n} questions actives simultanément à tout moment.`;
+    msg.className = "msg err";
+    return;
+  }
 
   // SAUVEGARDE SUR LE SERVEUR (Mode Facile)
   saveToCloud();
@@ -1397,23 +1517,18 @@ function renderPlayChallenges(){
   // L'ancien bouton "quickRecap" a été supprimé au profit de la barre flottante mobile
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
   game.challenges.forEach((ch, cIndex) => {
+    // NOUVEAU : Si la question n'est pas attribuée à ce joueur, on l'ignore totalement
+    if (!myIndices.includes(cIndex)) return;
+
     const block = document.createElement("div");
     block.className = "challenge-block";
     const effStatus = getEffectiveStatus(ch);
 
- // 1. QUESTION EN ATTENTE (PENDING)
-    if (effStatus === "pending") {
-      block.innerHTML = `
-        <div class="chip" style="background:#1e293b; color:#64748b;">${ch.category}</div>
-        <div style="text-align:center; padding:15px 0;">
-          <div style="font-size:12px; color:#9ca3af; font-weight:bold;">Question disponible dans :</div>
-          <div id="pending-timer-${cIndex}" style="font-size:24px; color:#3b82f6; font-family:monospace; margin-top:8px; font-weight:800; letter-spacing:1px;">--:--</div>
-        </div>`;
-      container.appendChild(block);
-      return;
-    }
+    // NOUVEAU : On ne gère plus le statut "pending" pour le joueur (il ne voit que l'actif)
+    if (effStatus === "pending") return;
 
     // 2. QUESTION TERMINÉE (CLOSED ou RESOLVED)
     if (effStatus === "closed" || effStatus === "resolved") {
@@ -1478,6 +1593,31 @@ answersBox.id = "answers-ch" + cIndex;
     renderAnswersForChallenge(cIndex);
   });
   
+  // --- NOUVEAU : Animation des cartes au défilement ---
+  const containerEl = document.getElementById("challengesPlay");
+  const cards = containerEl.querySelectorAll('.challenge-block');
+  
+  // L'observateur détecte quand une carte arrive au centre de l'écran
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible'); // Grossit et s'illumine
+      } else {
+        entry.target.classList.remove('is-visible'); // Rétrécit et se floute
+      }
+    });
+  }, {
+    root: containerEl,
+    threshold: 0.5 // L'animation se déclenche quand 50% de la carte est visible
+  });
+
+  cards.forEach(card => observer.observe(card));
+  
+  // On force l'animation sur la toute première carte pour qu'elle apparaisse joliment à l'ouverture
+  setTimeout(() => {
+     if(cards[0]) cards[0].classList.add('is-visible');
+  }, 50);
+
   // On lance la boucle de rafraîchissement des décomptes
   startPlayScreenTimers();
 }
@@ -1504,22 +1644,26 @@ ch.answers.forEach((a,i)=>{
  const div = document.createElement("div");
     div.className = "answer-btn";
     
-    // En mode facile, on garde le clic sur toute la div. En avancé, on le désactive pour utiliser OUI/NON.
-    if (currentPlayerMode === 'easy') {
-      if (snap) {
-         // S'il a déjà validé, on bloque le clic, on colore sa réponse et on grise les autres
-         if (snap.ansIndex === i) div.classList.add("selected");
-         div.style.cursor = "default";
-         if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
-      } else {
-         // S'il n'a pas encore validé, comportement normal
-         if(selectedAnswers[cIndex] === i) div.classList.add("selected");
-         div.onclick = () => { 
-           selectedAnswers[cIndex] = i; 
-           selectedBets[cIndex] = 1; 
-           renderAnswersForChallenge(cIndex); 
-         };
-      }
+    // --- CORRECTION : Logique de clic restaurée (Facile et Avancé) ---
+    if (snap) {
+       if (snap.ansIndex === i) div.classList.add("selected");
+       if (currentPlayerMode === 'easy') {
+           div.style.cursor = "default";
+           if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
+       } else {
+           div.onclick = () => openBetPanel(cIndex, i, 'YES');
+       }
+    } else {
+       if(selectedAnswers[cIndex] === i) div.classList.add("selected");
+       div.onclick = () => { 
+         if (currentPlayerMode === 'easy') {
+             selectedAnswers[cIndex] = i; 
+             selectedBets[cIndex] = 1; 
+             renderAnswersForChallenge(cIndex); 
+         } else {
+             openBetPanel(cIndex, i, 'YES');
+         }
+       };
     }
 
     const top = document.createElement("div");
@@ -1536,9 +1680,11 @@ ch.answers.forEach((a,i)=>{
     top.appendChild(label);
     top.appendChild(chip);
 
+    // --- CORRECTION : Déclaration de meta AVANT de l'utiliser ---
     const meta = document.createElement("div");
     meta.className = "answer-meta";
 
+    // NOUVEAU : On n'affiche le gain potentiel que pour le mode FACILE
     if (currentPlayerMode === 'easy') {
       const ptsSpan = document.createElement("span");
       const pill = document.createElement("span");
@@ -1546,31 +1692,13 @@ ch.answers.forEach((a,i)=>{
       pill.textContent = pts + " 💰 potentiels"; 
       ptsSpan.appendChild(pill);
       meta.appendChild(ptsSpan);
-    } else {
-      // MODE AVANCÉ : Boutons OUI / NON
-      meta.style.display = "flex";
-      meta.style.gap = "8px";
-      meta.style.marginTop = "8px";
-      
-      const btnYes = document.createElement("button");
-      btnYes.textContent = "Parier OUI";
-      btnYes.style.cssText = "background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid #22c55e; padding: 6px; font-size: 11px; margin: 0;";
-      btnYes.onclick = (e) => { e.stopPropagation(); openBetPanel(cIndex, i, 'YES'); };
-
-      const btnNo = document.createElement("button");
-      btnNo.textContent = "Parier NON";
-      btnNo.style.cssText = "background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid #ef4444; padding: 6px; font-size: 11px; margin: 0;";
-      btnNo.onclick = (e) => { e.stopPropagation(); openBetPanel(cIndex, i, 'NO'); };
-
-      meta.appendChild(btnYes);
-      meta.appendChild(btnNo);
-      
-      // Affichage de la mise temporaire (si existante)
+    } else if (currentPlayerMode === 'advanced') {
+      // Pour le mode Avancé, on affiche uniquement la mise en attente (s'il y en a une)
       if (selectedAnswers[cIndex] === i && selectedBets[cIndex] > 0) {
-        const betSpan = document.createElement("div");
+        const betSpan = document.createElement("span");
         betSpan.style.color = "#3b82f6";
         betSpan.style.fontSize = "11px";
-        betSpan.style.marginTop = "6px";
+        betSpan.style.marginLeft = "8px";
         betSpan.textContent = `En attente : ${selectedBets[cIndex]} u`;
         meta.appendChild(betSpan);
       }
@@ -1665,6 +1793,26 @@ function playNext() {
     return;
   }
 
+  // NOUVEAU : Vérification du nombre de paris "n" attribués au joueur
+  const n = sessionConfig.n || 1;
+  const player = (game.players || []).find(p => p.name === pseudo);
+  const myIndices = player ? (player.assignedIndices || []) : [];
+  
+  // On compte combien de paris sont prêts à être validés (ou déjà validés) parmi ses questions attribuées
+  const currentBetsCount = myIndices.filter(idx => {
+     const hasExistingBet = player.portfolio && player.portfolio.some(b => b.cIndex === idx);
+     const hasPendingBet = selectedAnswers[idx] !== null && selectedAnswers[idx] !== undefined;
+     return hasExistingBet || hasPendingBet;
+  }).length;
+
+  // NOUVEAU : On n'oblige à parier sur les 'n' questions que dans le Mode Facile.
+  // Le Mode Avancé a le droit de ne pas tout miser !
+  if (currentPlayerMode === 'easy' && currentBetsCount < n) {
+    msg.textContent = `Vous devez parier sur vos ${n} questions attribuées avant de valider.`;
+    msg.className = "msg err";
+    return;
+  }
+
   // En mode facile, on vérifie qu'il a répondu à toutes les questions OUVERTES
   if (currentPlayerMode === 'easy') {
     let allOpenAnswered = true;
@@ -1712,9 +1860,8 @@ function openBetPanel(cIndex, ansIndex, betType) {
   // 2. La probabilité du NON est exactement la somme des autres (soit 1 - pStartYes)
   const pStart = betType === 'YES' ? pStartYes : (1 - pStartYes);
 
-  // 3. Affichage dynamique avec la cote actuelle
-  const typeLabel = betType === 'YES' ? '<span style="color:#4ade80;">OUI</span>' : '<span style="color:#f87171;">NON</span>';
-  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} ${typeLabel} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
+  // 3. Affichage dynamique avec la cote actuelle (Plus de OUI/NON)
+  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
 
   // Si le joueur avait déjà misé sur cette question, on le rembourse temporairement
   if (selectedAnswers[cIndex] !== null && selectedBets[cIndex] > 0) {
@@ -2341,7 +2488,31 @@ function checkAccess() {
     if (!me) {
       // Nouveau joueur
       let startBal = currentPlayerBalance === 0 && modeToPlay === 'advanced' ? (sessionConfig.initialBalance || 100) : currentPlayerBalance;
-      me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [] };
+      me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [], assignedIndices: [] };
+      
+      // --- ATTRIBUTION ALÉATOIRE ---
+      const n = sessionConfig.n || 1;
+      // On trouve toutes les questions actuellement ouvertes
+      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
+                                         .filter(item => getEffectiveStatus(item.ch) === "open");
+      
+      // On identifie explicitement la question Fil Rouge
+      const golden = activeIndices.find(item => item.ch.isGolden === true);
+      
+      let finalSelection = [];
+      if (golden) {
+        finalSelection.push(golden.idx);
+        // On retire la golden des choix restants
+        activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
+      }
+      
+      // On pioche au hasard pour compléter jusqu'à n (soit n-1 questions supplémentaires)
+      activeIndices.sort(() => 0.5 - Math.random());
+      while (finalSelection.length < n && activeIndices.length > 0) {
+        finalSelection.push(activeIndices.shift().idx);
+      }
+      
+      me.assignedIndices = finalSelection;
       game.players.push(me);
       saveToCloud(); 
     } else {
@@ -2982,16 +3153,13 @@ function updateRecapUI(pseudo) {
       if (player.portfolio) {
     player.portfolio.forEach(snap => {
       const ch = game.challenges[snap.cIndex];
-      const typeBadge = snap.type === 'NO' ? 
-        '<span style="background:rgba(248,113,113,0.2); color:#f87171; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">NON</span>' : 
-        '<span style="background:rgba(74,222,128,0.2); color:#4ade80; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:8px;">OUI</span>';
 
       summaryContainer.innerHTML += `
         <div class="challenge-block" style="border-left: 3px solid #3b82f6;">
           <div style="font-size:10px; color:#9ca3af;">${ch.category}</div>
           <div class="challenge-title">${ch.question}</div>
           <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-            <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]} ${typeBadge}</div>
+            <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]}</div>
             <div style="color:#3b82f6; font-size:13px;">+${snap.pts} 💰 potentiels</div>
           </div>
           ${getEffectiveStatus(ch) === "open" && snap.bet > 0 ? `
@@ -3165,8 +3333,8 @@ function openSellPanel(cIndex, ansIndex, type) {
   tempSellAnsIndex = ansIndex;
   tempSellType = type; // NOUVEAU
 
-  const typeLabel = type === 'YES' ? '<span style="color:#4ade80;">(OUI)</span>' : '<span style="color:#f87171;">(NON)</span>';
-  document.getElementById("sellAnswerName").innerHTML = `${game.challenges[cIndex].answers[ansIndex]} ${typeLabel}`;
+  // NOUVEAU : On n'affiche plus OUI ou NON
+  document.getElementById("sellAnswerName").innerHTML = `${game.challenges[cIndex].answers[ansIndex]}`;
   document.getElementById("sellMaxBet").textContent = tempSellSnap.bet + " unités";
   document.getElementById("sellInput").value = "";
   document.getElementById("sellInput").max = tempSellSnap.bet;
@@ -3350,11 +3518,23 @@ function directManage() {
   checkManageAccess();
 }
 function forceTime(index, type) {
-  // Au lieu de changer un texte, on change l'heure de début ou de fin à "Maintenant"
+  const now = Date.now();
   if (type === 'start') {
-    game.challenges[index].startTime = Date.now();
+    game.challenges[index].startTime = now;
   } else {
-    game.challenges[index].endTime = Date.now();
+    // NOUVEAU : Empêcher la fermeture si cela fait chuter les questions actives sous 'n'
+    const n = sessionConfig.n || 1;
+    const currentlyActive = game.challenges.filter(ch => getEffectiveStatus(ch) === "open").length;
+    
+    if (currentlyActive <= n) {
+        alert(`Impossible de clôturer ce challenge maintenant : Il doit toujours y avoir au moins ${n} défis actifs en même temps pour les nouveaux joueurs.`);
+        return;
+    }
+    if (game.challenges[index].isGolden) {
+        alert("Impossible de clôturer manuellement la question Fil Rouge avant la fin de la session.");
+        return;
+    }
+    game.challenges[index].endTime = now;
   }
   saveToCloud();
   renderManageDashboard();
@@ -3526,6 +3706,8 @@ let adminDashboardTimerInterval = null;
 function setGlobalQuickTime(type) {
   const now = new Date();
   if (type === 'start') {
+    // NOUVEAU : Met aussi la date d'aujourd'hui
+    document.getElementById("globalDate").value = now.toISOString().split('T')[0];
     // Met l'heure actuelle
     document.getElementById("globalStartTime").value = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
   } else {
@@ -3564,14 +3746,13 @@ function fillTestGame() {
   const gStart = document.getElementById("globalStartTime").value;
   const gEnd = document.getElementById("globalEndTime").value;
 
-  if (!gStart || !gEnd) {
+ if (!gStart || !gEnd) {
      alert("Veuillez d'abord définir l'heure de début et de fin globale (Étape précédente) !");
      return;
   }
 
-  // On détermine au hasard quelle question commence direct et laquelle finit à la fin
-  const immediateIndex = Math.floor(Math.random() * qty);
-  const globalEndIndex = Math.floor(Math.random() * qty);
+  // NOUVEAU : On récupère 'n' pour que le simulateur crée un planning valide
+  const n = parseInt(document.getElementById("questionsPerPlayer").value) || 1;
 
   // On mélange la banque de questions
   const shuffledBank = [...testQuestionBank].sort(() => 0.5 - Math.random());
@@ -3614,24 +3795,81 @@ function fillTestGame() {
        setRandom(i);
     }
 
-    // 5. Attribution des horaires aléatoires
-    const startInput = document.getElementById(`start-${i}`);
-    const endInput = document.getElementById(`end-${i}`);
+} // <-- Fin de la boucle de génération des questions
+
+    // 5. NOUVEAU : Calcul intelligent du planning par "Pistes de relais" (Lanes)
+    // Cela garantit 'n' questions actives à la seconde près, avec des durées aléatoires.
     
-    let randomStart = getRandomTimeBetween(gStart, gEnd);
-    let randomEnd = getRandomTimeBetween(gStart, gEnd);
-    
-    // Sécurité : On s'assure que la fin est toujours après le début
-    if (randomStart > randomEnd) {
-       const temp = randomStart;
-       randomStart = randomEnd;
-       randomEnd = temp;
+    function timeToMins(t) {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+    }
+    function minsToTime(m) {
+        const h = Math.floor(m / 60) % 24;
+        const mn = m % 60;
+        return h.toString().padStart(2,'0') + ':' + mn.toString().padStart(2,'0');
     }
 
-    if (startInput) startInput.value = (i === immediateIndex) ? gStart : randomStart;
-    if (endInput) endInput.value = (i === globalEndIndex) ? gEnd : randomEnd;
-  }
+    const startM = timeToMins(gStart);
+    let endM = timeToMins(gEnd);
+    if (endM < startM) endM += 24 * 60; // Gère le passage de minuit
+
+    const lanes = [];
+    const numLanes = Math.max(1, n); 
+    for(let j=0; j<numLanes; j++) lanes.push([]);
+
+    // Piste 0 : Réservée au Fil Rouge (Question 0)
+    lanes[0].push(0);
+
+    // Pistes 1 à n-1 : On répartit toutes les autres questions pour créer les relais
+    if (n === 1) {
+       for(let i=1; i<qty; i++) lanes[0].push(i);
+    } else {
+       for(let i=1; i<qty; i++) {
+           lanes[((i - 1) % (n - 1)) + 1].push(i); 
+       }
+    }
+
+    // Application mathématique des temps pour chaque piste
+    for (let j = 0; j < lanes.length; j++) {
+       const laneQs = lanes[j];
+       
+       if (j === 0) {
+           // Piste 0 : La question Fil Rouge dure du début à la fin
+           document.getElementById('start-0').value = gStart;
+           document.getElementById('end-0').value = gEnd;
+           const radio = document.querySelector('input[name="filRouge"][value="0"]');
+           if (radio) radio.checked = true;
+
+           // Les éventuelles autres questions (si n=1) sont placées en vrac aléatoirement
+           for(let q=1; q<laneQs.length; q++) {
+               const idx = laneQs[q];
+               let rs = Math.floor(Math.random() * (endM - startM)) + startM;
+               let re = Math.floor(Math.random() * (endM - startM)) + startM;
+               if (rs > re) { const t = rs; rs = re; re = t; }
+               document.getElementById(`start-${idx}`).value = minsToTime(rs);
+               document.getElementById(`end-${idx}`).value = minsToTime(re);
+           }
+       } else {
+           // Pistes de relais : On divise le temps total de la session par le nombre de questions
+           const k = laneQs.length;
+           const splits = [];
+           for(let s=0; s<k-1; s++) {
+               splits.push(Math.floor(Math.random() * (endM - startM)) + startM);
+           }
+           splits.sort((a,b) => a - b);
+           const boundaries = [startM, ...splits, endM]; // Ex: 14h -> 15h12 -> 17h
+
+           // On attribue chaque segment continu à une question
+           for(let q=0; q<k; q++) {
+               const idx = laneQs[q];
+               document.getElementById(`start-${idx}`).value = minsToTime(boundaries[q]);
+               document.getElementById(`end-${idx}`).value = minsToTime(boundaries[q+1]);
+           }
+       }
+    }
 }
+
 
 function getRandomTimeBetween(startStr, endStr) {
     if (!startStr || !endStr) return startStr;
