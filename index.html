@@ -479,7 +479,30 @@ input, select, textarea {
   <button onclick="askResume()">Créer un nouveau jeu</button>
   <button onclick="showScreen('manageAuth')" style="background: rgba(55,65,81,0.5); margin-top: 12px;">Gérer un jeu existant</button>
   <button onclick="showScreen('bigScreenAuth')" style="background: linear-gradient(135deg,#a855f7,#d946ef); margin-top: 12px; box-shadow:0 10px 20px rgba(168,85,247,0.4);">Affichage Grand Écran</button>
+  <button onclick="showScreen('simulationSetup')" style="background: linear-gradient(135deg,#f59e0b,#d97706); margin-top: 12px; box-shadow:0 10px 20px rgba(245,158,11,0.4);">Simulateur de Joueurs</button>
   <button onclick="showScreen('home')" style="background: none; border: 1px solid #4b5563; margin-top: 12px; box-shadow: none;">Retour à l'accueil</button>
+</div>
+
+<div id="simulationSetup" class="card" style="display:none">
+  <h2>Simulateur de Bots</h2>
+  <p class="subtitle">Générez des joueurs virtuels qui miseront en temps réel pendant les heures de la session.</p>
+  
+  <label>Code de la session cible</label>
+  <input id="simCodeInput" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+  
+  <label>Nombre de bots à générer</label>
+  <input type="number" id="simBotCount" value="10" min="1" max="500">
+  
+  <button id="startSimBtn" onclick="startSimulation()" style="background:linear-gradient(135deg,#10b981,#059669);">Démarrer la simulation</button>
+  <button id="stopSimBtn" onclick="stopSimulation()" class="hidden" style="background:#ef4444;">🛑 Arrêter la simulation</button>
+  
+  <div id="simMsg" class="msg"></div>
+  
+  <div id="simLogs" style="margin-top:15px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; height:150px; overflow-y:auto; font-size:11px; font-family:monospace; color:#9ca3af; border:1px solid #4b5563; line-height: 1.4;">
+    <em>Les actions des bots apparaîtront ici...</em>
+  </div>
+
+  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:12px;">Retour</button>
 </div>
 
 <div id="selectMode" class="card" style="display:none">
@@ -810,8 +833,8 @@ input, select, textarea {
   }
 }
 function showScreen(screenId) {
-  // CORRECTION : On retire onboarding
-  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult'];
+  // NOUVEAU : Ajout de l'écran simulationSetup
+  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup'];
 
   // On cache le canvas de confettis si on quitte l'écran de résultat personnel
   if (screenId !== 'playerResult') {
@@ -1635,9 +1658,11 @@ function renderPlayChallenges(){
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
-  game.challenges.forEach((ch, cIndex) => {
-    // NOUVEAU : Si la question n'est pas attribuée à ce joueur, on l'ignore totalement
-    if (!myIndices.includes(cIndex)) return;
+  // CORRECTION : On boucle sur myIndices (et non sur game.challenges) 
+  // pour respecter l'ordre et assurer que la dernière carte soit bien la dernière affichée.
+  myIndices.forEach((cIndex) => {
+    const ch = game.challenges[cIndex];
+    if (!ch) return;
 
     const block = document.createElement("div");
     block.className = "challenge-block";
@@ -4798,6 +4823,196 @@ function updateBsTimers() {
         el.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
      }
   });
+}
+
+
+// ==========================================
+// MOTEUR DU SIMULATEUR DE BOTS (TEMPS RÉEL)
+// ==========================================
+let simulationInterval = null;
+let simulationActive = false;
+
+function startSimulation() {
+  const code = document.getElementById("simCodeInput").value.trim().toUpperCase();
+  const botCount = parseInt(document.getElementById("simBotCount").value) || 10;
+  const msg = document.getElementById("simMsg");
+  
+  if (!code) { msg.textContent = "Veuillez entrer un code de session."; msg.className = "msg err"; return; }
+  
+  msg.textContent = "Connexion au serveur..."; msg.className = "msg ok";
+  
+  db.ref('sessions/' + code).once('value').then(snapshot => {
+    if (!snapshot.exists()) {
+      msg.textContent = "Session introuvable."; msg.className = "msg err"; return;
+    }
+    
+    const data = snapshot.val();
+    sessionConfig = data.sessionConfig;
+    game = data.gameData;
+    window.currentActiveSessionCode = code;
+    
+    if (!game.players) game.players = [];
+    
+    // 1. Création et inscription des Bots
+    let newBotsAdded = 0;
+    const n = sessionConfig.n || 1;
+    
+    for (let i = 1; i <= botCount; i++) {
+      const botName = "Bot_" + i;
+      let bot = game.players.find(p => p.name === botName);
+      
+      if (!bot) {
+        let startBal = sessionConfig.initialBalance || 100;
+        bot = { name: botName, email: `bot${i}@sim.com`, balance: startBal, portfolio: [], assignedIndices: [] };
+        
+        // Attribution des questions comme un vrai joueur
+        let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}));
+        const golden = activeIndices.find(item => item.ch.isGolden === true);
+        let finalSelection = [];
+        
+        if (golden) {
+          finalSelection.push(golden.idx);
+          activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
+        }
+        
+        activeIndices.sort(() => 0.5 - Math.random());
+        while (finalSelection.length < n && activeIndices.length > 0) {
+          finalSelection.push(activeIndices.shift().idx);
+        }
+        
+        bot.assignedIndices = finalSelection;
+        game.players.push(bot);
+        newBotsAdded++;
+      }
+    }
+    
+    if (newBotsAdded > 0) {
+      saveToCloud();
+      logSim(`✅ ${newBotsAdded} bots ajoutés avec succès.`);
+    } else {
+      logSim(`ℹ️ Bots existants reconnus, reprise du jeu.`);
+    }
+    
+    // 2. Démarrage de la boucle de jeu
+    simulationActive = true;
+    document.getElementById("startSimBtn").classList.add("hidden");
+    document.getElementById("stopSimBtn").classList.remove("hidden");
+    msg.textContent = "Simulation en cours d'exécution...";
+    
+    // On écoute Firebase pour fusionner les actions des vrais joueurs en même temps
+    db.ref('sessions/' + code).on('value', simUpdateState);
+    
+    if(simulationInterval) clearInterval(simulationInterval);
+    // Le moteur vérifie les actions possibles toutes les 3 secondes
+    simulationInterval = setInterval(simulationTick, 3000); 
+    
+  }).catch(err => {
+    msg.textContent = "Erreur: " + err.message; msg.className = "msg err";
+  });
+}
+
+function simUpdateState(snapshot) {
+  if (simulationActive && snapshot.exists()) {
+    const data = snapshot.val();
+    game = data.gameData;
+    sessionConfig = data.sessionConfig;
+  }
+}
+
+function stopSimulation() {
+  simulationActive = false;
+  if (simulationInterval) clearInterval(simulationInterval);
+  if (window.currentActiveSessionCode) {
+    db.ref('sessions/' + window.currentActiveSessionCode).off('value', simUpdateState);
+  }
+  document.getElementById("startSimBtn").classList.remove("hidden");
+  document.getElementById("stopSimBtn").classList.add("hidden");
+  document.getElementById("simMsg").textContent = "Simulation arrêtée.";
+  logSim("🛑 La simulation est stoppée.");
+}
+
+function logSim(text) {
+  const logs = document.getElementById("simLogs");
+  const time = new Date().toLocaleTimeString();
+  logs.innerHTML = `<div><span style="color:#60a5fa">[${time}]</span> ${text}</div>` + logs.innerHTML;
+}
+
+function simulationTick() {
+  if (!simulationActive || !game || !game.players) return;
+  
+  // On récupère uniquement les bots
+  const bots = game.players.filter(p => p.name.startsWith("Bot_"));
+  if (bots.length === 0) return;
+  
+  // À chaque itération (3s), environ 15% des bots essaient de faire une action pour étaler l'activité
+  const activeBots = bots.filter(() => Math.random() < 0.15);
+  let madeChanges = false;
+  
+  activeBots.forEach(bot => {
+    if (!bot.portfolio) bot.portfolio = [];
+    if (!bot.assignedIndices) return;
+    
+    // On filtre les questions qui sont actuellement "open"
+    const openAssigned = bot.assignedIndices.filter(idx => {
+      const ch = game.challenges[idx];
+      return ch && getEffectiveStatus(ch) === "open";
+    });
+    
+    // On filtre les questions où le bot n'a pas encore misé
+    const availableToBet = openAssigned.filter(idx => {
+      return !bot.portfolio.some(b => b.cIndex === idx);
+    });
+    
+    if (availableToBet.length > 0) {
+      // 1. Choix d'une question aléatoire disponible
+      const cIndex = availableToBet[Math.floor(Math.random() * availableToBet.length)];
+      const ch = game.challenges[cIndex];
+      
+      // 2. Choix d'une réponse aléatoire
+      const ansIndex = Math.floor(Math.random() * ch.answers.length);
+      
+      // 3. Choix du montant de la mise
+      let betAmount = 1; // Mode facile par défaut
+      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
+        const maxBet = Math.min(bot.balance, 25); // Un bot mise max 25 crédits à la fois
+        if (maxBet >= 5) {
+          betAmount = Math.floor(Math.random() * (maxBet - 5 + 1)) + 5;
+        } else if (maxBet > 0) {
+          betAmount = maxBet;
+        } else {
+          return; // Le bot est ruiné
+        }
+      }
+      
+      // 4. Calcul de l'impact financier (LMSR)
+      const probsStart = getLMSRProbs(ch.votes);
+      const pStartYes = probsStart[ansIndex];
+      
+      let simulatedVotes = [...ch.votes];
+      simulatedVotes[ansIndex] += betAmount;
+      
+      const probsEnd = getLMSRProbs(simulatedVotes);
+      const pEndYes = probsEnd[ansIndex];
+      
+      let pAvg = (pStartYes + pEndYes) / 2;
+      if (pAvg <= 0.01) pAvg = 0.01;
+      if (pAvg >= 0.99) pAvg = 0.99;
+      
+      const pts = +(betAmount / pAvg).toFixed(2);
+      
+      // 5. Validation de la transaction
+      bot.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: betAmount, pts: pts, type: 'YES' });
+      bot.balance -= betAmount;
+      ch.votes = simulatedVotes;
+      
+      logSim(`🎯 <strong>${bot.name}</strong> a misé ${betAmount}u sur "${ch.answers[ansIndex]}".`);
+      madeChanges = true;
+    }
+  });
+  
+  if (madeChanges) {
+    saveToCloud(); // On synchronise avec les vrais joueurs et le grand écran
+  }
 }
 
 </script>
