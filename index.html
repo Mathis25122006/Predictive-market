@@ -3631,7 +3631,8 @@ function cashOut(cIndex) {
 function updateGlobalBalance() {
   const balEl = document.getElementById("globalBalance");
   const balAmt = document.getElementById("globalBalanceAmt");
-  if (currentPlayerMode === 'advanced') {
+  // CORRECTION : On vérifie le mode réel de la session (advanced ou both) pour autoriser les grosses mises
+      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
     balAmt.textContent = currentPlayerBalance;
     balEl.classList.remove("hidden");
   } else {
@@ -4857,11 +4858,11 @@ function startSimulation() {
     // --- CORRECTION : Sécurisation du calcul du temps ---
     const now = Date.now();
     // Si gameStartTime est manquant, on utilise l'heure actuelle
-    const sessionStart = sessionConfig.gameStartTime || now;
-    const startTime = Math.max(now, sessionStart);
+    // CORRECTION : On commence à faire arriver les bots dès maintenant, peu importe l'heure de début du jeu
+    const startTime = now; 
 
-    // Si gameEndTime est manquant, on utilise expiresAt ou on prévoit 1h
-    const sessionEnd = sessionConfig.gameEndTime || sessionConfig.expiresAt || (now + 3600000);
+    // Sécurisation du calcul de la fin (conversion en nombre pour éviter les bugs de calcul)
+    const sessionEnd = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt) || (now + 3600000);
     const endTime = sessionEnd;
 
     const windowSize = endTime - startTime;
@@ -4907,9 +4908,12 @@ function startSimulation() {
 }
 
 function simulationTick() {
-  if (!simulationActive || !game || !game.players) return;
-  
+  // CORRECTION : Si game.players est manquant, on l'initialise au lieu de quitter la fonction
+  if (!simulationActive || !game) return;
+  if (!game.players) game.players = [];
+
   const now = Date.now();
+  
   let madeChanges = false;
   const n = sessionConfig.n || 1;
 
@@ -5015,6 +5019,10 @@ function simUpdateState(snapshot) {
     const data = snapshot.val();
     game = data.gameData;
     sessionConfig = data.sessionConfig;
+    
+    // CORRECTION : On s'assure que game.players est toujours un tableau
+    // pour que le moteur de simulation ne s'arrête pas s'il est vide sur le serveur.
+    if (!game.players) game.players = [];
   }
 }
 
