@@ -338,7 +338,6 @@ input, select, textarea {
   top: max(20px, env(safe-area-inset-top)); 
   left: 15px; 
   right: 15px; 
-  /* CORRECTION : Marge étendue pour que le bouton 'Suivant' ne soit plus jamais coupé par l'iPhone */
   bottom: calc(max(30px, env(safe-area-inset-bottom)) + 25px);
   box-sizing: border-box;
   
@@ -351,14 +350,15 @@ input, select, textarea {
   
   display: flex;
   flex-direction: column;
-  overflow-y: auto; 
+  /* CORRECTION : On empêche la carte de scroller globalement. Le footer reste ancré en bas. */
+  overflow: hidden; 
   
   /* Animation de base (quand on relâche la carte ou qu'elle remonte) */
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out;
   transform-origin: center bottom;
   z-index: 1;
   opacity: 0;
-  pointer-events: none; /* Désactive le clic sur les cartes cachées */
+  pointer-events: none; 
 }
 
 /* Effets d'empilement (Stack) des cartes suivantes */
@@ -1611,6 +1611,7 @@ function renderPlayChallenges(){
 
     const header = document.createElement("div");
     header.className = "challenge-header";
+    header.style.cssText = "flex-shrink: 0;"; // NOUVEAU : Protège l'en-tête
     
     // Calcul du Leaderboard
     const provLeaderboard = (game.players || []).map(p => ({ name: p.name, score: p.balance })).sort((a,b)=>b.score - a.score);
@@ -1641,10 +1642,12 @@ function renderPlayChallenges(){
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
+    // NOUVEAU : La zone de réponses devient scrollable indépendamment !
+    answersBox.style.cssText = "flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; margin-top: 5px; padding-right: 5px; -webkit-overflow-scrolling: touch;";
     
     const footer = document.createElement("div");
-    // CORRECTION : Ajout de padding-bottom pour assurer l'espace de clic
-    footer.style.cssText = "margin-top: auto; padding-top: 15px; padding-bottom: 15px;";
+    // NOUVEAU : flex-shrink: 0 empêche le footer d'être poussé hors de l'écran par les réponses
+    footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: 15px; padding-bottom: 15px;";
     
     // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
     const hintText = cIndex > 0 
@@ -1725,6 +1728,7 @@ function renderPlayChallenges(){
     updateCardStack(); 
   };
 
+  // --- Moteur Tactile (Touch Events) ---
   let startY = 0; let startX = 0;
   let isDragging = false;
 
@@ -1732,6 +1736,12 @@ function renderPlayChallenges(){
     const activeCard = cardsElements[window.currentCardIndex];
     if(!activeCard || !activeCard.contains(e.target)) return;
     
+    // CORRECTION : Si on touche la zone de réponses et qu'elle a besoin d'être scrollée, on ne Swipe pas !
+    const scrollableAnswers = e.target.closest('[id^="answers-ch"]');
+    if (scrollableAnswers && scrollableAnswers.scrollHeight > scrollableAnswers.clientHeight) {
+        return; 
+    }
+
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     isDragging = true;
@@ -1739,7 +1749,13 @@ function renderPlayChallenges(){
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
-    e.preventDefault(); 
+    // CORRECTION : On autorise le défilement naturel si on est sur la liste des réponses
+    const scrollableAnswers = e.target.closest('[id^="answers-ch"]');
+    if (scrollableAnswers && scrollableAnswers.scrollHeight > scrollableAnswers.clientHeight) {
+        return; 
+    }
+    e.preventDefault(); // Sinon on bloque la page pour le moteur de Swipe
+
     if(!isDragging) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
