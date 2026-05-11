@@ -1001,20 +1001,40 @@ let game = {
 };
 
 // --- MOTEUR LMSR (Logarithmic Market Scoring Rule) ---
-const B_LIQUIDITY = 250; // Paramètre de liquidité. Plus il est haut, plus le marché est stable.
+// --- NOUVEAU : CALCUL DYNAMIQUE DE LA LIQUIDITÉ (B) ---
+function getB() {
+  if (!sessionConfig) return 50;
+  
+  // On identifie si on est sur la version "Easy" ou "Advanced" du jeu
+  let isEasy = (sessionConfig.mode === 'easy');
+  if (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code) {
+    isEasy = true;
+  }
+
+  // Application de vos règles de proportionnalité
+  if (isEasy) {
+    // Mode Facile : B = n / 2 (Réactivité maximale pour des mises de 1 unité)
+    return (sessionConfig.n || 1) / 2;
+  } else {
+    // Mode Avancé : B = Solde de départ / 2
+    return (sessionConfig.initialBalance || 100) / 2;
+  }
+}
 
 function getLMSRProbs(votesArray) {
-  const maxV = Math.max(...votesArray); // Prévention de l'overflow exponentiel
-  const exps = votesArray.map(v => Math.exp((v - maxV) / B_LIQUIDITY));
+  const B = getB();
+  const maxV = Math.max(...votesArray);
+  const exps = votesArray.map(v => Math.exp((v - maxV) / B));
   const sumExp = exps.reduce((a, b) => a + b, 0);
   return exps.map(e => e / sumExp);
 }
 
 function getLMSRCost(votesArray) {
+  const B = getB();
   const maxV = Math.max(...votesArray);
   let sumExp = 0;
-  for (let v of votesArray) sumExp += Math.exp((v - maxV) / B_LIQUIDITY);
-  return B_LIQUIDITY * (Math.log(sumExp) + maxV / B_LIQUIDITY);
+  for (let v of votesArray) sumExp += Math.exp((v - maxV) / B);
+  return B * (Math.log(sumExp) + maxV / B);
 }
 // -----------------------------------------------------
 
@@ -1395,8 +1415,15 @@ if (!isValid) {
     }
   });
 
-  // Initialisation des votes pour chaque challenge créé
-  game.challenges.forEach(ch => initBaseVotes(ch));
+  // 1. Anticipation des variables pour calculer la liquidité de base
+  const n = parseInt(document.getElementById("questionsPerPlayer").value) || 1;
+  sessionConfig.n = n;
+  sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
+  
+  const bEasy = n / 2;
+
+  // 2. Initialisation des votes pour chaque challenge (avec le B du mode facile par défaut)
+  game.challenges.forEach(ch => initBaseVotes(ch, bEasy));
   
 // Reset des variables de jeu
   game.players = [];
@@ -1443,12 +1470,11 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
   // Sécurité cachée : Maintient la BDD ouverte 30 min après la fin
   sessionConfig.expiresAt = sessionConfig.gameEndTime + (30 * 60 * 1000); 
 
-  // On définit le code actif
+// On définit le code actif
   window.currentActiveSessionCode = sessionConfig.code;
 
   // --- NOUVEAU : VALIDATION DE LA CONTRAINTE "n" ET FIL ROUGE ---
-  const n = parseInt(document.getElementById("questionsPerPlayer").value) || 1;
-  sessionConfig.n = n;
+  // CORRECTION : La variable 'n' a déjà été déclarée plus haut dans la fonction pour le calcul de la liquidité !
   const totalQty = game.challenges.length;
 
   if (totalQty < n) {
@@ -1488,15 +1514,27 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
     return;
   }
 
-  // SAUVEGARDE SUR LE SERVEUR (Mode Facile)
+// SAUVEGARDE SUR LE SERVEUR (Mode Facile ou par défaut)
   saveToCloud();
 
   // NOUVEAU : Création de la copie 100% indépendante pour le mode Avancé
   if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
+     const bEasy = (sessionConfig.n || 1) / 2;
+     const bAdv = (sessionConfig.initialBalance || 100) / 2;
+     const ratio = bAdv / bEasy; // Facteur de mise à l'échelle des parts LMSR
+
      const advPayload = { 
         sessionConfig: JSON.parse(JSON.stringify(sessionConfig)), 
         gameData: JSON.parse(JSON.stringify(game)) 
      };
+
+     // Ajustement mathématique : on multiplie les parts par le ratio des B
+     // pour garantir que les deux versions débutent exactement avec les mêmes pourcentages affichés
+     advPayload.gameData.challenges.forEach(ch => {
+        if(ch.votes) ch.votes = ch.votes.map(v => v * ratio);
+        if(ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
+     });
+
      db.ref('sessions/' + sessionConfig.codeAdvanced).set(advPayload).catch(err => console.error(err));
   }
 
@@ -1518,23 +1556,16 @@ function startSetup(mode) {
   showScreen('setup');
 }
 
-function initBaseVotes(ch) {
-  // 1. Normalisation pour s'assurer que le total fait 100% (1.0)
+function initBaseVotes(ch, customB) {
   const sumPcts = ch.initialPcts.reduce((a, b) => a + b, 0) || 1;
   const normPcts = ch.initialPcts.map(pct => pct / sumPcts);
-
-  // 2. On trouve le pourcentage le plus bas pour lui attribuer "0 mise" de base
-  // (L'algorithme LMSR calcule les prix en fonction de la différence de "parts" entre les options)
   const minPct = Math.min(...normPcts);
+  const B = customB || getB(); // Utilise le B fourni ou le B dynamique
 
-  // 3. Calcul des "parts" initiales exactes requises par l'algorithme LMSR
-  // Formule inversée : q = B * ln(P_cible / P_min)
   let initialShares = normPcts.map(p => {
-    // Math.max évite les erreurs mathématiques si un pourcentage est à 0
-    return B_LIQUIDITY * Math.log(Math.max(p, 0.001) / Math.max(minPct, 0.001));
+    return B * Math.log(Math.max(p, 0.001) / Math.max(minPct, 0.001));
   });
   
-  // On sauvegarde ces parts comme état de départ
   ch.baseVotes = initialShares.slice();
   ch.votes = initialShares.slice();
 }
