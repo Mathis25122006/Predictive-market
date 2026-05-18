@@ -3903,7 +3903,7 @@ function getRandomCategoryImage(category) {
   const fileName = normalizedCat.replace(/\s+/g, '_');
   
   // 2. Liste des catégories qui utilisent le nouveau format PNG
-  const pngCategories = ["future_spotlight", "live_traffic", "innovation_arena", "fun_fact", "saisie_libre"];
+  const pngCategories = ["future_spotlight", "live_traffic", "innovation_arena", "fun_fact", "saisie_libre", 'trend_signal'];
 
   // 3. Si la catégorie est dans la liste, on applique le suffixe _carte.png
   if (pngCategories.includes(fileName)) {
@@ -4858,7 +4858,8 @@ document.getElementById("bsQrContainer").innerHTML = `
       document.getElementById("bsLeftCat").textContent = leftCh ? leftCh.category : '';
       const lImg = document.getElementById("bsLeftImg");
       if (leftCh && leftCh.imageUrl) {
-          lImg.style.background = `url('${leftCh.imageUrl}') center/cover`;
+          // CORRECTION : On remplace "center/cover" par "top/cover" pour prioriser le haut de l'image
+          lImg.style.background = `url('${leftCh.imageUrl}') top/cover`;
           lImg.style.display = "block";
       } else {
           lImg.style.display = "none";
