@@ -3675,7 +3675,7 @@ function updateRecapUI(pseudo) {
             <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]}</div>
             <div style="color:#3b82f6; font-size:13px;">+${snap.pts} 💰 potentiels</div>
           </div>
-          ${getEffectiveStatus(ch) === "open" && snap.bet > 0 ? `
+          ${getEffectiveStatus(ch) === "open" && snap.bet > 0 && currentPlayerMode !== 'easy' ? `
           <div style="margin-top:12px; text-align:right;">
             <button onclick="openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1); color:#f97316; border:1px solid #f97316; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold;">Revendre (Cash out)</button>
           </div>
