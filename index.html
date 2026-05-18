@@ -742,13 +742,14 @@ input, select, textarea {
     </div>
   </div>
 
-  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:20%; right:20%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
+  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:20%; right:20%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
     <div style="display:flex; justify-content:center; gap:25px; margin-bottom:6px;">
         <div class="swipe-up-hand" style="font-size:24px;">👆</div>
         <div class="swipe-down-hand" style="font-size:24px;">👇</div>
     </div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:12px; font-weight:900;">NAVIGUEZ</h3>
-    <p style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:0;">Glissez la carte vers le HAUT ou le BAS.</p>
+    <p style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;">Glissez la carte vers le HAUT ou le BAS.</p>
+    <button onclick="closeTuto()" style="background:#020617; border:none; border-radius:999px; color:white; padding:6px 16px; font-size:12px; font-weight:bold;">J'ai compris</button>
   </div>
 </div>
 
@@ -854,8 +855,18 @@ function showScreen(screenId) {
      if (canvas) canvas.style.display = "none";
   }
 
+  // CORRECTION : On cache visuellement le tutoriel si on quitte l'écran de jeu,
+  // MAIS on ne le marque pas comme "terminé" pour éviter de le désactiver définitivement !
+  if (screenId !== 'play') {
+     const tutoContainer = document.getElementById("tutoContainer");
+     if (tutoContainer) tutoContainer.style.display = "none";
+     if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
+  }
+
   // 1. Actions de nettoyage et sécurité
   if (screenId === 'home') {
+    window.sessionTutoDone = false; // Réinitialisation automatique du tuto si on revient à l'accueil
+    
     // Nettoyage spécifique au Grand Écran
     if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
     if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
@@ -1860,12 +1871,38 @@ function renderPlayChallenges(){
     });
   }
 
-  window.swipeNextCard = function() {
-    if(window.currentCardIndex >= cardsElements.length - 1) return;
+window.swipeNextCard = function() {
+    if(window.currentCardIndex >= cardsElements.length - 1) return false;
+
+    // --- NOUVEAU : Blocage en Mode Facile si aucun pari n'est fait ---
+    if (currentPlayerMode === 'easy') {
+      const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+      const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+      const cIndex = myIndices[window.currentCardIndex];
+      const ch = game.challenges[cIndex];
+
+      if (ch && getEffectiveStatus(ch) === "open") {
+         // On vérifie si le joueur a une mise en attente ou s'il a DÉJÀ une mise validée en base de données
+         const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
+         if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
+             const msg = document.getElementById("playMsg");
+             if (msg) {
+                 msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
+                 msg.className = "msg err";
+                 // Le message d'erreur s'efface tout seul après 3 secondes
+                 setTimeout(() => { if (msg.textContent.includes("cocher une réponse")) msg.textContent = ""; }, 3000);
+             }
+             return false; // Bloque le swipe et le bouton
+         }
+      }
+    }
+    // -----------------------------------------------------------------
+
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.classList.add('fly-away'); 
     window.currentCardIndex++;
     setTimeout(updateCardStack, 100); 
+    return true;
   };
 
   window.swipePrevCard = function() {
@@ -1907,7 +1944,7 @@ function renderPlayChallenges(){
     if(!isDragging) return;
     isDragging = false;
     
-    if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
@@ -1915,11 +1952,16 @@ function renderPlayChallenges(){
     const deltaY = e.changedTouches[0].clientY - startY;
     
     if (deltaY < -80 && window.currentCardIndex < cardsElements.length - 1) {
-      swipeNextCard(); 
-      if (window.currentTutoStep === 5) closeTuto(); 
+      const success = swipeNextCard(); 
+      if (success) {
+          if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
+      } else {
+          // CORRECTION : Le swipe a été bloqué par la sécurité, on remet la carte au centre
+          activeCard.style.transform = ''; 
+      }
     } else if (deltaY > 80 && window.currentCardIndex > 0) {
       swipePrevCard(); 
-      if (window.currentTutoStep === 5) closeTuto(); 
+      if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
     } else {
       activeCard.style.transform = ''; 
     }
@@ -2218,6 +2260,7 @@ function playNext() {
   msg.textContent = "";
 
   if (confirm("Voulez-vous vraiment valider vos prédictions actuelles ?")) {
+    closeTuto(); // CORRECTION : On ferme le tutoriel instantanément pour éviter qu'il ne reste affiché
     validate(); // Enregistre les mises et déclenche la redirection automatique
   }
 }
