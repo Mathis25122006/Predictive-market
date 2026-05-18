@@ -402,8 +402,13 @@ input, select, textarea {
   z-index: 51 !important; /* Passe au-dessus du flou */
   pointer-events: auto !important;
   background: rgba(15,23,42,0.95) !important;
-  box-shadow: 0 0 0 3px #a855f7, 0 0 25px 8px rgba(168,85,247,0.6) !important;
-  border-radius: 12px;
+  /* CORRECTION : Trait plus épais (5px) et halo lumineux plus large */
+  box-shadow: 0 0 0 5px #a855f7, 0 0 30px 12px rgba(168,85,247,0.65) !important;
+  border-radius: 16px !important;
+  /* CORRECTION : On élargit le cadre de 8px tout autour de l'image/question */
+  padding: 8px !important;
+  /* Et on compense avec une marge négative pour ne pas casser votre mise en page */
+  margin: -8px !important; 
 }
 
 /* Animation des mains Swipe */
