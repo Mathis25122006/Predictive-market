@@ -1407,10 +1407,10 @@ if (!isValid) {
     const selectedMode = selects[i].value;
     
     if (selectedMode === "custom") {
-      // Si c'est le mode Saisie Libre, on force votre image dédiée
-      ch.imageUrl = "saisie_libre.jpg";
+      // CORRECTION : Si c'est le mode Saisie Libre, on force la nouvelle image PNG
+      ch.imageUrl = "saisie_libre_carte.png";
     } else {
-      // Sinon, on applique la logique habituelle (live_traffic.jpg, etc.)
+      // Sinon, on applique la logique automatique 
       ch.imageUrl = getRandomCategoryImage(ch.category);
     }
   });
@@ -2467,7 +2467,7 @@ function drawCharts(histories){
     const paddingLeft = 32;
     const paddingRight = 10;
     const paddingTop = 10;
-    const paddingBottom = 22;
+    const paddingBottom = 45; // CORRECTION : Espace augmenté pour la légende multi-lignes
     const chartW = w - paddingLeft - paddingRight;
     const chartH = h - paddingTop - paddingBottom;
 
@@ -2530,17 +2530,28 @@ function drawCharts(histories){
       }
     }
 
-    const legendY = h - 6;
     ctx.font = "10px system-ui";
-    const stepX = chartW / (answersCount + 1);
+    let currentX = paddingLeft;
+    let currentY = paddingTop + chartH + 18; // Départ juste sous le graphique
+    
     game.challenges[cIndex].answers.forEach((label, ans)=>{
       const color = colors[ans % colors.length];
-      const x = paddingLeft + stepX * (ans + 1);
-      const labelText = label && label.length > 16 ? label.slice(0,15) + "…" : (label || ("Réponse " + (ans+1)));
-      ctx.fillStyle = color;
-      ctx.fillRect(x, legendY-8, 10, 3);
-      ctx.fillStyle = "#e5e7eb";
-      ctx.fillText(labelText, x+14, legendY-4);
+      const labelText = label && label.length > 20 ? label.slice(0,19) + "…" : (label || ("Réponse " + (ans+1)));
+      const textW = ctx.measureText(labelText).width;
+      const itemW = 15 + textW + 12; // Espace requis par cette réponse (Carré + texte + marge)
+      
+      // Si on dépasse le bord droit, on passe à la ligne suivante !
+      if (currentX + itemW > w - paddingRight && currentX > paddingLeft) {
+          currentX = paddingLeft;
+          currentY += 15;
+      }
+      
+      ctx.fillStyle = color; 
+      ctx.fillRect(currentX, currentY - 4, 10, 3);
+      ctx.fillStyle = "#e5e7eb"; 
+      ctx.fillText(labelText, currentX + 14, currentY);
+      
+      currentX += itemW;
     });
   });
 }
@@ -3137,14 +3148,88 @@ function startManageTimer() {
 
 function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
-  container.innerHTML = "";
+  
+  // CORRECTION : On ne nettoie tout l'écran que si le nombre de questions change (Ex: changement de session).
+  // Cela empêche le rechargement complet du DOM toutes les 3 secondes !
+  if (container.children.length !== game.challenges.length) {
+      container.innerHTML = "";
+  }
 
   game.challenges.forEach((ch, i) => {
-    const block = document.createElement("div");
-    block.className = "challenge-block";
-    block.style.marginTop = "15px";
+    const effStatus = getEffectiveStatus(ch);
+    let block = document.getElementById(`manage-challenge-${i}`);
     
-    // Calcul des % actuels (Compatible avec la formule classique ou LMSR si elle est active)
+    // 1. Création de la structure statique si elle n'existe pas encore
+    if (!block) {
+      block = document.createElement("div");
+      block.id = `manage-challenge-${i}`;
+      block.className = "challenge-block";
+      block.style.marginTop = "15px";
+      block.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+          <div class="chip">${ch.category}</div>
+          <div id="manage-status-${i}" style="font-size:11px; font-weight:bold;"></div>
+        </div>
+        <div class="challenge-title" style="margin:5px 0;">${ch.question}</div>
+        
+        <div id="manage-controls-${i}" style="margin-bottom:12px;"></div>
+
+        <canvas id="manage-chart-${i}" height="120" style="margin-bottom:10px;"></canvas>
+        <div id="manage-stats-data-${i}" style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px;"></div>
+      `;
+      container.appendChild(block);
+    }
+
+    // 2. Mise à jour de l'étiquette de statut
+    let statusLabel = `<span style="color:#9ca3af;">En attente</span>`;
+    if(effStatus === "open") statusLabel = `<span style="color:#4ade80;">EN DIRECT</span>`;
+    if(effStatus === "closed") statusLabel = `<span style="color:#f87171;">TEMPS ÉCOULÉ</span>`;
+    if(effStatus === "resolved") statusLabel = `<span style="color:#3b82f6;">RÉSULTAT PUBLIÉ</span>`;
+    document.getElementById(`manage-status-${i}`).innerHTML = statusLabel;
+
+    // 3. Mise à jour des boutons d'action SEULEMENT si le statut change (empêche la perte de saisie sur le menu déroulant)
+    if (block.dataset.status !== effStatus) {
+      block.dataset.status = effStatus;
+      
+      let controlsHtml = "";
+      if (effStatus === "pending") {
+        controlsHtml = `
+          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center; border:1px dashed #4b5563;">
+            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">Ouverture auto dans :</div>
+            <div id="admin-pending-timer-${i}" style="font-size:20px; font-weight:800; color:#3b82f6; font-family:monospace; margin:5px 0;">--:--</div>
+            <button onclick="forceTime(${i}, 'start')" style="background:#22c55e; font-size:11px; padding:8px; margin:0; width:100%;">LANCER MAINTENANT</button>
+          </div>
+        `;
+      } else if (effStatus === "open") {
+        controlsHtml = `
+          <div style="margin-bottom:8px; text-align:center;">
+            <div style="font-size:10px; color:#f87171; text-transform:uppercase;">Clôture auto dans :</div>
+            <div id="admin-open-timer-${i}" style="font-size:18px; font-weight:800; color:#f87171; font-family:monospace; margin:2px 0;">--:--</div>
+          </div>
+          <button onclick="forceTime(${i}, 'end')" style="background:#ef4444; font-size:12px; padding:10px; margin:0; font-weight:bold; width:100%;">CLÔTURER MAINTENANT</button>
+        `;
+      } else if (effStatus === "closed") {
+        controlsHtml = `
+          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px;">
+            <label style="color:#3b82f6; margin-bottom:8px; display:block; font-size:12px;">Saisir le résultat gagnant :</label>
+            <select id="res-${i}" style="margin-bottom:8px; background:#020617; color:white; border:1px solid #3b82f6; border-radius:8px; width:100%;">
+              ${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
+            </select>
+            <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px; font-size:12px; width:100%;">Publier & Créditer les gains</button>
+          </div>
+        `;
+      } else if (effStatus === "resolved") {
+        controlsHtml = `
+          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
+            <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
+            <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
+          </div>
+        `;
+      }
+      document.getElementById(`manage-controls-${i}`).innerHTML = controlsHtml;
+    }
+
+    // 4. Mise à jour des Mises et Pourcentages (En continu)
     let probs = [];
     if (typeof getLMSRProbs === 'function') {
         probs = getLMSRProbs(ch.votes);
@@ -3160,13 +3245,10 @@ function renderManageDashboard() {
               </div>`;
     }).join('');
 
-    // NOUVEAU : Affichage des mises des joueurs en temps réel
     let playersHtml = `<div style="margin-top:10px; font-size:11px; color:#9ca3af; border-top:1px solid rgba(55,65,81,0.5); padding-top:8px;"><strong>Mises des joueurs :</strong><br>`;
-let hasBets = false;
+    let hasBets = false;
     
-    // Sécurité : On s'assure que la liste des joueurs existe avant de la parcourir
     const playersList = game.players || [];
-    
     playersList.forEach(p => {
         if (p.portfolio) {
             const pBets = p.portfolio.filter(b => b.cIndex === i);
@@ -3180,77 +3262,19 @@ let hasBets = false;
     if (!hasBets) playersHtml += "<em>Aucune mise enregistrée pour le moment.</em>";
     playersHtml += `</div>`;
 
-// On utilise le calcul automatique du temps
-    const effStatus = getEffectiveStatus(ch);
-    
-let statusLabel = `<span style="color:#9ca3af;">En attente</span>`;
-    if(effStatus === "open") statusLabel = `<span style="color:#4ade80;">EN DIRECT</span>`;
-    if(effStatus === "closed") statusLabel = `<span style="color:#f87171;">TEMPS ÉCOULÉ</span>`;
-    if(effStatus === "resolved") statusLabel = `<span style="color:#3b82f6;">RÉSULTAT PUBLIÉ</span>`;
-
-    block.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:start;">
-        <div class="chip">${ch.category}</div>
-        <div style="font-size:11px; font-weight:bold;">${statusLabel}</div>
-      </div>
-      <div class="challenge-title" style="margin:5px 0;">${ch.question}</div>
-      
-      <div style="margin-bottom:12px;">
-        ${effStatus === "pending" ? `
-          <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; text-align:center; border:1px dashed #4b5563;">
-            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">Ouverture auto dans :</div>
-            <div id="admin-pending-timer-${i}" style="font-size:20px; font-weight:800; color:#3b82f6; font-family:monospace; margin:5px 0;">--:--</div>
-            <button onclick="forceTime(${i}, 'start')" style="background:#22c55e; font-size:11px; padding:8px; margin:0; width:100%;">LANCER MAINTENANT</button>
-          </div>
-        ` : ""}
-
-        ${effStatus === "open" ? `
-          <div style="margin-bottom:8px; text-align:center;">
-            <div style="font-size:10px; color:#f87171; text-transform:uppercase;">Clôture auto dans :</div>
-            <div id="admin-open-timer-${i}" style="font-size:18px; font-weight:800; color:#f87171; font-family:monospace; margin:2px 0;">--:--</div>
-          </div>
-          <button onclick="forceTime(${i}, 'end')" style="background:#ef4444; font-size:12px; padding:10px; margin:0; font-weight:bold; width:100%;">CLÔTURER MAINTENANT</button>
-        ` : ""}
-
-        ${effStatus === 'closed' ? `
-          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px;">
-            <label style="color:#3b82f6; margin-bottom:8px; display:block; font-size:12px;">Saisir le résultat gagnant :</label>
-            <select id="res-${i}" style="margin-bottom:8px; background:#020617; color:white; border:1px solid #3b82f6; border-radius:8px; width:100%;">
-              ${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
-            </select>
-            <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px; font-size:12px; width:100%;">Publier & Créditer les gains</button>
-          </div>
-        ` : ""}
-
-        ${effStatus === 'resolved' ? `
-          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
-            <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
-            <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
-          </div>
-        ` : ""}
-      </div>
-
-      <canvas id="manage-chart-${i}" height="120" style="margin-bottom:10px;"></canvas>
-      <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px;">
-        ${answersHtml}
-        ${playersHtml}
-      </div>
-    `;
-    container.appendChild(block);
+    document.getElementById(`manage-stats-data-${i}`).innerHTML = answersHtml + playersHtml;
   });
 
-// On dessine les graphiques en temps réel
+  // 5. On dessine les graphiques en temps réel (Plus de setTimeout nécessaire car les canvas ne sont plus détruits)
   const histories = computeHistories();
   histories.forEach((hist, i) => {
-    const manageId = "manage-chart-" + i;
-    // On attend 100ms que le navigateur ait fini d'afficher le HTML pour dessiner les courbes
-    setTimeout(() => {
-      drawSingleChart(hist, manageId, i);
-    }, 100);
+    drawSingleChart(hist, "manage-chart-" + i, i);
   });
 
-  // NOUVEAU : On lance les décomptes côté admin
-  startAdminDashboardTimers();
+  // 6. Relance intelligente du chrono global Admin
+  if (!adminDashboardTimerInterval) {
+     startAdminDashboardTimers();
+  }
 }
 
 function renderValidationList() {
@@ -3576,7 +3600,7 @@ const canvas = document.getElementById(canvasId);
   if(maxPct < 5) maxPct = 5;
 
   const paddingLeft = 32; const paddingRight = 10;
-  const paddingTop = 10; const paddingBottom = 22;
+  const paddingTop = 10; const paddingBottom = 45; // CORRECTION : Espace augmenté pour la légende
   const chartW = w - paddingLeft - paddingRight;
   const chartH = h - paddingTop - paddingBottom;
 
@@ -3620,14 +3644,28 @@ const canvas = document.getElementById(canvasId);
     }
   }
 
-  const legendY = h - 6;
-  const stepX = chartW / (answersCount + 1);
+  ctx.font = "10px system-ui";
+  let currentX = paddingLeft;
+  let currentY = paddingTop + chartH + 18; 
+  
   game.challenges[cIndex].answers.forEach((label, ans)=>{
     const color = colors[ans % colors.length];
-    const x = paddingLeft + stepX * (ans + 1);
-    const labelText = label && label.length > 16 ? label.slice(0,15) + "…" : label;
-    ctx.fillStyle = color; ctx.fillRect(x, legendY-8, 10, 3);
-    ctx.fillStyle = "#e5e7eb"; ctx.fillText(labelText, x+14, legendY-4);
+    const labelText = label && label.length > 20 ? label.slice(0,19) + "…" : label;
+    const textW = ctx.measureText(labelText).width;
+    const itemW = 15 + textW + 12; 
+    
+    // Si on dépasse le bord droit, on passe à la ligne suivante !
+    if (currentX + itemW > w - paddingRight && currentX > paddingLeft) {
+        currentX = paddingLeft;
+        currentY += 15;
+    }
+    
+    ctx.fillStyle = color; 
+    ctx.fillRect(currentX, currentY - 4, 10, 3);
+    ctx.fillStyle = "#e5e7eb"; 
+    ctx.fillText(labelText, currentX + 14, currentY);
+    
+    currentX += itemW;
   });
 }
 
@@ -3858,14 +3896,21 @@ function toggleCustomCat(index) {
 }
 
 // Fonction pour appeler DALL-E 3
-// Fonction pour appeler DALL-E 3
+// Fonction pour appeler DALL-E 3 ou attribuer les images fixes
 function getRandomCategoryImage(category) {
-  // On convertit le nom de la catégorie en minuscule et on remplace les espaces par des underscores
-  // Exemple : "Live traffic" devient "live_traffic"
-  const fileName = category.toLowerCase().replace(/\s+/g, '_');
+  // 1. On convertit en minuscule et on remplace les espaces par des underscores
+  const normalizedCat = category.toLowerCase().trim();
+  const fileName = normalizedCat.replace(/\s+/g, '_');
   
-  // On retourne le nom du fichier avec l'extension .jpg
-  // Note : Si vos images sont dans un dossier, ajoutez "images/" devant ${fileName}
+  // 2. Liste des catégories qui utilisent le nouveau format PNG
+  const pngCategories = ["future_spotlight", "live_traffic", "innovation_arena", "fun_fact", "saisie_libre"];
+
+  // 3. Si la catégorie est dans la liste, on applique le suffixe _carte.png
+  if (pngCategories.includes(fileName)) {
+    return `${fileName}_carte.png`;
+  }
+
+  // 4. Pour toutes les autres catégories, on garde le format classique .jpg
   return `${fileName}.jpg`; 
 }
 
@@ -4527,27 +4572,50 @@ function startBigScreenEngine() {
   if (bsTimerInterval) clearInterval(bsTimerInterval);
   
   updateBsIndices(true);
+  window.bsFinalRecapIndex = 0; // Initialisation du pointeur de fin
+  window.bsScreenSwitchedToWaiting = false; // NOUVEAU : Réinitialisation du drapeau de basculement d'écran
   renderBigScreen();
 
-  // MOTEUR DE ROTATION ALTERNÉE : S'exécute toutes les 30 secondes avec fondu
+  let elapsedSeconds = 0;
+
+  // CORRECTION : Horloge universelle de 5 secondes qui s'adapte instantanément à l'état du jeu
   bsInterval = setInterval(() => {
-    // 1. On identifie quel côté va changer (bsToggle nous dit lequel est remplacé)
-    const targetId = (bsToggle === 'left') ? "bsLeft" : "bsMiddle";
-    const targetEl = document.getElementById(targetId);
-    
-    // 2. On lance la disparition (fade out)
-    if (targetEl) targetEl.classList.add("bs-faded");
-    
-    // 3. On attend 800ms (durée de la transition CSS) pour changer les infos
-    setTimeout(() => {
-      updateBsIndices(false);
-      renderBigScreen();
-      
-      // 4. On relance l'apparition (fade in)
-      if (targetEl) targetEl.classList.remove("bs-faded");
-    }, 800);
-    
-  }, 30000);
+    elapsedSeconds += 5;
+
+    if (game.isResolved) {
+      // MODE FIN DE PARTIE : Rotation toutes les 15 secondes
+      if (elapsedSeconds >= 15) {
+        elapsedSeconds = 0;
+        // CORRECTION : On cible UNIQUEMENT la grille pour le fondu, l'écran reste parfaitement stable
+        const gridEl = document.getElementById("bsRecapContainer");
+        if (gridEl) gridEl.classList.add("bs-faded"); 
+        
+        setTimeout(() => {
+          window.bsFinalRecapIndex += 2;
+          if (window.bsFinalRecapIndex >= game.challenges.length) {
+            window.bsFinalRecapIndex = 0;
+          }
+          renderBigScreen();
+          if (gridEl) gridEl.classList.remove("bs-faded");
+        }, 800);
+      }
+    } else {
+      // MODE EN DIRECT : Rotation alternée toutes les 30 secondes
+      if (elapsedSeconds >= 30) {
+        elapsedSeconds = 0;
+        const targetId = (bsToggle === 'left') ? "bsLeft" : "bsMiddle";
+        const targetEl = document.getElementById(targetId);
+        
+        if (targetEl) targetEl.classList.add("bs-faded");
+        
+        setTimeout(() => {
+          updateBsIndices(false);
+          renderBigScreen();
+          if (targetEl) targetEl.classList.remove("bs-faded");
+        }, 800);
+      }
+    }
+  }, 5000);
 
   // MOTEUR DE CHRONOMÈTRE : S'exécute chaque seconde pour la fluidité
   bsTimerInterval = setInterval(() => {
@@ -4558,14 +4626,11 @@ function startBigScreenEngine() {
 function updateBsIndices(isInit) {
   if(!game || !game.challenges) return;
 
-  // NOUVEAU : On liste UNIQUEMENT les questions actuellement ouvertes (en cours)
   bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
      const st = getEffectiveStatus(game.challenges[i]);
      return st === 'open';
   });
   
-  // S'il n'y a pas de questions ouvertes, on boucle sur les terminées pour meubler l'écran
-  // RÈGLE STRICTE : On exclut totalement les questions "pending" (pas encore lancées)
   if (bsActiveIndices.length === 0) {
      bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
          return getEffectiveStatus(game.challenges[i]) !== 'pending';
@@ -4573,31 +4638,39 @@ function updateBsIndices(isInit) {
   }
 
   if (isInit) {
-    // Si tout est vide (ex: la partie n'a pas encore commencé), on gère le vide proprement
     bsLeftIndex = bsActiveIndices.length > 0 ? bsActiveIndices[0] : undefined;
     bsRightIndex = bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsLeftIndex;
-    bsToggle = 'left'; // Le prochain bloc à être remplacé sera la gauche
+    bsToggle = 'left'; 
   } else {
-    // Si on a plus de 2 questions à afficher, on procède à la rotation
-    if (bsActiveIndices.length > 2) {
+    // CORRECTION : On vérifie si les cartes actuellement affichées sont toujours valides (toujours dans bsActiveIndices)
+    const leftStillValid = bsActiveIndices.includes(bsLeftIndex);
+    const rightStillValid = bsActiveIndices.includes(bsRightIndex);
+    
+    let targetToReplace = null;
+    
+    // Priorité 1 : Remplacer une carte qui vient de se fermer
+    if (!leftStillValid && bsLeftIndex !== undefined) targetToReplace = 'left';
+    else if (!rightStillValid && bsRightIndex !== undefined) targetToReplace = 'right';
+    // Priorité 2 : S'il y a plus de 2 questions actives, on fait la rotation normale
+    else if (bsActiveIndices.length > 2) targetToReplace = bsToggle; 
+
+    if (targetToReplace) {
       const currentDisplayed = [bsLeftIndex, bsRightIndex];
-      // On cherche la prochaine question qui n'est pas déjà affichée à l'écran
       let next = bsActiveIndices.find(idx => !currentDisplayed.includes(idx));
       
-      // Si on a affiché toutes les questions actives, on relance la boucle
-      if (next === undefined) {
-         const maxDisplayed = Math.max(bsLeftIndex, bsRightIndex);
+      if (next === undefined && bsActiveIndices.length > 0) {
+         const maxDisplayed = Math.max(bsLeftIndex || 0, bsRightIndex || 0);
          const nextPos = (bsActiveIndices.indexOf(maxDisplayed) + 1) % bsActiveIndices.length;
          next = bsActiveIndices[nextPos];
       }
       
-      // Alternance : On remplace la gauche, puis 30s plus tard la droite (Chacune reste donc 1 min visible)
-      if (bsToggle === 'left') {
+      if (targetToReplace === 'left') {
          bsLeftIndex = next !== undefined ? next : bsActiveIndices[0];
-         bsToggle = 'right';
+         // On n'inverse le toggle que s'il s'agissait d'une rotation normale
+         if (leftStillValid && rightStillValid) bsToggle = 'right'; 
       } else {
-         bsRightIndex = next !== undefined ? next : bsActiveIndices[1];
-         bsToggle = 'left';
+         bsRightIndex = next !== undefined ? next : (bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsActiveIndices[0]);
+         if (leftStillValid && rightStillValid) bsToggle = 'left';
       }
     }
   }
@@ -4621,62 +4694,75 @@ document.getElementById("bsQrContainer").innerHTML = `
 
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
-         // 1. Réglage des colonnes (On cache la droite, on agrandit le milieu)
          document.getElementById("bsLeft").style.flex = "1.2";
-         document.getElementById("bsLeft").style.overflowY = "auto";
+         document.getElementById("bsLeft").style.overflowY = "hidden";
          document.getElementById("bsMiddle").style.flex = "2";
-         document.getElementById("bsMiddle").style.overflowY = "auto";
+         document.getElementById("bsMiddle").style.overflowY = "hidden";
          document.getElementById("bsRight").style.display = "none";
 
-         // 2. Classement Final (Colonne de gauche)
-         const playersList = game.players || [];
-         const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
-         
-         const leaderboard = playersList.map(p => {
-            let finalScore = 0;
-            if (isEasyScreen) {
-                if (p.portfolio) {
-                   p.portfolio.forEach(snap => {
-                      if (snap.paidOut) finalScore += snap.pts;
-                      else if (snap.cashedOut && snap.cashedOutAmount) finalScore += snap.cashedOutAmount;
-                   });
+         // 2. Classement Final : GÉNÉRÉ UNE SEULE FOIS pour éviter le clignotement
+         if (!document.getElementById("bsLeft").innerHTML.includes("PODIUM FINAL")) {
+             const playersList = game.players || [];
+             const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
+             
+             const leaderboard = playersList.map(p => {
+                let finalScore = 0;
+                if (isEasyScreen) {
+                    if (p.portfolio) {
+                       p.portfolio.forEach(snap => {
+                          if (snap.paidOut) finalScore += snap.pts;
+                          else if (snap.cashedOut && snap.cashedOutAmount) finalScore += snap.cashedOutAmount;
+                       });
+                    }
+                } else {
+                    finalScore = p.balance || 0;
                 }
-            } else {
-                finalScore = p.balance || 0;
-            }
-            return { name: p.name, score: finalScore };
-         }).sort((a,b) => b.score - a.score).slice(0, 15);
+                return { name: p.name, score: finalScore };
+             }).sort((a,b) => b.score - a.score).slice(0, 5);
 
-         let lbHtml = `<div style="font-size:32px; font-weight:900; letter-spacing:2px; margin-bottom:30px; color:#fbbf24; text-transform:uppercase; text-align:center;">🏆 PODIUM FINAL 🏆</div>`;
+             let lbHtml = `<div style="font-size:32px; font-weight:900; letter-spacing:2px; margin-bottom:30px; color:#fbbf24; text-transform:uppercase; text-align:center;">🏆 PODIUM FINAL 🏆</div>`;
 
-         leaderboard.forEach((p, idx) => {
-            let color = "#e2e8f0";
-            let trophy = `<span style="color:#a855f7; font-weight:900; width:40px; font-size:24px;">${idx+1}</span>`;
-            let bg = "rgba(255,255,255,0.05)";
-            if(idx === 0) { color = "#fbbf24"; trophy = `<span style="font-size:32px; width:40px;">🥇</span>`; bg = "rgba(251,191,36,0.1)"; }
-            else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:28px; width:40px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
-            else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:28px; width:40px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
+             leaderboard.forEach((p, idx) => {
+                let color = "#e2e8f0";
+                let trophy = `<span style="color:#a855f7; font-weight:900; width:40px; font-size:24px;">${idx+1}</span>`;
+                let bg = "rgba(255,255,255,0.05)";
+                if(idx === 0) { color = "#fbbf24"; trophy = `<span style="font-size:32px; width:40px;">🥇</span>`; bg = "rgba(251,191,36,0.1)"; }
+                else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:28px; width:40px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
+                else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:28px; width:40px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
 
-            // Affichage à 2 décimales pour le mode Facile
-            const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
+                const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
 
-            lbHtml += `
-               <div style="display:flex; justify-content:space-between; align-items:center; font-size:24px; margin-bottom:12px; padding:15px; border-radius:12px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color};">
-                  <div style="display:flex; gap:15px; align-items:center;">
-                     ${trophy}
-                     <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
-                  </div>
-                  <div style="font-weight:900;">${scoreDisplay} 💰</div>
-               </div>
-            `;
-         });
-         document.getElementById("bsLeft").innerHTML = lbHtml;
+                lbHtml += `
+                   <div style="display:flex; justify-content:space-between; align-items:center; font-size:24px; margin-bottom:12px; padding:15px; border-radius:12px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color};">
+                      <div style="display:flex; gap:15px; align-items:center;">
+                         ${trophy}
+                         <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
+                      </div>
+                      <div style="font-weight:900;">${scoreDisplay} 💰</div>
+                   </div>
+                `;
+             });
+             document.getElementById("bsLeft").innerHTML = lbHtml;
+         }
 
-         // 3. Récapitulatif des réponses (Colonne de droite / Milieu élargi)
-         let recapHtml = `<div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:25px; color:#e2e8f0; text-transform:uppercase;">RÉCAPITULATIF DES RÉSULTATS</div>`;
-         recapHtml += `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px; padding-bottom: 20px;">`; // Grille pour afficher plus de questions
+         // 3. Récapitulatif : On isole la grille dans un "Container" pour ne faire disparaître QUE les cartes
+         if (!document.getElementById("bsMiddle").innerHTML.includes("RÉCAPITULATIF DES RÉSULTATS")) {
+             document.getElementById("bsMiddle").innerHTML = `
+                <div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:25px; color:#e2e8f0; text-transform:uppercase;">RÉCAPITULATIF DES RÉSULTATS</div>
+                <div id="bsRecapContainer" style="transition: opacity 0.8s ease, transform 0.8s ease;"></div>
+             `;
+         }
 
-         game.challenges.forEach((ch, i) => {
+         let recapHtml = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px; padding-bottom: 20px;">`;
+
+         if (typeof window.bsFinalRecapIndex === 'undefined' || window.bsFinalRecapIndex >= game.challenges.length) {
+            window.bsFinalRecapIndex = 0;
+         }
+
+         const visibleIndices = [window.bsFinalRecapIndex, window.bsFinalRecapIndex + 1].filter(idx => idx < game.challenges.length);
+
+         visibleIndices.forEach(i => {
+            const ch = game.challenges[i];
             let answersHtml = '';
             ch.answers.forEach((ans, aIdx) => {
                const isCorrect = (ch.correct === aIdx);
@@ -4692,7 +4778,7 @@ document.getElementById("bsQrContainer").innerHTML = `
             });
 
             recapHtml += `
-               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:15px; display:flex; flex-direction:column; justify-content:space-between;">
+               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:15px; display:flex; flex-direction:column; justify-content:space-between; min-height:260px;">
                   <div>
                      <div style="font-size:11px; color:#a855f7; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Challenge ${i+1} • ${ch.category}</div>
                      <div style="font-size:16px; font-weight:600; color:white; margin-bottom:15px; line-height:1.3;">${ch.question}</div>
@@ -4702,10 +4788,44 @@ document.getElementById("bsQrContainer").innerHTML = `
             `;
          });
          recapHtml += `</div>`;
-         document.getElementById("bsMiddle").innerHTML = recapHtml;
+         
+         // On ne met à jour que l'intérieur de la grille, le titre reste intact !
+         document.getElementById("bsRecapContainer").innerHTML = recapHtml;
 
          updateBsTimers();
-         return; // Fin de l'affichage fin de jeu, on ignore le reste
+         return; 
+      }
+
+      // --- NOUVEAU : SESSION TERMINÉE MAIS ATTENTE DE LA PROMULGATION ---
+      const nowTime = Date.now();
+      const endTimeLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
+      if (nowTime >= endTimeLimit && !game.isResolved) {
+         document.getElementById("bsLeft").style.flex = "1";
+         document.getElementById("bsLeft").style.overflowY = "hidden";
+         document.getElementById("bsMiddle").style.flex = "1";
+         document.getElementById("bsMiddle").style.overflowY = "hidden";
+         document.getElementById("bsRight").style.display = "none";
+
+         document.getElementById("bsLeft").innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
+               <div style="font-size:70px; margin-bottom:20px;">⏱️</div>
+               <div style="font-size:32px; font-weight:900; color:#fbbf24; text-transform:uppercase; letter-spacing:1px; line-height:1.3;">
+                  Les prédictions<br>sont closes !
+               </div>
+            </div>
+         `;
+         document.getElementById("bsMiddle").innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:30px;">
+               <div style="font-size:30px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; margin-bottom:20px; line-height:1.3;">
+                  Résultats définitifs<br>dans quelques instants
+               </div>
+               <div style="font-size:18px; color:#9ca3af; line-height:1.5; max-width:500px; margin:0 auto;">
+                  L'administrateur clôture les derniers défis et publie le classement final. Restez connectés !
+               </div>
+            </div>
+         `;
+         updateBsTimers();
+         return;
       }
 
       // --- RETOUR AU LAYOUT NORMAL (Si le jeu est encore en cours) ---
@@ -4718,49 +4838,63 @@ document.getElementById("bsQrContainer").innerHTML = `
       const leftCh = game.challenges[bsLeftIndex];
       const rightCh = game.challenges[bsRightIndex];
 
-let leftImgHtml = "";
-  if (leftCh && leftCh.imageUrl) {
-     // NOUVEAU : L'image devient le "ressort" principal avec flex: 1 1 0. Elle absorbe tout le manque de place.
-     leftImgHtml = `<div style="flex:1 1 0; min-height:0; width:100%; border-radius:16px; margin-bottom:2vh; background:url('${leftCh.imageUrl}') center/cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);"></div>`;
-  }
-  
-  document.getElementById("bsLeft").innerHTML = `
-    <div style="font-size:clamp(16px, 2vh, 22px); font-weight:800; letter-spacing:1.5px; margin-bottom:1vh; flex-shrink:0; color:#e2e8f0; text-transform:uppercase;">${leftCh ? leftCh.category : ''}</div>
-    ${leftImgHtml}
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
-       <div style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;">${leftCh ? leftCh.question : 'En attente de la prochaine question...'}</div>
-       <div id="bsTimer-${bsLeftIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
-    </div>
-    <!-- NOUVEAU : flex-shrink:0 garantit que les réponses ne seront JAMAIS coupées ni écrasées -->
-    <div style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;">
-      ${leftCh ? renderBsProgress(leftCh) : ''}
-    </div>
-  `;
+      // ================= COLONNE GAUCHE (Image + Question) =================
+      const leftEl = document.getElementById("bsLeft");
+      // On ne recrée la structure que si la question a tourné (stoppe le clignotement de l'image)
+      if (leftEl.dataset.chIndex !== String(bsLeftIndex)) {
+          leftEl.dataset.chIndex = String(bsLeftIndex);
+          leftEl.innerHTML = `
+            <div id="bsLeftCat" style="font-size:clamp(16px, 2vh, 22px); font-weight:800; letter-spacing:1.5px; margin-bottom:1vh; flex-shrink:0; color:#e2e8f0; text-transform:uppercase;"></div>
+            <div id="bsLeftImg" style="flex:1 1 0; min-height:0; width:100%; border-radius:16px; margin-bottom:2vh; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:none;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
+               <div id="bsLeftQ" style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;"></div>
+               <div id="bsTimer-${bsLeftIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+            </div>
+            <div id="bsLeftProg" style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;"></div>
+          `;
+      }
+      
+      // Mise à jour fluide des textes sans toucher à l'image
+      document.getElementById("bsLeftCat").textContent = leftCh ? leftCh.category : '';
+      const lImg = document.getElementById("bsLeftImg");
+      if (leftCh && leftCh.imageUrl) {
+          lImg.style.background = `url('${leftCh.imageUrl}') center/cover`;
+          lImg.style.display = "block";
+      } else {
+          lImg.style.display = "none";
+      }
+      document.getElementById("bsLeftQ").textContent = leftCh ? leftCh.question : 'En attente de la prochaine question...';
+      document.getElementById("bsLeftProg").innerHTML = leftCh ? renderBsProgress(leftCh) : '';
 
 
-// ================= COLONNE CENTRALE (Question + Graphique) =================
-  document.getElementById("bsMiddle").innerHTML = `
-    <!-- NOUVEAU : Le graphique devient le ressort (flex: 1 1 0) pour absorber le manque de place -->
-    <div style="flex:1 1 0; min-height:0; width:100%; margin-bottom:2vh; display:flex;">
-        <canvas id="bsChart" style="width:100%; height:100%; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
-    </div>
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
-       <div style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;">${rightCh ? rightCh.question : 'Bientôt disponible...'}</div>
-       <div id="bsTimer-${bsRightIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
-    </div>
-    <!-- NOUVEAU : flex-shrink:0 protège totalement la zone des réponses -->
-    <div style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;">
-      ${rightCh ? renderBsProgress(rightCh) : ''}
-    </div>
-  `;
+      // ================= COLONNE CENTRALE (Question + Graphique) =================
+      const middleEl = document.getElementById("bsMiddle");
+      // On ne recrée le canvas que si la question a tourné (stoppe le sursaut du graphique)
+      if (middleEl.dataset.chIndex !== String(bsRightIndex)) {
+          middleEl.dataset.chIndex = String(bsRightIndex);
+          middleEl.innerHTML = `
+            <div style="flex:1 1 0; min-height:0; width:100%; margin-bottom:2vh; display:flex;">
+                <canvas id="bsChart" style="width:100%; height:100%; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
+               <div id="bsRightQ" style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;"></div>
+               <div id="bsTimer-${bsRightIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+            </div>
+            <div id="bsRightProg" style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;"></div>
+          `;
+      }
 
-  // On attend un instant que le canvas soit créé pour dessiner la courbe boursière
-  setTimeout(() => {
-    const histories = computeHistories();
-    if (histories && histories[bsRightIndex]) {
-       drawSingleChart(histories[bsRightIndex], "bsChart", bsRightIndex);
-    }
-  }, 100);
+      // Mise à jour fluide des textes
+      document.getElementById("bsRightQ").textContent = rightCh ? rightCh.question : 'Bientôt disponible...';
+      document.getElementById("bsRightProg").innerHTML = rightCh ? renderBsProgress(rightCh) : '';
+
+      // On dessine la courbe quasi-immédiatement sans détruire le conteneur visuel
+      const histories = computeHistories();
+      if (histories && histories[bsRightIndex]) {
+         setTimeout(() => {
+             drawSingleChart(histories[bsRightIndex], "bsChart", bsRightIndex);
+         }, 10);
+      }
 
 // ================= COLONNE DROITE (Leaderboard Fixe) =================
   const playersList = game.players || [];
@@ -4851,6 +4985,11 @@ function updateBsTimers() {
   if (globalEl) {
     if (globalDiff <= 0) {
       globalEl.textContent = "SESSION TERMINÉE";
+      // NOUVEAU : Si la session vient d'expirer, on force un rafraîchissement immédiat de la mise en page
+      if (!window.bsScreenSwitchedToWaiting && !game.isResolved) {
+         window.bsScreenSwitchedToWaiting = true;
+         renderBigScreen();
+      }
     } else {
       const h = Math.floor(globalDiff / 3600000);
       const m = Math.floor((globalDiff % 3600000) / 60000);
@@ -4860,7 +4999,10 @@ function updateBsTimers() {
   }
   
   // 2. MISE À JOUR DES CHRONOS DES QUESTIONS
-  [bsLeftIndex, bsRightIndex].forEach(idx => {
+  let forceRotateTargetId = null;
+
+  // On ajoute "loopIndex" pour savoir si on est sur la carte de gauche (0) ou du milieu (1)
+  [bsLeftIndex, bsRightIndex].forEach((idx, loopIndex) => {
      const el = document.getElementById(`bsTimer-${idx}`);
      if(!el) return;
      const ch = game.challenges[idx];
@@ -4875,6 +5017,10 @@ function updateBsTimers() {
 
      if (effStatus === "closed" || effStatus === "resolved") {
         el.textContent = "CLOS";
+        // On repère exactement quelle colonne contient la carte fermée pour appliquer le fondu
+        if (!forceRotateTargetId) {
+            forceRotateTargetId = (loopIndex === 0) ? "bsLeft" : "bsMiddle";
+        }
      } else if (diff <= 0) {
         el.textContent = "00:00";
      } else {
@@ -4884,6 +5030,25 @@ function updateBsTimers() {
         el.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
      }
   });
+
+  // CORRECTION : Si une carte est close, on lance le remplacement AVEC FONDU
+  if (forceRotateTargetId && !window.isFadingImmediate) {
+     const hasOtherOpen = game.challenges.some((c, i) => getEffectiveStatus(c) === "open" && i !== bsLeftIndex && i !== bsRightIndex);
+     
+     if (hasOtherOpen) {
+         window.isFadingImmediate = true; // On verrouille pour éviter de relancer l'animation chaque seconde
+         const targetEl = document.getElementById(forceRotateTargetId);
+         
+         if (targetEl) targetEl.classList.add("bs-faded"); // Disparition
+         
+         setTimeout(() => {
+             updateBsIndices(false);
+             renderBigScreen();
+             if (targetEl) targetEl.classList.remove("bs-faded"); // Réapparition de la nouvelle carte
+             window.isFadingImmediate = false; // On déverrouille une fois fini
+         }, 800); // 800ms correspond à la durée de l'animation CSS (transition)
+     }
+  }
 }
 
 
