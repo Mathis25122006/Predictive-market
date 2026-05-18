@@ -333,28 +333,58 @@ input, select, textarea {
 
 #challengesPlay::-webkit-scrollbar { display: none; }
 
+/* NOUVEAU : Bloque le défilement et l'élasticité (rebond iOS) sur mobile */
+body.play-mode-active {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* NOUVEAU : Transformation du message d'erreur en bulle d'alerte rouge flottante */
+#playMsg {
+  position: fixed;
+  top: -100px;
+  left: 10%;
+  right: 10%;
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  z-index: 9999;
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+  transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  text-align: center;
+  pointer-events: none;
+  margin-top: 0;
+}
+#playMsg.show {
+  top: max(40px, env(safe-area-inset-top));
+}
+
 #challengesPlay .challenge-block {
   position: absolute;
-  top: max(20px, env(safe-area-inset-top)); 
+  /* CORRECTION : On centre la carte verticalement au milieu de l'écran avec une hauteur fixe */
+  top: 0; 
+  bottom: 0;
   left: 15px; 
   right: 15px; 
-  bottom: calc(max(30px, env(safe-area-inset-bottom)) + 25px);
+  margin: auto;
+  height: 82vh; 
+  max-height: 750px;
   box-sizing: border-box;
   
   background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
   border-radius: 20px !important;
-  /* CORRECTION : Le padding inférieur passe de 24px à 12px pour coller le footer plus bas ! */
   padding: 24px 24px 12px 24px !important;
   border: none !important; 
-  margin-bottom: 0 !important;
   box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
   
   display: flex;
   flex-direction: column;
-  /* CORRECTION : On empêche la carte de scroller globalement. Le footer reste ancré en bas. */
   overflow: hidden; 
   
-  /* Animation de base (quand on relâche la carte ou qu'elle remonte) */
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out;
   transform-origin: center bottom;
   z-index: 1;
@@ -861,6 +891,13 @@ function showScreen(screenId) {
      const tutoContainer = document.getElementById("tutoContainer");
      if (tutoContainer) tutoContainer.style.display = "none";
      if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
+  }
+
+  // NOUVEAU : Anti-rebond mobile, on fige complètement l'écran en mode jeu
+  if (screenId === 'play') {
+     document.body.classList.add('play-mode-active');
+  } else {
+     document.body.classList.remove('play-mode-active');
   }
 
   // 1. Actions de nettoyage et sécurité
@@ -1888,9 +1925,9 @@ window.swipeNextCard = function() {
              const msg = document.getElementById("playMsg");
              if (msg) {
                  msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
-                 msg.className = "msg err";
-                 // Le message d'erreur s'efface tout seul après 3 secondes
-                 setTimeout(() => { if (msg.textContent.includes("cocher une réponse")) msg.textContent = ""; }, 3000);
+                 msg.classList.add("show"); // Affichage de la bulle d'alerte rouge
+                 // Le message d'erreur redescend tout seul après 3 secondes
+                 setTimeout(() => { if (msg.textContent.includes("cocher une réponse")) msg.classList.remove("show"); }, 3000);
              }
              return false; // Bloque le swipe et le bouton
          }
@@ -2216,6 +2253,8 @@ function playNext() {
 
   if(!pseudo) {
     msg.textContent = "Erreur de session.";
+    msg.classList.add("show");
+    setTimeout(() => { if (msg.textContent.includes("Erreur de session")) msg.classList.remove("show"); }, 3000);
     return;
   }
 
@@ -2235,7 +2274,8 @@ function playNext() {
   // Le Mode Avancé a le droit de ne pas tout miser !
   if (currentPlayerMode === 'easy' && currentBetsCount < n) {
     msg.textContent = `Vous devez parier sur vos ${n} questions attribuées avant de valider.`;
-    msg.className = "msg err";
+    msg.classList.add("show");
+    setTimeout(() => { if (msg.textContent.includes("attribuées")) msg.classList.remove("show"); }, 3000);
     return;
   }
 
@@ -2252,12 +2292,13 @@ function playNext() {
     
     if (!allOpenAnswered) {
       msg.textContent = "Veuillez répondre à toutes les questions en cours avant de valider.";
-      msg.className = "msg err";
+      msg.classList.add("show");
+      setTimeout(() => { if (msg.textContent.includes("toutes les questions")) msg.classList.remove("show"); }, 3000);
       return;
     }
   }
 
-  msg.textContent = "";
+  msg.classList.remove("show");
 
   if (confirm("Voulez-vous vraiment valider vos prédictions actuelles ?")) {
     closeTuto(); // CORRECTION : On ferme le tutoriel instantanément pour éviter qu'il ne reste affiché
