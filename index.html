@@ -1749,8 +1749,11 @@ function renderPlayChallenges(){
 
     let imgHtml = "";
     if (ch.imageUrl) {
+        // NOUVEAU : On transforme dynamiquement le nom de l'image pour afficher la version "question" sur mobile
+        let mobileImageUrl = ch.imageUrl.replace('.jpg', '_question.png').replace('_carte.png', '_question.png');
+
         // CORRECTION : L'image s'écrase fortement (jusqu'à 60px) si l'espace manque
-        imgHtml = `<img src="${ch.imageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+        imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
     }
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
