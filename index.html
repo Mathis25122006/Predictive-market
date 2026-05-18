@@ -2592,11 +2592,22 @@ function finish() {
 
 function displayLeaderboard() {
   const playersList = game.players || [];
+  const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
 
   const leaderboard = playersList.map(p => {
-    // CORRECTION : Le solde du joueur contient DÉJÀ l'argent des questions résolues,
-    // calculé mathématiquement (OUI/NON) au moment où l'admin publie les résultats.
-    return { name: p.name, pts: (p.balance || 0).toFixed(2) }; 
+    let finalScore = 0;
+    if (isEasyScreen) {
+        // CORRECTION : En mode facile, on affiche la somme des gains purs (sans déduire la mise de départ)
+        if (p.portfolio) {
+           p.portfolio.forEach(snap => {
+              if (snap.paidOut) finalScore += snap.pts;
+              else if (snap.cashedOut && snap.cashedOutAmount) finalScore += snap.cashedOutAmount;
+           });
+        }
+    } else {
+        finalScore = p.balance || 0;
+    }
+    return { name: p.name, pts: finalScore.toFixed(2) }; 
   });
 
   leaderboard.sort((a, b) => b.pts - a.pts);
@@ -4619,8 +4630,22 @@ document.getElementById("bsQrContainer").innerHTML = `
 
          // 2. Classement Final (Colonne de gauche)
          const playersList = game.players || [];
-         const leaderboard = playersList.map(p => ({ name: p.name, score: p.balance || 0 }))
-                                        .sort((a,b) => b.score - a.score).slice(0, 15);
+         const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
+         
+         const leaderboard = playersList.map(p => {
+            let finalScore = 0;
+            if (isEasyScreen) {
+                if (p.portfolio) {
+                   p.portfolio.forEach(snap => {
+                      if (snap.paidOut) finalScore += snap.pts;
+                      else if (snap.cashedOut && snap.cashedOutAmount) finalScore += snap.cashedOutAmount;
+                   });
+                }
+            } else {
+                finalScore = p.balance || 0;
+            }
+            return { name: p.name, score: finalScore };
+         }).sort((a,b) => b.score - a.score).slice(0, 15);
 
          let lbHtml = `<div style="font-size:32px; font-weight:900; letter-spacing:2px; margin-bottom:30px; color:#fbbf24; text-transform:uppercase; text-align:center;">🏆 PODIUM FINAL 🏆</div>`;
 
@@ -4632,13 +4657,16 @@ document.getElementById("bsQrContainer").innerHTML = `
             else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:28px; width:40px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
             else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:28px; width:40px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
 
+            // Affichage à 2 décimales pour le mode Facile
+            const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
+
             lbHtml += `
                <div style="display:flex; justify-content:space-between; align-items:center; font-size:24px; margin-bottom:12px; padding:15px; border-radius:12px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color};">
                   <div style="display:flex; gap:15px; align-items:center;">
                      ${trophy}
                      <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
                   </div>
-                  <div style="font-weight:900;">${p.score.toFixed(0)} 💰</div>
+                  <div style="font-weight:900;">${scoreDisplay} 💰</div>
                </div>
             `;
          });
@@ -4736,25 +4764,23 @@ let leftImgHtml = "";
 
 // ================= COLONNE DROITE (Leaderboard Fixe) =================
   const playersList = game.players || [];
+  const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
   
-  // NOUVEAU : Calcul dynamique du score selon l'état du jeu
+  // NOUVEAU : Calcul dynamique du score
   const leaderboard = playersList.map(p => {
      let displayScore = 0;
      
-     if (game.isResolved) {
-        // FIN DU JEU : On affiche le solde final complet (incluant l'argent de départ)
-        displayScore = p.balance || 0;
-     } else {
-        // JEU EN COURS : On ne compte QUE l'argent remporté sur les défis terminés ou revendus
+     if (isEasyScreen) {
+        // En mode Facile, on affiche UNIQUEMENT les gains remportés (on ignore les 1u de mise)
         if (p.portfolio) {
            p.portfolio.forEach(snap => {
-              if (snap.paidOut) {
-                 displayScore += snap.pts;
-              } else if (snap.cashedOut && snap.cashedOutAmount) {
-                 displayScore += snap.cashedOutAmount;
-              }
+              if (snap.paidOut) displayScore += snap.pts;
+              else if (snap.cashedOut && snap.cashedOutAmount) displayScore += snap.cashedOutAmount;
            });
         }
+     } else {
+        // En mode Avancé, on prend le solde complet du joueur
+        displayScore = p.balance || 0;
      }
      
      return { name: p.name, score: displayScore };
@@ -4763,13 +4789,16 @@ let leftImgHtml = "";
   let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:30px; color:#e2e8f0; text-transform:uppercase;">LEADERBOARD</div>`;
   
   leaderboard.forEach((p, idx) => {
+     // Affichage à 2 décimales pour le mode Facile
+     const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
+
      lbHtml += `
         <div style="display:flex; justify-content:space-between; align-items:center; font-size:22px; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
            <div style="display:flex; gap:20px; align-items:center;">
               <span style="color:#a855f7; font-weight:900; width:30px; font-size:20px;">${idx+1}</span>
               <span style="font-weight:500; text-transform:capitalize;">${p.name}</span>
            </div>
-           <div style="font-weight:800;">${p.score.toFixed(0)}</div>
+           <div style="font-weight:800;">${scoreDisplay}</div>
         </div>
      `;
   });
@@ -4955,8 +4984,11 @@ function simulationTick() {
     if (arrivals.length > 0) {
       arrivals.forEach(b => {
         const botName = "Bot_" + b.num;
-        let startBal = sessionConfig.initialBalance || 100;
-        const newBot = { 
+        // CORRECTION : Les bots démarrent à 0 en mode Facile pour ne pas fausser le classement !
+        let isEasy = (sessionConfig.mode === 'easy') || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code);
+        let startBal = isEasy ? 0 : (sessionConfig.initialBalance || 100);
+        
+        const newBot = {
           name: botName, 
           email: `bot${b.num}@sim.com`, 
           balance: startBal, 
