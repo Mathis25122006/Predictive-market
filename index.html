@@ -1183,14 +1183,34 @@ function generateSetupFields() {
   msg.textContent = ""; // On efface les erreurs précédentes
 
   if (isNaN(qty) || qty < 1) qty = 1;
-  if (qty > 50) qty = 50; 
+      if (qty > 50) qty = 50; 
 
-// NOUVEAU : On récupère les heures globales saisies par l'admin
-  const gStart = document.getElementById("globalStartTime").value || "";
-  const gEnd = document.getElementById("globalEndTime").value || "";
+      // NOUVEAU : Si l'admin n'a pas rempli les dates/heures, on applique les valeurs par défaut (Immédiat -> +3H)
+      const dateInput = document.getElementById("globalDate");
+      const startInput = document.getElementById("globalStartTime");
+      const endInput = document.getElementById("globalEndTime");
+      
+      const now = new Date();
+      
+      if (!dateInput.value) {
+          dateInput.value = now.toISOString().split('T')[0];
+      }
+      if (!startInput.value) {
+          startInput.value = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+      }
+      if (!endInput.value) {
+          const [h, m] = startInput.value.split(':');
+          const baseTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(h), parseInt(m));
+          const end = new Date(baseTime.getTime() + (180 * 60 * 1000));
+          endInput.value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
+      }
 
-  const container = document.getElementById("dynamicSetupContainer");
-  container.innerHTML = "";
+      // On récupère les heures globales saisies (ou fraîchement générées par défaut)
+      const gStart = startInput.value;
+      const gEnd = endInput.value;
+
+      const container = document.getElementById("dynamicSetupContainer");
+      container.innerHTML = "";
   
   // NOUVEAU : Bouton pour générer un jeu test aléatoire
   const testBtn = document.createElement("button");
