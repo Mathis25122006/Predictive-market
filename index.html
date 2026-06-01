@@ -466,6 +466,22 @@ body.play-mode-active {
 }
 .swipe-up-hand { animation: swipeHandAnim 2s infinite ease-in-out; }
 .swipe-down-hand { animation: swipeDownAnim 2s infinite ease-in-out; animation-delay: 1s; }
+
+/* NOUVEAU : Animation de clignotement pour le texte du tutoriel */
+@keyframes pulseOpacity {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+.tuto-tap-text {
+  margin-top: 15px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fde047;
+  animation: pulseOpacity 1.5s infinite;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 </style>
 </head>
 <body>
@@ -756,27 +772,27 @@ body.play-mode-active {
 
 <div id="tutoContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10002; pointer-events:none;">
   
-  <div id="tutoStep1" class="hidden" style="position:absolute; bottom:calc(max(20px, env(safe-area-inset-bottom)) + 120px); left:12%; right:12%; background:rgba(147,51,234,0.95); border:1px solid #d946ef; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
+  <div id="tutoStep1" class="hidden" style="position:absolute; bottom:calc(max(20px, env(safe-area-inset-bottom)) + 120px); left:12%; right:12%; background:rgba(147,51,234,0.95); border:1px solid #d946ef; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="font-size:20px; margin-bottom:4px;">👑</div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">LE DÉFI</h3>
     <p style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:10px;">Voici l'en-tête en surbrillance. Il vous indique le thème de la carte et le temps restant.</p>
-    <button onclick="nextTuto(2)" style="background:#020617; border:none; border-radius:999px; color:white; padding:6px 16px; font-size:12px; font-weight:bold;">Suivant</button>
+    <div class="tuto-tap-text">👆 Touchez l'écran pour continuer</div>
   </div>
 
-  <div id="tutoStep2" class="hidden" style="position:absolute; top:calc(max(20px, env(safe-area-inset-top)) + 160px); left:12%; right:12%; background:rgba(16,185,129,0.95); border:1px solid #34d399; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
+  <div id="tutoStep2" class="hidden" style="position:absolute; top:calc(max(20px, env(safe-area-inset-top)) + 160px); left:12%; right:12%; background:rgba(16,185,129,0.95); border:1px solid #34d399; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="font-size:20px; margin-bottom:4px;">💰</div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">VOTRE SCORE</h3>
     <p id="tutoStep2Text" style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:10px;"></p>
-    <button onclick="nextTuto(3)" style="background:#020617; border:none; border-radius:999px; color:white; padding:6px 16px; font-size:12px; font-weight:bold;">Suivant</button>
+    <div class="tuto-tap-text">👆 Touchez l'écran pour continuer</div>
   </div>
 
-  <div id="tutoStep3" class="hidden" style="position:absolute; top:max(20px, env(safe-area-inset-top)); left:12%; right:12%; background:rgba(59,130,246,0.95); border:1px solid #60a5fa; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
+  <div id="tutoStep3" class="hidden" style="position:absolute; top:max(20px, env(safe-area-inset-top)); left:12%; right:12%; background:rgba(59,130,246,0.95); border:1px solid #60a5fa; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="font-size:20px; margin-bottom:4px;">👇</div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">FAITES VOS JEUX</h3>
     <p id="tutoStep3Text" style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:0;"></p>
   </div>
 
-  <div id="tutoStep4" class="hidden" style="position:absolute; top:max(10px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
+  <div id="tutoStep4" class="hidden" style="position:absolute; top:max(10px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="display:flex; flex-direction:column; align-items:center;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
          <span style="font-size:18px;">💰</span>
@@ -787,14 +803,14 @@ body.play-mode-active {
     </div>
   </div>
 
-  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:20%; right:20%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:auto;">
+  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:20%; right:20%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="display:flex; justify-content:center; gap:25px; margin-bottom:6px;">
         <div class="swipe-up-hand" style="font-size:24px;">👆</div>
         <div class="swipe-down-hand" style="font-size:24px;">👇</div>
     </div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:12px; font-weight:900;">NAVIGUEZ</h3>
     <p style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;">Glissez la carte vers le HAUT ou le BAS.</p>
-    <button onclick="closeTuto()" style="background:#020617; border:none; border-radius:999px; color:white; padding:6px 16px; font-size:12px; font-weight:bold;">J'ai compris</button>
+    <div class="tuto-tap-text">👆 Touchez l'écran pour fermer</div>
   </div>
 </div>
 
@@ -863,6 +879,16 @@ body.play-mode-active {
        <div id="bsRight" style="flex:0.8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow-y:auto;"></div>
     </div>
     
+  </div>
+</div>
+<div id="welcomeCodeOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.95); backdrop-filter:blur(10px); z-index:10000; flex-direction:column; justify-content:center; align-items:center; padding:20px; text-align:center; box-sizing:border-box;">
+  <div class="card" style="width:100%; max-width:400px; padding:30px 20px; box-sizing:border-box;">
+    <h2 style="font-size:24px; color:#3b82f6; margin-bottom:15px;">Bienvenue !</h2>
+    <p style="font-size:14px; color:#e2e8f0; margin-bottom:20px;">Si vous quittez la page par erreur, vous aurez absolument besoin de ce code pour retrouver vos paris :</p>
+    <div style="font-size:40px; font-weight:900; letter-spacing:6px; color:#fde047; margin-bottom:10px; background:rgba(0,0,0,0.5); padding:15px; border-radius:12px; border:1px dashed #fde047;" id="welcomeCodeDisplay">------</div>
+    <button onclick="copyWelcomeCode()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin-bottom:15px; font-size:16px;">📋 Copier le code</button>
+    <div id="welcomeCopyFeedback" style="font-size:12px; color:#4ade80; font-weight:bold; opacity:0; transition:opacity 0.3s; margin-bottom:15px;">✅ Copié dans le presse-papier !</div>
+    <button onclick="closeWelcomeCode()" style="background:none; border:1px solid #4b5563;">J'ai noté le code, jouer !</button>
   </div>
 </div>
 
@@ -2086,7 +2112,14 @@ function renderPlayChallenges(){
     }
   });
 
-  updateCardStack(); 
+  // NOUVEAU : Clic n'importe où pour avancer le tutoriel (Étapes de lecture uniquement)
+  containerEl.addEventListener('click', (e) => {
+      if (window.currentTutoStep === 1) nextTuto(2);
+      else if (window.currentTutoStep === 2) nextTuto(3);
+      else if (window.currentTutoStep === 5) closeTuto();
+  });
+
+  updateCardStack();
 
   // --- NOUVEAU : Navigation au Clavier (Flèches Haut / Bas) sur Ordinateur ---
   if (!window.keyboardNavAttached) {
@@ -2129,8 +2162,11 @@ function renderPlayChallenges(){
       window.keyboardNavAttached = true; // Empêche l'accumulation d'écouteurs d'événements
   }
 
-  // NOUVEAU : Déclenchement in-game systématique à chaque nouvelle session
-  startTuto();
+  // CORRECTION : On ne lance le tuto automatiquement QUE SI la pop-up de bienvenue n'est pas affichée par-dessus
+  const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+  if (!welcomeOverlay || welcomeOverlay.style.display === "none" || welcomeOverlay.style.display === "") {
+      startTuto();
+  }
 
   startPlayScreenTimers();
 }
@@ -3187,9 +3223,13 @@ document.getElementById("playerAuth").classList.add("hidden");
         document.getElementById("gameContent").classList.remove("hidden");
         document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
         
-        // NOUVEAU : On affiche le code au joueur pour qu'il puisse le copier
-        const codeDisplay = document.getElementById("playerSessionCodeDisplay");
-        if (codeDisplay) codeDisplay.textContent = inputCode;
+        // NOUVEAU : On affiche la Pop-up géante obligatoire avec le code
+        const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+        const welcomeDisplay = document.getElementById("welcomeCodeDisplay");
+        if (welcomeOverlay && welcomeDisplay) {
+            welcomeDisplay.textContent = inputCode;
+            welcomeOverlay.style.display = "flex";
+        }
         
         // NOUVEAU : On efface le message "Connexion au serveur..." une fois que l'écran de jeu s'affiche
         const playMsg = document.getElementById("playMsg");
@@ -5537,6 +5577,30 @@ function copySessionCode() {
     }).catch(err => {
         console.error("Erreur de copie", err);
     });
+}
+
+// ==========================================
+// POP-UP DE BIENVENUE (COPIE DU CODE)
+// ==========================================
+function copyWelcomeCode() {
+    const code = document.getElementById("welcomeCodeDisplay").textContent;
+    if (!code || code === "------") return;
+
+    navigator.clipboard.writeText(code).then(() => {
+        const feedback = document.getElementById("welcomeCopyFeedback");
+        if (feedback) {
+            feedback.style.opacity = "1"; 
+            setTimeout(() => { feedback.style.opacity = "0"; }, 2500);
+        }
+    }).catch(err => console.error("Erreur de copie", err));
+}
+
+function closeWelcomeCode() {
+    document.getElementById("welcomeCodeOverlay").style.display = "none";
+    // NOUVEAU : Maintenant que l'écran est dégagé, on peut lancer le tutoriel !
+    if (typeof startTuto === 'function') {
+        startTuto();
+    }
 }
 
 </script>
