@@ -2026,24 +2026,27 @@ window.swipeNextCard = function() {
     if(!isDragging) return;
     isDragging = false;
     
-    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4) return;
+    // CORRECTION : On autorise le relâchement du doigt pour l'étape 5 (et non plus 4)
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
     
+    // NOUVEAU : Dès que le joueur fait un geste de swipe clair, on ferme automatiquement le tuto
+    if (window.currentTutoStep === 5 && Math.abs(deltaY) > 50) {
+        closeTuto();
+    }
+
     if (deltaY < -80 && window.currentCardIndex < cardsElements.length - 1) {
       const success = swipeNextCard(); 
-      if (success) {
-          if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
-      } else {
-          // CORRECTION : Le swipe a été bloqué par la sécurité, on remet la carte au centre
+      if (!success) {
+          // Le swipe a été bloqué par la sécurité (pas de mise), on remet la carte au centre
           activeCard.style.transform = ''; 
       }
     } else if (deltaY > 80 && window.currentCardIndex > 0) {
       swipePrevCard(); 
-      if (window.currentTutoStep === 4) closeTuto(); // Succès du swipe : Fin du Tuto !
     } else {
       activeCard.style.transform = ''; 
     }
