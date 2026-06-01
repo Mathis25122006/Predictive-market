@@ -84,6 +84,8 @@ input, select, textarea {
    /* NOUVEAU : 16px empêche iOS de zoomer de force lors d'un clic */
    font-size: 16px; 
    outline: none;
+   /* CORRECTION : Force les bordures et marges intérieures à rester dans les 100% */
+   box-sizing: border-box;
  }
  input::placeholder {
    color: #6b7280;
