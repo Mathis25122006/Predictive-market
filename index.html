@@ -685,6 +685,13 @@ body.play-mode-active {
         <span class="badge hidden" id="playerBalanceDisplay" style="color:#3b82f6; border-color:#3b82f6;">Solde: 0</span>
       </div>
     </div>
+    
+    <div id="playerSessionCodeContainer" style="background: rgba(59,130,246,0.1); border: 1px dashed #3b82f6; padding: 12px; border-radius: 12px; margin-bottom: 15px; text-align: center; cursor: pointer;" onclick="copySessionCode()">
+       <div style="font-size:11px; color:#9ca3af; margin-bottom: 4px;">Pour revenir plus tard, conservez ce code :</div>
+       <div style="font-size:24px; font-weight:900; color:#3b82f6; letter-spacing: 3px;" id="playerSessionCodeDisplay">------</div>
+       <div style="font-size:11px; color:#4ade80; margin-top: 4px; font-weight: bold; opacity: 0; transition: opacity 0.3s;" id="copyCodeFeedback">✅ Copié dans le presse-papier !</div>
+    </div>
+
     <div id="challengesPlay"></div>
     
 <div class="sticky-action-bar">
@@ -3180,6 +3187,10 @@ document.getElementById("playerAuth").classList.add("hidden");
         document.getElementById("gameContent").classList.remove("hidden");
         document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
         
+        // NOUVEAU : On affiche le code au joueur pour qu'il puisse le copier
+        const codeDisplay = document.getElementById("playerSessionCodeDisplay");
+        if (codeDisplay) codeDisplay.textContent = inputCode;
+        
         // NOUVEAU : On efface le message "Connexion au serveur..." une fois que l'écran de jeu s'affiche
         const playMsg = document.getElementById("playMsg");
         if (playMsg) playMsg.textContent = "";
@@ -5504,6 +5515,28 @@ function stopSimulation() {
   document.getElementById("stopSimBtn").classList.add("hidden");
   document.getElementById("simMsg").textContent = "Simulation arrêtée.";
   logSim("🛑 La simulation est stoppée.");
+}
+
+
+// ==========================================
+// UTILITAIRES JOUEUR
+// ==========================================
+function copySessionCode() {
+    const code = document.getElementById("playerSessionCodeDisplay").textContent;
+    if (!code || code === "------") return;
+
+    // Copie dans le presse-papier du smartphone / PC
+    navigator.clipboard.writeText(code).then(() => {
+        const feedback = document.getElementById("copyCodeFeedback");
+        if (feedback) {
+            feedback.style.opacity = "1"; // Fait apparaître le message de confirmation
+            setTimeout(() => {
+                feedback.style.opacity = "0"; // Le cache après 2.5 secondes
+            }, 2500);
+        }
+    }).catch(err => {
+        console.error("Erreur de copie", err);
+    });
 }
 
 </script>
