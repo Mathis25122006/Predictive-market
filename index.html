@@ -472,29 +472,29 @@ body.play-mode-active {
 
 <div id="sellPanelOverlay" class="side-panel-overlay" onclick="closeSellPanel()"></div>
 <div id="sellPanel" class="side-panel">
-  <h2 style="margin-bottom:5px;">Revendre</h2>
+  <h2 style="margin-bottom:5px;">Revendre (Cash out)</h2>
   <p class="subtitle" id="sellAnswerName" style="margin-bottom:20px;">Réponse</p>
 
   <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #f97316;">
-    <div style="font-size:12px; color:#9ca3af;">Mise initiale sur cette option</div>
-    <div id="sellMaxBet" style="font-size:20px; font-weight:bold; color:#f97316;">0 unités</div>
+    <div style="font-size:12px; color:#9ca3af;">Valeur actuelle totale (après frais de retrait)</div>
+    <div id="sellMaxBet" style="font-size:20px; font-weight:bold; color:#f97316;">0 💰</div>
   </div>
 
-  <label>Combien d'unités (de votre mise) voulez-vous retirer ?</label>
-  <input type="number" id="sellInput" placeholder="Ex: 5" min="1" oninput="updateSellPotential()">
+  <label>Montant exact à retirer (💰)</label>
+  <input type="number" id="sellInput" placeholder="Ex: 50" min="0.1" step="0.1" oninput="updateSellPotential()">
   <div style="display:flex; justify-content:flex-end; margin-top:-5px; margin-bottom:15px;">
      <button onclick="setSellMax()" style="background:#4b5563; padding:4px 8px; font-size:11px; width:auto; border-radius:6px;">TOUT RETIRER</button>
   </div>
 
   <div style="background:rgba(74,222,128,0.1); border:1px solid rgba(74,222,128,0.3); padding:10px; border-radius:10px; margin-bottom:15px;">
-     <div style="font-size:12px; color:#9ca3af;">Argent récupéré avec la Chute Libre (Estimation)</div>
-     <div id="sellPotential" style="font-size:20px; font-weight:bold; color:#4ade80;">0 💰</div>
+     <div style="font-size:12px; color:#9ca3af;">Impact sur votre prédiction</div>
+     <div id="sellPotential" style="font-size:16px; font-weight:bold; color:#4ade80;">Saisissez un montant...</div>
   </div>
 
   <div id="sellError" class="msg err" style="margin-bottom:15px;"></div>
 
   <div style="margin-top:auto;">
-    <button onclick="confirmSell()" style="background:linear-gradient(135deg,#f97316,#ea580c);">Confirmer le retrait</button>
+    <button onclick="confirmSell()" style="background:linear-gradient(135deg,#f97316,#ea580c);">Confirmer le retrait exact</button>
     <button onclick="closeSellPanel()" style="background:none; border:1px solid #4b5563; margin-top:10px;">Annuler</button>
   </div>
 </div>
@@ -1955,40 +1955,36 @@ function renderPlayChallenges(){
     });
   }
 
-window.swipeNextCard = function() {
+// NOUVEAU : Fonction centralisée pour vérifier si le joueur a le droit de quitter la carte
+  window.canPassCurrentCard = function() {
+      const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+      const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+      const cIndex = myIndices[window.currentCardIndex];
+      const ch = game.challenges[cIndex];
+
+      // CORRECTION : On bloque uniquement pour le Mode Facile (Le joueur est libre de passer le Fil Rouge en mode Avancé)
+      if (ch && currentPlayerMode === 'easy') {
+        if (getEffectiveStatus(ch) === "open") {
+           const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
+           if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
+               const msg = document.getElementById("playMsg");
+               if (msg) {
+                   msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
+                   msg.classList.add("show"); 
+                   setTimeout(() => { if (msg.textContent.includes("cocher")) msg.classList.remove("show"); }, 3000);
+               }
+               return false; 
+           }
+        }
+      }
+      return true;
+  };
+
+  window.swipeNextCard = function() {
     if(window.currentCardIndex >= cardsElements.length - 1) return false;
 
-    // --- CORRECTION : Blocage si aucun pari n'est fait (Mode Facile OU Fil Rouge OU Première carte du tuto) ---
-    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-    const cIndex = myIndices[window.currentCardIndex];
-    const ch = game.challenges[cIndex];
-
-    // NOUVEAU : On ajoute 'window.currentCardIndex === 0' pour bloquer le passage de la toute 1ère question
-    if (ch && (currentPlayerMode === 'easy' || ch.isGolden || window.currentCardIndex === 0)) {
-      if (getEffectiveStatus(ch) === "open") {
-         // On vérifie si le joueur a une mise en attente ou s'il a DÉJÀ une mise validée en base de données
-         const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
-         if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
-             const msg = document.getElementById("playMsg");
-             if (msg) {
-                 // NOUVEAU : Message spécifique pour la première question
-                 if (window.currentCardIndex === 0) {
-                     msg.textContent = "Vous devez miser sur cette question.";
-                 } else if (ch.isGolden && currentPlayerMode !== 'easy') {
-                     msg.textContent = "Vous devez obligatoirement miser sur le Fil Rouge pour passer à la suite.";
-                 } else {
-                     msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
-                 }
-                 msg.classList.add("show"); 
-                 // Le minuteur vérifie un des mots-clés pour redescendre la bulle
-                 setTimeout(() => { if (msg.textContent.includes("miser") || msg.textContent.includes("cocher") || msg.textContent.includes("passer")) msg.classList.remove("show"); }, 3000);
-             }
-             return false; // Bloque le swipe et le bouton
-         }
-      }
-    }
-    // -----------------------------------------------------------------
+    // Utilisation de la vérification centralisée
+    if (!window.canPassCurrentCard()) return false;
 
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.classList.add('fly-away'); 
@@ -2022,7 +2018,8 @@ window.swipeNextCard = function() {
     e.preventDefault(); 
     if(!isDragging) return;
     
-    if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
+    // CORRECTION : On autorise le mouvement du doigt pour l'étape 4 (Gérer les crédits) ET 5 (Swipe)
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
@@ -2036,32 +2033,33 @@ window.swipeNextCard = function() {
     if(!isDragging) return;
     isDragging = false;
     
-    // CORRECTION : On autorise le relâchement du doigt pour l'étape 5 (et non plus 4)
-    if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
+    // CORRECTION : On autorise le relâchement de la carte pour l'étape 4 ET 5
+    if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
-    
-    // NOUVEAU : Dès que le joueur fait un geste de swipe clair, on ferme automatiquement le tuto
-    if (window.currentTutoStep === 5 && Math.abs(deltaY) > 50) {
+
+    // CORRECTION : Si le joueur force le passage (swipe) pendant l'étape 4 ou 5, on ferme complètement le tuto
+    if ((window.currentTutoStep === 4 || window.currentTutoStep === 5) && Math.abs(deltaY) > 50) {
         closeTuto();
     }
-
-    if (deltaY < -80) {
+    
+    if (deltaY < -80) { // Glissement vers le haut (Suivant)
       if (window.currentCardIndex < cardsElements.length - 1) {
           const success = swipeNextCard(); 
           if (!success) {
-              // Le swipe a été bloqué par la sécurité (pas de mise), on remet la carte au centre
               activeCard.style.transform = ''; 
           }
       } else {
-          // NOUVEAU : C'est la dernière carte, le swipe vers le HAUT déclenche la validation !
           activeCard.style.transform = ''; 
-          playNext();
+          // NOUVEAU : Sur la dernière carte, on vérifie si la mise est faite avant d'ouvrir le panneau "Valider"
+          if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+              playNext(); // Lance la validation finale
+          }
       }
-    } else if (deltaY > 80 && window.currentCardIndex > 0) {
+    } else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
       swipePrevCard(); 
     } else {
       activeCard.style.transform = ''; 
@@ -2079,11 +2077,11 @@ window.swipeNextCard = function() {
           if (document.getElementById('betPanel') && document.getElementById('betPanel').classList.contains('open')) return;
           if (document.getElementById('messagePanel') && document.getElementById('messagePanel').classList.contains('open')) return;
 
-          // On autorise la navigation clavier uniquement si le tutoriel n'est pas bloquant (sauf étape 5)
-          if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
+          // CORRECTION : On autorise la navigation clavier sur l'étape 4 et 5
+          if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5) return;
 
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-              if (window.currentTutoStep === 5) closeTuto(); // Ferme le message "Naviguez" si existant
+              if (window.currentTutoStep === 4 || window.currentTutoStep === 5) closeTuto(); // Ferme le tuto
 
               const cards = document.querySelectorAll('#challengesPlay .challenge-block');
               if (!cards.length) return;
@@ -2394,25 +2392,8 @@ function playNext() {
       setTimeout(() => { if (msg.textContent.includes("toutes les questions")) msg.classList.remove("show"); }, 3000);
       return;
     }
-  } else {
-    // NOUVEAU : En mode avancé, on s'assure que le Fil Rouge a bien été joué
-    let goldenAnswered = true;
-    game.challenges.forEach((ch, cIndex) => {
-      if (ch.isGolden && getEffectiveStatus(ch) === "open" && myIndices.includes(cIndex)) {
-        const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
-        if ((selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined) && !hasBetInPortfolio) {
-          goldenAnswered = false;
-        }
-      }
-    });
-    
-    if (!goldenAnswered) {
-      msg.textContent = "Vous devez obligatoirement placer une mise sur le Fil Rouge avant de valider.";
-      msg.classList.add("show");
-      setTimeout(() => { if (msg.textContent.includes("Fil Rouge")) msg.classList.remove("show"); }, 3000);
-      return;
-    }
   }
+  // CORRECTION : En mode avancé, le joueur n'est plus obligé de parier sur le Fil Rouge pour valider
 
   msg.classList.remove("show");
 
@@ -3963,11 +3944,12 @@ function updateGlobalBalance() {
   }
 }
 
-// --- LOGIQUE DE REVENTE ---
+// --- LOGIQUE DE REVENTE (Basée sur le montant souhaité en 💰) ---
 let tempSellCIndex = null;
 let tempSellAnsIndex = null;
 let tempSellSnap = null;
-let tempSellType = 'YES'; // NOUVEAU
+let tempSellType = 'YES'; 
+let tempSellMaxMoney = 0; // NOUVEAU : Sauvegarde de la valeur financière max
 
 function openSellPanel(cIndex, ansIndex, type) {
   const player = game.players.find(p => p.name === game.currentPlayerName);
@@ -3976,64 +3958,24 @@ function openSellPanel(cIndex, ansIndex, type) {
 
   tempSellCIndex = cIndex;
   tempSellAnsIndex = ansIndex;
-  tempSellType = type; // NOUVEAU
+  tempSellType = type;
 
-  // NOUVEAU : On n'affiche plus OUI ou NON
-  document.getElementById("sellAnswerName").innerHTML = `${game.challenges[cIndex].answers[ansIndex]}`;
-  document.getElementById("sellMaxBet").textContent = tempSellSnap.bet + " unités";
-  document.getElementById("sellInput").value = "";
-  document.getElementById("sellInput").max = tempSellSnap.bet;
-  document.getElementById("sellPotential").textContent = "0 💰";
-  document.getElementById("sellError").textContent = "";
-
-  document.getElementById("sellPanelOverlay").classList.add("open");
-  document.getElementById("sellPanel").classList.add("open");
-}
-
-// CORRECTION : LA FONCTION MANQUANTE POUR FERMER LE MENU
-function closeSellPanel() {
-  document.getElementById("sellPanelOverlay").classList.remove("open");
-  document.getElementById("sellPanel").classList.remove("open");
-}
-
-function setSellMax() {
-  document.getElementById("sellInput").value = tempSellSnap.bet;
-  updateSellPotential();
-}
-
-function updateSellPotential() {
-  const sellVal = parseInt(document.getElementById("sellInput").value) || 0;
-  const err = document.getElementById("sellError");
-
-  if (sellVal > tempSellSnap.bet) {
-    err.textContent = "Vous ne pouvez pas retirer plus que votre mise initiale (" + tempSellSnap.bet + ").";
-    document.getElementById("sellPotential").textContent = "0 💰";
-    return;
-  } else { err.textContent = ""; }
-
-  if (sellVal <= 0) { document.getElementById("sellPotential").textContent = "0 💰"; return; }
-
-// Calcul Slippage Revente (Chute Libre basée sur la quantité)
-  const ch = game.challenges[tempSellCIndex];
-
-  // 1. Calcul du nombre de parts (quantité) que l'on souhaite revendre
-  const fraction = sellVal / tempSellSnap.bet;
-  const quantiteAVendre = tempSellSnap.pts * fraction;
-
-// 2. Chute du prix (Slippage) AVEC LMSR (Gestion OUI / NON)
+  // 1. CALCUL IMMÉDIAT DE LA VALEUR DE REVENTE GLOBALE (Si on vendait 100%)
+  const ch = game.challenges[cIndex];
+  const quantiteTotale = tempSellSnap.pts;
+  
   const probsStart = getLMSRProbs(ch.votes);
-  const pStartYes = probsStart[tempSellAnsIndex];
-  const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
-  
-  const estimatedWithdraw = quantiteAVendre * pStart;
-  
+  const pStartYes = probsStart[ansIndex];
+  const pStart = type === 'YES' ? pStartYes : (1 - pStartYes);
+  const estimatedWithdraw = quantiteTotale * pStart;
+
   let simulatedVotes = [...ch.votes];
-  if (tempSellType === 'YES') {
-      simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+  if (type === 'YES') {
+      simulatedVotes[ansIndex] = Math.max(0, simulatedVotes[ansIndex] - estimatedWithdraw);
   } else {
-      const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempSellAnsIndex];
+      const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[ansIndex];
       for (let i = 0; i < simulatedVotes.length; i++) {
-          if (i !== tempSellAnsIndex) {
+          if (i !== ansIndex) {
               const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
               simulatedVotes[i] = Math.max(0, simulatedVotes[i] - (estimatedWithdraw * weight));
           }
@@ -4041,29 +3983,66 @@ function updateSellPotential() {
   }
   
   const probsEnd = getLMSRProbs(simulatedVotes);
-  const pEndYes = probsEnd[tempSellAnsIndex];
-  const pEnd = tempSellType === 'YES' ? pEndYes : (1 - pEndYes);
+  const pEndYes = probsEnd[ansIndex];
+  const pEnd = type === 'YES' ? pEndYes : (1 - pEndYes);
 
   let pAvg = (pStart + pEnd) / 2;
   if (pAvg <= 0.01) pAvg = 0.01;
 
-// 3. Argent réel récupéré = Quantité vendue * Prix moyen
-  const recoveredMoney = (quantiteAVendre * pAvg).toFixed(2); 
-  document.getElementById("sellPotential").textContent = recoveredMoney + " 💰";
+  tempSellMaxMoney = parseFloat((quantiteTotale * pAvg).toFixed(2));
+
+  // 2. AFFICHAGE DES INFORMATIONS
+  document.getElementById("sellAnswerName").innerHTML = `${ch.answers[ansIndex]}`;
+  document.getElementById("sellMaxBet").textContent = tempSellMaxMoney + " 💰";
+  document.getElementById("sellInput").value = "";
+  document.getElementById("sellInput").max = tempSellMaxMoney;
+  document.getElementById("sellInput").placeholder = `Ex: ${Math.floor(tempSellMaxMoney / 2)}`;
+  document.getElementById("sellPotential").textContent = "Saisissez un montant...";
+  document.getElementById("sellError").textContent = "";
+
+  document.getElementById("sellPanelOverlay").classList.add("open");
+  document.getElementById("sellPanel").classList.add("open");
+}
+
+function closeSellPanel() {
+  document.getElementById("sellPanelOverlay").classList.remove("open");
+  document.getElementById("sellPanel").classList.remove("open");
+}
+
+function setSellMax() {
+  document.getElementById("sellInput").value = tempSellMaxMoney;
+  updateSellPotential();
+}
+
+function updateSellPotential() {
+  const desiredMoney = parseFloat(document.getElementById("sellInput").value) || 0;
+  const err = document.getElementById("sellError");
+
+  if (desiredMoney > tempSellMaxMoney) {
+    err.textContent = "Vous ne pouvez pas retirer plus que la valeur actuelle (" + tempSellMaxMoney + " 💰).";
+    document.getElementById("sellPotential").textContent = "---";
+    return;
+  } else { err.textContent = ""; }
+
+  if (desiredMoney <= 0) { document.getElementById("sellPotential").textContent = "---"; return; }
+
+  // On indique simplement au joueur quel pourcentage de son pari il est en train de liquider
+  const fraction = desiredMoney / tempSellMaxMoney;
+  document.getElementById("sellPotential").textContent = `Liquidation de ${(fraction * 100).toFixed(0)}% de votre position`;
 }
 
 function confirmSell() {
-  const sellVal = parseInt(document.getElementById("sellInput").value) || 0;
-  if (sellVal <= 0 || sellVal > tempSellSnap.bet) return;
+  const desiredMoney = parseFloat(document.getElementById("sellInput").value) || 0;
+  if (desiredMoney <= 0 || desiredMoney > tempSellMaxMoney) return;
 
-const ch = game.challenges[tempSellCIndex];
+  const fraction = desiredMoney / tempSellMaxMoney;
+  const ch = game.challenges[tempSellCIndex];
 
-  // 1. Calcul des parts à revendre
-  const fraction = sellVal / tempSellSnap.bet;
+  // 1. Calcul de la portion exacte de la position qui sera détruite
   const quantiteAVendre = tempSellSnap.pts * fraction;
+  const betToSell = tempSellSnap.bet * fraction;
 
-  // 2. Calcul du glissement et de l'argent récupéré AVEC LMSR
-  // 2. Calcul du glissement et de l'argent récupéré AVEC LMSR (Gestion OUI / NON)
+  // 2. Retrait de l'influence du joueur sur le marché public (Slippage LMSR)
   const probsStart = getLMSRProbs(ch.votes);
   const pStartYes = probsStart[tempSellAnsIndex];
   const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
@@ -4085,37 +4064,29 @@ const ch = game.challenges[tempSellCIndex];
       }
   }
 
-  const probsEnd = getLMSRProbs(simulatedVotes);
-  const pEndYes = probsEnd[tempSellAnsIndex];
-  const pEnd = tempSellType === 'YES' ? pEndYes : (1 - pEndYes);
-
-  let pAvg = (pStart + pEnd) / 2;
-  if (pAvg <= 0.01) pAvg = 0.01;
-
-  const recoveredMoney = parseFloat((quantiteAVendre * pAvg).toFixed(2)); 
-
-  // 3. Le joueur récupère son argent
-  currentPlayerBalance += recoveredMoney;
+  // 3. Le joueur récupère EXACTEMENT l'argent qu'il a demandé
+  currentPlayerBalance = parseFloat((currentPlayerBalance + desiredMoney).toFixed(2));
   updateGlobalBalance();
 
-  // 4. Mise à jour de son portefeuille
-  tempSellSnap.cashedOutAmount = (tempSellSnap.cashedOutAmount || 0) + recoveredMoney; // Mémoire pour l'écran géant
-  tempSellSnap.bet -= sellVal;
+  // 4. Mise à jour de son portefeuille (On le prive des points liquidés)
+  tempSellSnap.cashedOutAmount = (tempSellSnap.cashedOutAmount || 0) + desiredMoney; 
+  tempSellSnap.bet -= betToSell;
   tempSellSnap.pts -= quantiteAVendre;
 
-  // Si on a tout vendu, on le marque comme revendu mais on le GARDE dans l'historique
-  if (tempSellSnap.bet <= 0 || tempSellSnap.pts <= 0) {
+  // CORRECTION : On ne clôture la position que s'il reste de véritables poussières (moins de 0.01 unité)
+  // ou si le joueur a réellement vendu 99.9% de sa part.
+  if (tempSellSnap.bet <= 0.01 || tempSellSnap.pts <= 0.01 || fraction >= 0.999) {
      tempSellSnap.bet = 0;
      tempSellSnap.pts = 0;
      tempSellSnap.cashedOut = true; 
   }
 
-const player = game.players.find(p => p.name === game.currentPlayerName);
+  const player = game.players.find(p => p.name === game.currentPlayerName);
   player.balance = currentPlayerBalance;
 
-  saveToCloud(); // Remplace localStorage
+  saveToCloud(); 
   closeSellPanel();
-  renderPlayerRecap(game.currentPlayerName); // On rafraîchit le tableau de bord
+  renderPlayerRecap(game.currentPlayerName); 
 }
 
 function goToPlayScreen() {
