@@ -897,8 +897,8 @@ function showScreen(screenId) {
      if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
   }
 
-  // NOUVEAU : Anti-rebond mobile, on fige complètement l'écran en mode jeu
-  if (screenId === 'play') {
+  // CORRECTION : Anti-rebond mobile, on fige complètement l'écran sur l'accueil ET en jeu
+  if (screenId === 'play' || screenId === 'home') {
      document.body.classList.add('play-mode-active');
   } else {
      document.body.classList.remove('play-mode-active');
