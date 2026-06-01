@@ -649,9 +649,9 @@ body.play-mode-active {
   <button onclick="showScreen('home')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top: 15px;">Retour au menu principal</button>
 </div>
 
-<div id="play" class="card" style="display:none">
-  <div id="playerAuth">
-    <h2>Rejoindre le jeu</h2>
+<div id="play" style="display:none;">
+  <div id="playerAuth" class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 420px; margin: 0; padding: 35px 25px; box-sizing: border-box; z-index: 1000;">
+    <h2 style="text-align:center; margin-bottom: 25px; font-size: 26px;">Rejoindre le jeu</h2>
     <label>Pseudo</label>
     <input id="pseudo" placeholder="Ex : Renaud">
     
@@ -2053,10 +2053,15 @@ function renderPlayChallenges(){
               activeCard.style.transform = ''; 
           }
       } else {
-          activeCard.style.transform = ''; 
-          // NOUVEAU : Sur la dernière carte, on vérifie si la mise est faite avant d'ouvrir le panneau "Valider"
+          // CORRECTION : On laisse la carte s'envoler d'abord, puis on attend la fin de l'animation pour demander la validation
           if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
-              playNext(); // Lance la validation finale
+              activeCard.style.transform = ''; // Nettoie le style manuel de votre doigt
+              activeCard.classList.add('fly-away'); // Lance l'animation CSS d'envol
+              setTimeout(() => {
+                  playNext(); // Affiche le pop-up après 400ms
+              }, 400); 
+          } else {
+              activeCard.style.transform = ''; 
           }
       }
     } else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
@@ -2090,7 +2095,14 @@ function renderPlayChallenges(){
                   if (window.currentCardIndex < cards.length - 1) {
                       if (typeof window.swipeNextCard === 'function') window.swipeNextCard();
                   } else {
-                      if (typeof playNext === 'function') playNext(); // Dernière carte = Lancement de la Validation !
+                      // CORRECTION : Même logique de délai pour le clavier
+                      if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+                          const activeCard = cards[window.currentCardIndex];
+                          activeCard.classList.add('fly-away');
+                          setTimeout(() => {
+                              if (typeof playNext === 'function') playNext(); 
+                          }, 400);
+                      }
                   }
               } else if (e.key === 'ArrowDown') {
                   if (window.currentCardIndex > 0) {
@@ -2401,6 +2413,13 @@ function playNext() {
   if (confirm("Voulez-vous valider ces paris ? Vous pourrez les ajuster à tout moment.")) {
     closeTuto(); 
     validate(); 
+  } else {
+    // NOUVEAU : Si le joueur annule la validation après avoir balayé la dernière carte,
+    // on annule son envol (fly-away) pour qu'il ne se retrouve pas face à un écran noir vide !
+    const activeCard = document.querySelector('.challenge-block.active-card');
+    if (activeCard) {
+        activeCard.classList.remove('fly-away');
+    }
   }
 }
 
