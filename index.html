@@ -1956,23 +1956,26 @@ function renderPlayChallenges(){
 window.swipeNextCard = function() {
     if(window.currentCardIndex >= cardsElements.length - 1) return false;
 
-    // --- NOUVEAU : Blocage en Mode Facile si aucun pari n'est fait ---
-    if (currentPlayerMode === 'easy') {
-      const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-      const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-      const cIndex = myIndices[window.currentCardIndex];
-      const ch = game.challenges[cIndex];
+    // --- CORRECTION : Blocage si aucun pari n'est fait (Mode Facile OU Fil Rouge en Mode Avancé) ---
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    const cIndex = myIndices[window.currentCardIndex];
+    const ch = game.challenges[cIndex];
 
-      if (ch && getEffectiveStatus(ch) === "open") {
+    if (ch && (currentPlayerMode === 'easy' || ch.isGolden)) {
+      if (getEffectiveStatus(ch) === "open") {
          // On vérifie si le joueur a une mise en attente ou s'il a DÉJÀ une mise validée en base de données
          const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
          if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
              const msg = document.getElementById("playMsg");
              if (msg) {
-                 msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
-                 msg.classList.add("show"); // Affichage de la bulle d'alerte rouge
-                 // Le message d'erreur redescend tout seul après 3 secondes
-                 setTimeout(() => { if (msg.textContent.includes("cocher une réponse")) msg.classList.remove("show"); }, 3000);
+                 if (ch.isGolden && currentPlayerMode !== 'easy') {
+                     msg.textContent = "Vous devez obligatoirement miser sur le Fil Rouge pour passer à la suite.";
+                 } else {
+                     msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
+                 }
+                 msg.classList.add("show"); 
+                 setTimeout(() => { if (msg.textContent.includes("passer à la suite") || msg.textContent.includes("cocher une réponse")) msg.classList.remove("show"); }, 3000);
              }
              return false; // Bloque le swipe et le bouton
          }
@@ -2039,11 +2042,17 @@ window.swipeNextCard = function() {
         closeTuto();
     }
 
-    if (deltaY < -80 && window.currentCardIndex < cardsElements.length - 1) {
-      const success = swipeNextCard(); 
-      if (!success) {
-          // Le swipe a été bloqué par la sécurité (pas de mise), on remet la carte au centre
+    if (deltaY < -80) {
+      if (window.currentCardIndex < cardsElements.length - 1) {
+          const success = swipeNextCard(); 
+          if (!success) {
+              // Le swipe a été bloqué par la sécurité (pas de mise), on remet la carte au centre
+              activeCard.style.transform = ''; 
+          }
+      } else {
+          // NOUVEAU : C'est la dernière carte, le swipe vers le HAUT déclenche la validation !
           activeCard.style.transform = ''; 
+          playNext();
       }
     } else if (deltaY > 80 && window.currentCardIndex > 0) {
       swipePrevCard(); 
@@ -2053,6 +2062,40 @@ window.swipeNextCard = function() {
   });
 
   updateCardStack(); 
+
+  // --- NOUVEAU : Navigation au Clavier (Flèches Haut / Bas) sur Ordinateur ---
+  if (!window.keyboardNavAttached) {
+      document.addEventListener('keydown', (e) => {
+          // On s'assure d'être sur l'écran de jeu
+          if (document.getElementById('play').style.display === 'none') return;
+          // On ignore si un panneau de menu est ouvert par-dessus (ex: pari ou messagerie)
+          if (document.getElementById('betPanel') && document.getElementById('betPanel').classList.contains('open')) return;
+          if (document.getElementById('messagePanel') && document.getElementById('messagePanel').classList.contains('open')) return;
+
+          // On autorise la navigation clavier uniquement si le tutoriel n'est pas bloquant (sauf étape 5)
+          if (window.currentTutoStep > 0 && window.currentTutoStep !== 5) return;
+
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              if (window.currentTutoStep === 5) closeTuto(); // Ferme le message "Naviguez" si existant
+
+              const cards = document.querySelectorAll('#challengesPlay .challenge-block');
+              if (!cards.length) return;
+
+              if (e.key === 'ArrowUp') {
+                  if (window.currentCardIndex < cards.length - 1) {
+                      if (typeof window.swipeNextCard === 'function') window.swipeNextCard();
+                  } else {
+                      if (typeof playNext === 'function') playNext(); // Dernière carte = Lancement de la Validation !
+                  }
+              } else if (e.key === 'ArrowDown') {
+                  if (window.currentCardIndex > 0) {
+                      if (typeof window.swipePrevCard === 'function') window.swipePrevCard();
+                  }
+              }
+          }
+      });
+      window.keyboardNavAttached = true; // Empêche l'accumulation d'écouteurs d'événements
+  }
 
   // NOUVEAU : Déclenchement in-game systématique à chaque nouvelle session
   startTuto();
@@ -2331,7 +2374,7 @@ function playNext() {
   if (currentPlayerMode === 'easy') {
     let allOpenAnswered = true;
     game.challenges.forEach((ch, cIndex) => {
-      if (getEffectiveStatus(ch) === "open") {
+      if (getEffectiveStatus(ch) === "open" && myIndices.includes(cIndex)) {
         if (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined) {
           allOpenAnswered = false;
         }
@@ -2344,13 +2387,32 @@ function playNext() {
       setTimeout(() => { if (msg.textContent.includes("toutes les questions")) msg.classList.remove("show"); }, 3000);
       return;
     }
+  } else {
+    // NOUVEAU : En mode avancé, on s'assure que le Fil Rouge a bien été joué
+    let goldenAnswered = true;
+    game.challenges.forEach((ch, cIndex) => {
+      if (ch.isGolden && getEffectiveStatus(ch) === "open" && myIndices.includes(cIndex)) {
+        const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
+        if ((selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined) && !hasBetInPortfolio) {
+          goldenAnswered = false;
+        }
+      }
+    });
+    
+    if (!goldenAnswered) {
+      msg.textContent = "Vous devez obligatoirement placer une mise sur le Fil Rouge avant de valider.";
+      msg.classList.add("show");
+      setTimeout(() => { if (msg.textContent.includes("Fil Rouge")) msg.classList.remove("show"); }, 3000);
+      return;
+    }
   }
 
   msg.classList.remove("show");
 
-  if (confirm("Voulez-vous vraiment valider vos prédictions actuelles ?")) {
-    closeTuto(); // CORRECTION : On ferme le tutoriel instantanément pour éviter qu'il ne reste affiché
-    validate(); // Enregistre les mises et déclenche la redirection automatique
+  // CORRECTION : Nouveau message plus rassurant pour les joueurs
+  if (confirm("Voulez-vous valider ces paris ? Vous pourrez les ajuster à tout moment.")) {
+    closeTuto(); 
+    validate(); 
   }
 }
 
