@@ -1166,6 +1166,18 @@ function resumeSetup() {
   showScreen('setup');
 }
 
+// NOUVEAU : Fonction pour forcer les horaires globaux sur le Fil Rouge
+function syncFilRougeTime(index) {
+  const gStart = document.getElementById("globalStartTime").value;
+  const gEnd = document.getElementById("globalEndTime").value;
+  const startInput = document.getElementById("start-" + index);
+  const endInput = document.getElementById("end-" + index);
+  
+  // Applique l'heure globale aux champs de la question ciblée
+  if (startInput && gStart) startInput.value = gStart;
+  if (endInput && gEnd) endInput.value = gEnd;
+}
+
 function generateSetupFields() {
   const qtyInput = document.getElementById("challengesQty");
   const nInput = document.getElementById("questionsPerPlayer");
@@ -1242,7 +1254,8 @@ function generateSetupFields() {
       <div class="top-row" style="margin-bottom:10px;">
         <strong>Challenge ${i + 1}</strong>
         <label style="display:inline-flex; align-items:center; gap:5px; margin:0; color:#fbbf24; font-weight:bold; cursor:pointer;">
-          <input type="radio" name="filRouge" value="${i}" ${i === 0 ? 'checked' : ''} style="width:auto; margin:0;">
+          <!-- CORRECTION : Ajout de l'événement onchange pour synchroniser les horaires -->
+          <input type="radio" name="filRouge" value="${i}" ${i === 0 ? 'checked' : ''} style="width:auto; margin:0;" onchange="syncFilRougeTime(${i})">
           Fil Rouge
         </label>
       </div>
