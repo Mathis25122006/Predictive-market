@@ -343,10 +343,11 @@ body.play-mode-active {
   height: 100% !important;
 }
 
-/* NOUVEAU : Transformation du message d'erreur en bulle d'alerte rouge flottante */
+/* CORRECTION : La bulle d'alerte rouge apparaît désormais par le bas pour ne pas cacher le tutoriel */
 #playMsg {
   position: fixed;
-  top: -100px;
+  bottom: -100px; /* On la cache sous l'écran au lieu d'au-dessus */
+  top: auto;
   left: 10%;
   right: 10%;
   background: rgba(239, 68, 68, 0.95);
@@ -354,15 +355,16 @@ body.play-mode-active {
   padding: 12px 20px;
   border-radius: 12px;
   font-weight: bold;
-  z-index: 9999;
+  z-index: 10005; /* Assure que l'erreur passe toujours par-dessus tout le reste */
   box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
-  transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: bottom 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   text-align: center;
   pointer-events: none;
   margin-top: 0;
 }
 #playMsg.show {
-  top: max(40px, env(safe-area-inset-top));
+  top: auto;
+  bottom: max(40px, env(safe-area-inset-bottom));
 }
 
 #challengesPlay .challenge-block {
@@ -1956,26 +1958,31 @@ function renderPlayChallenges(){
 window.swipeNextCard = function() {
     if(window.currentCardIndex >= cardsElements.length - 1) return false;
 
-    // --- CORRECTION : Blocage si aucun pari n'est fait (Mode Facile OU Fil Rouge en Mode Avancé) ---
+    // --- CORRECTION : Blocage si aucun pari n'est fait (Mode Facile OU Fil Rouge OU Première carte du tuto) ---
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const cIndex = myIndices[window.currentCardIndex];
     const ch = game.challenges[cIndex];
 
-    if (ch && (currentPlayerMode === 'easy' || ch.isGolden)) {
+    // NOUVEAU : On ajoute 'window.currentCardIndex === 0' pour bloquer le passage de la toute 1ère question
+    if (ch && (currentPlayerMode === 'easy' || ch.isGolden || window.currentCardIndex === 0)) {
       if (getEffectiveStatus(ch) === "open") {
          // On vérifie si le joueur a une mise en attente ou s'il a DÉJÀ une mise validée en base de données
          const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
          if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
              const msg = document.getElementById("playMsg");
              if (msg) {
-                 if (ch.isGolden && currentPlayerMode !== 'easy') {
+                 // NOUVEAU : Message spécifique pour la première question
+                 if (window.currentCardIndex === 0) {
+                     msg.textContent = "Vous devez miser sur cette question.";
+                 } else if (ch.isGolden && currentPlayerMode !== 'easy') {
                      msg.textContent = "Vous devez obligatoirement miser sur le Fil Rouge pour passer à la suite.";
                  } else {
                      msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
                  }
                  msg.classList.add("show"); 
-                 setTimeout(() => { if (msg.textContent.includes("passer à la suite") || msg.textContent.includes("cocher une réponse")) msg.classList.remove("show"); }, 3000);
+                 // Le minuteur vérifie un des mots-clés pour redescendre la bulle
+                 setTimeout(() => { if (msg.textContent.includes("miser") || msg.textContent.includes("cocher") || msg.textContent.includes("passer")) msg.classList.remove("show"); }, 3000);
              }
              return false; // Bloque le swipe et le bouton
          }
