@@ -363,7 +363,9 @@ button {
  .side-panel-overlay.open { opacity: 1; pointer-events: auto; }
 
 .side-panel {
-   position: fixed; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 85vh;
+   position: fixed; bottom: -100%; left: 0; width: 100%; height: auto; 
+   /* CORRECTION : Utilisation de dvh (Dynamic Viewport) pour s'adapter à la barre blanche du navigateur */
+   max-height: 85dvh; 
    
    /* DESIGN SUPERCONSCIOUS : Verre fumé violet profond et arrondi supérieur accentué */
    background: rgba(15, 10, 30, 0.85);
@@ -375,7 +377,9 @@ button {
    box-shadow: 0 -15px 40px rgba(0,0,0,0.8), inset 0 1px 15px rgba(168,85,247,0.15);
    
    z-index: 1000; transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-   padding: 15px 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column;
+   /* CORRECTION : Ajout d'un coussin de sécurité de +15px pour protéger le bouton Annuler */
+   padding: 15px 20px calc(max(24px, env(safe-area-inset-bottom)) + 15px); 
+   display: flex; flex-direction: column;
    box-sizing: border-box;
  }
  .side-panel.open { bottom: 0; }
