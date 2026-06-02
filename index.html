@@ -462,12 +462,16 @@ body.play-mode-active {
 
 #challengesPlay .challenge-block {
   position: absolute;
-  top: 0; 
-  bottom: 0;
+  /* CORRECTION : On pousse le "plafond" de la carte vers le bas pour laisser un espace vide parfait pour les boutons ! */
+  top: calc(max(15px, env(safe-area-inset-top)) + 65px); 
+  /* Et on laisse une petite marge en bas pour ne pas coller à l'écran */
+  bottom: calc(max(15px, env(safe-area-inset-bottom)) + 15px);
   left: 15px; 
   right: 15px; 
   margin: auto;
-  height: 82vh; 
+  
+  /* CORRECTION : On retire la hauteur fixe (82vh). La carte va maintenant s'étirer exactement entre le "top" et le "bottom" définis au-dessus. */
+  height: auto; 
   max-height: 750px;
   box-sizing: border-box;
   
@@ -477,12 +481,11 @@ body.play-mode-active {
   border-radius: 36px !important;
   padding: 24px 20px 12px 20px !important;
   
-  /* NOUVEAU : Bordure Néon "Cyberpunk" maximale pour les cartes de jeu */
   border: 2px solid rgba(168, 85, 247, 1) !important;
   box-shadow: 
-      0 0 35px rgba(168, 85, 247, 0.65),       /* Lueur externe très large */
-      inset 0 0 25px rgba(168, 85, 247, 0.4),  /* Lueur interne puissante */
-      0 40px 80px rgba(0,0,0,0.95) !important; /* Ombre noire très lourde en dessous */
+      0 0 35px rgba(168, 85, 247, 0.65),       
+      inset 0 0 25px rgba(168, 85, 247, 0.4),  
+      0 40px 80px rgba(0,0,0,0.95) !important; 
   
   display: flex;
   flex-direction: column;
