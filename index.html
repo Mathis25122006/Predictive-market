@@ -78,16 +78,21 @@
    to { opacity: 1; transform: translateY(0); }
  }
 
- .card {
-   /* DESIGN SUPERCONSCIOUS : Translucide violet profond, bordure cristalline */
-   background: rgba(15, 10, 30, 0.4); 
+.card {
+   background: rgba(15, 10, 30, 0.6); 
    backdrop-filter: blur(16px);
    -webkit-backdrop-filter: blur(16px);
    border-radius: 24px;
    padding: 24px 20px;
    margin-top: 16px;
-   border: 1px solid rgba(255, 255, 255, 0.08); 
-   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+   
+   /* NOUVEAU : Bordure Néon Violette ultra brillante */
+   border: 2px solid rgba(168, 85, 247, 0.8); 
+   box-shadow: 
+      0 0 25px rgba(168, 85, 247, 0.5),        /* Lueur externe (Aura) */
+      inset 0 0 15px rgba(168, 85, 247, 0.3),  /* Lueur interne (Profondeur) */
+      0 30px 60px rgba(0, 0, 0, 0.8);          /* Ombre portée classique pour décoller du fond */
+   
    animation: smoothFadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
  }
  label {
@@ -452,14 +457,18 @@ body.play-mode-active {
   max-height: 750px;
   box-sizing: border-box;
   
-  /* DESIGN SUPERCONSCIOUS : Noir très profond avec lueur interne violette / bleue */
   background: linear-gradient(180deg, rgba(20, 10, 40, 0.8) 0%, rgba(5, 2, 15, 0.98) 100%) !important;
-  border: 1px solid rgba(168, 85, 247, 0.2) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 36px !important; /* Bords du téléphone */
+  border-radius: 36px !important;
   padding: 24px 20px 12px 20px !important;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.95), inset 0 0 40px rgba(139, 92, 246, 0.08) !important;
+  
+  /* NOUVEAU : Bordure Néon "Cyberpunk" maximale pour les cartes de jeu */
+  border: 2px solid rgba(168, 85, 247, 1) !important;
+  box-shadow: 
+      0 0 35px rgba(168, 85, 247, 0.65),       /* Lueur externe très large */
+      inset 0 0 25px rgba(168, 85, 247, 0.4),  /* Lueur interne puissante */
+      0 40px 80px rgba(0,0,0,0.95) !important; /* Ombre noire très lourde en dessous */
   
   display: flex;
   flex-direction: column;
