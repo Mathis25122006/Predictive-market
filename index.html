@@ -796,24 +796,26 @@ body.play-mode-active {
     <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Quitter et retourner au menu principal</button>
   </div>
 
-<div id="gameContent" class="hidden" style="padding-bottom: 90px;">
-    <div style="display:flex;justify-content:space-between;align-items:center; margin-bottom: 15px;">
-      <h2 id="playerTitle" style="margin:0;">Prédictions</h2>
-      <div>
-        <span class="badge hidden" id="playerBalanceDisplay" style="color:#3b82f6; border-color:#3b82f6;">Solde: 0</span>
-      </div>
+<div id="gameContent" class="hidden">
+    <div style="display:none;">
+      <h2 id="playerTitle">Prédictions</h2>
     </div>
     
     <div id="challengesPlay"></div>
     
-<div class="sticky-action-bar">
-      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; flex:0.3; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px;">
-        💬 <span id="msgUnreadBadgeGame" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
-      </button>
-      <button onclick="renderPlayerRecap(game.currentPlayerName)" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; flex:0.4; font-size:12px; padding:10px 5px; box-shadow:none; border-radius:12px;">Mes Paris</button>
-      <button onclick="playNext()" style="flex:1; margin:0; padding:10px 5px; font-size:14px; box-shadow:0 10px 20px rgba(249,115,22,0.3); border-radius:12px;">Valider</button>
+    <div id="playFloatingControls" style="position:fixed; top:calc(max(15px, env(safe-area-inset-top)) + 5px); left:16px; right:16px; display:flex; justify-content:space-between; z-index:900; pointer-events:none;">
+       
+       <button onclick="openMessagePanel()" style="pointer-events:auto; background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; color:#fff !important; border-radius:999px; padding:10px 16px; font-size:13px; font-weight:bold; width:auto; margin:0; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; transition:all 0.3s;">
+          💬 Messages
+          <span id="msgUnreadBadgeGame" class="hidden" style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
+       </button>
+       
+       <button id="replayTutoBtn" onclick="startTuto(true)" style="pointer-events:auto; background:rgba(255,255,255,0.08) !important; border:1px solid rgba(255,255,255,0.15) !important; color:#fff !important; border-radius:999px; padding:10px 16px; font-size:13px; font-weight:bold; width:auto; margin:0; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); display:none; box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; transition:all 0.3s;">
+          Tutoriel
+       </button>
+       
     </div>
-  </div>
+</div>
   <div class="msg" id="playMsg"></div>
 </div>
 
@@ -824,13 +826,15 @@ body.play-mode-active {
   <h2 style="margin-bottom:5px; font-size:24px; text-align:center;">Miser</h2>
   <p class="subtitle" id="betAnswerName" style="margin-bottom:20px; font-size:14px; color:#a855f7; text-align:center;">Réponse</p>
   
-  <div id="betAvailableContainer" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 15px; border-radius:16px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08);">
-    <div style="font-size:13px; color:#9ca3af;">Solde disponible</div>
-    <div id="betAvailable" style="font-size:18px; font-weight:900; color:#ffffff;">0 💰</div>
-  </div>
-  
-  <div style="position:relative; margin-bottom:15px;">
-    <input type="number" id="betInput" placeholder="0" min="1" oninput="updatePotentialGain()" style="font-size:36px; font-weight:900; text-align:center; padding:15px; background:rgba(0,0,0,0.4); border:1px solid rgba(168,85,247,0.4); border-radius:20px; color:#ffffff; height:80px; box-shadow:inset 0 0 20px rgba(168,85,247,0.1); margin-bottom:0;">
+  <div id="tutoBetZone" style="border-radius:20px; transition:all 0.3s;">
+      <div id="betAvailableContainer" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 15px; border-radius:16px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:13px; color:#9ca3af;">Solde disponible</div>
+        <div id="betAvailable" style="font-size:18px; font-weight:900; color:#ffffff;">0 💰</div>
+      </div>
+      
+      <div style="position:relative; margin-bottom:15px;">
+        <input type="number" id="betInput" placeholder="0" min="1" oninput="updatePotentialGain()" style="font-size:36px; font-weight:900; text-align:center; padding:15px; background:rgba(0,0,0,0.4); border:1px solid rgba(168,85,247,0.4); border-radius:20px; color:#ffffff; height:80px; box-shadow:inset 0 0 20px rgba(168,85,247,0.1); margin-bottom:0;">
+      </div>
   </div>
   
   <div style="display:flex; gap:10px; margin-bottom:25px;">
@@ -874,6 +878,8 @@ body.play-mode-active {
 
 <div id="tutoContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10002; pointer-events:none;">
   
+  <button onclick="closeTuto()" style="position:absolute; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(255,255,255,0.15) !important; border:1px solid rgba(255,255,255,0.3) !important; color:#fff !important; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:bold; width:auto; pointer-events:auto; margin:0; backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); box-shadow:0 4px 15px rgba(0,0,0,0.3) !important; z-index:10010; transition:all 0.3s;">Passer ⏭</button>
+
   <div id="tutoStep1" class="hidden" style="position:absolute; bottom:calc(max(20px, env(safe-area-inset-bottom)) + 120px); left:12%; right:12%; background:rgba(147,51,234,0.95); border:1px solid #d946ef; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="font-size:20px; margin-bottom:4px;">👑</div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">LE DÉFI</h3>
@@ -887,25 +893,25 @@ body.play-mode-active {
     <p id="tutoStep3Text" style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:0;"></p>
   </div>
 
-  <div id="tutoStep4" class="hidden" style="position:absolute; top:max(10px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none; z-index:10007;">
+  <div id="tutoStep4" class="hidden" style="position:absolute; bottom:calc(max(20px, env(safe-area-inset-bottom)) + 20px); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none; z-index:10007;">
     <div style="display:flex; flex-direction:column; align-items:center;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
          <span style="font-size:18px;">💰</span>
          <h3 style="color:#fde047; margin:0; font-size:13px; font-weight:900;">GÉREZ VOS CRÉDITS</h3>
       </div>
       <p id="tutoNText" style="font-size:11px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;"></p>
-      <div class="tuto-tap-text">👆 Touchez l'écran pour miser</div>
+      <div class="tuto-tap-text">👆 Touchez la barre de saisie pour miser</div>
     </div>
   </div>
 
-  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:20%; right:20%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
-    <div style="display:flex; justify-content:center; gap:25px; margin-bottom:6px;">
-        <div class="swipe-up-hand" style="font-size:24px;">👆</div>
-        <div class="swipe-down-hand" style="font-size:24px;">👇</div>
+  <div id="tutoStep5" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:25%; right:25%; background:rgba(249,115,22,0.95); border:1px solid #fb923c; border-radius:12px; padding:8px 10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
+    <div style="display:flex; justify-content:center; gap:15px; margin-bottom:2px;">
+        <div class="swipe-up-hand" style="font-size:20px;">👆</div>
+        <div class="swipe-down-hand" style="font-size:20px;">👇</div>
     </div>
-    <h3 style="color:#fde047; margin-bottom:4px; font-size:12px; font-weight:900;">NAVIGUEZ</h3>
-    <p style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;">Glissez la carte vers le HAUT ou le BAS.</p>
-    <div class="tuto-tap-text">👆 Touchez l'écran pour fermer</div>
+    <h3 style="color:#fde047; margin-bottom:2px; font-size:11px; font-weight:900;">NAVIGUEZ</h3>
+    <p style="font-size:9px; color:#e2e8f0; line-height:1.1; margin-bottom:4px;">Glissez en HAUT ou en BAS</p>
+    <div class="tuto-tap-text" style="margin-top:4px; font-size:10px;">👆 Touchez pour fermer</div>
   </div>
 </div>
 
@@ -2410,15 +2416,24 @@ function updateAdminButton(){
 window.sessionTutoDone = false; // Se réinitialise si on quitte et relance l'application
 window.currentTutoStep = 0;
 
-function startTuto() {
-  if (window.sessionTutoDone) return;
+// CORRECTION : On ajoute le paramètre "force" pour permettre de relancer le tutoriel
+function startTuto(force = false) {
+  if (window.sessionTutoDone && !force) return;
   const containerEl = document.getElementById("challengesPlay");
   if (!containerEl) return;
   const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
   
-  if (cardsElements.length === 0 || window.currentCardIndex !== 0) return;
+  if (cardsElements.length === 0) return;
+  // On autorise si c'est forcé (Revoir le tuto), sinon on doit obligatoirement être sur la carte 0 pour le premier démarrage
+  if (!force && window.currentCardIndex !== 0) return;
   
+  window.sessionTutoDone = false;
   document.getElementById("tutoContainer").style.display = "block";
+  
+  // Cache le bouton "Revoir le tutoriel" pendant qu'il est actif
+  const replayBtn = document.getElementById("replayTutoBtn");
+  if (replayBtn) replayBtn.style.display = "none";
+
   nextTuto(1);
 }
 
@@ -2427,7 +2442,10 @@ function clearTutoHighlights() {
   const oldBg = document.getElementById("cardTutoBackdrop");
   if (oldBg) oldBg.remove();
   
-  // NOUVEAU : Nettoyer le calque de l'étape 4 s'il existe
+  // CORRECTION : Nettoyer le fond flou du panneau de mise
+  const panelBg = document.getElementById("panelTutoBackdrop");
+  if (panelBg) panelBg.remove();
+  
   const dismiss = document.getElementById("tutoDismissOverlay");
   if (dismiss) dismiss.remove();
 }
@@ -2473,39 +2491,68 @@ function nextTuto(step) {
        if (currentPlayerMode === 'easy') {
            tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les points (pts) indiquent vos gains potentiels. Moins une réponse est jouée, plus elle rapporte !`;
        } else {
-           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les pourcentages (%) évoluent en temps réel selon le montant total des mises placées par tous les joueurs !`;
+           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les pourcentages (%) évoluent en temps réel selon le montant total des mises placées par tous les joueurs ! Plus la probabilité d'une réponse est faible, plus vos gains potentiels seront important.`;
        }
     }
   } else if (step === 4) {
     // ÉTAPE 4 : LA GESTION DES PARIS (DANS LE PANNEAU DE MISE)
-    const betAvailContainer = document.getElementById('betAvailableContainer');
-    if (betAvailContainer) betAvailContainer.classList.add('tuto-highlight');
+    
+    // CORRECTION : On ajoute le fond flou sur le panneau pour bloquer TOUS les autres boutons (Valider, MAX, etc.)
+    const betPanel = document.getElementById("betPanel");
+    if (betPanel && !document.getElementById("panelTutoBackdrop")) {
+        let panelBackdrop = document.createElement("div");
+        panelBackdrop.id = "panelTutoBackdrop";
+        panelBackdrop.className = "card-tuto-bg"; // Réutilise la magnifique classe de flou des cartes
+        betPanel.appendChild(panelBackdrop);
+    }
+
+    // CORRECTION : On illumine la grande zone qui contient le solde ET le champ de saisie (elle passe par-dessus le flou !)
+    const tutoBetZone = document.getElementById('tutoBetZone');
+    if (tutoBetZone) tutoBetZone.classList.add('tuto-highlight');
 
     const n = sessionConfig.n || 1;
     const tutoNText = document.getElementById("tutoNText");
     if (tutoNText) tutoNText.innerHTML = `Attention, gérez vos crédits intelligemment car vous avez <strong>${n} questions</strong> à disposition.`;
     
-    // NOUVEAU : On ajoute un calque invisible pour intercepter le premier clic, fermer l'explication, et permettre de miser !
-    let dismissOverlay = document.createElement("div");
-    dismissOverlay.id = "tutoDismissOverlay";
-    dismissOverlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; z-index:10006; pointer-events:auto;";
-    dismissOverlay.onclick = () => {
-       clearTutoHighlights();
-       const step4El = document.getElementById("tutoStep4");
-       if (step4El) step4El.classList.add("hidden");
-       dismissOverlay.remove();
-       // On garde window.currentTutoStep = 4 pour que le code lance l'étape 5 automatiquement une fois la mise validée
+    // CORRECTION : On ne met plus de calque invisible. On écoute directement la barre de saisie !
+    const betInput = document.getElementById('betInput');
+    
+    const dismissTutoOnInput = () => {
+       if (window.currentTutoStep === 4) {
+           clearTutoHighlights();
+           const step4El = document.getElementById("tutoStep4");
+           if (step4El) step4El.classList.add("hidden");
+           
+           // On supprime l'écouteur pour ne pas perturber les futures mises
+           betInput.removeEventListener('focus', dismissTutoOnInput);
+           betInput.removeEventListener('click', dismissTutoOnInput);
+           betInput.removeEventListener('input', dismissTutoOnInput);
+       }
     };
-    document.body.appendChild(dismissOverlay);
+    
+    if (betInput) {
+        // CORRECTION : On attend 250ms (un quart de seconde) avant d'écouter les clics sur la barre de saisie. 
+        // Cela empêche le clic d'ouverture du panneau de fermer le tutoriel par accident !
+        setTimeout(() => {
+            betInput.addEventListener('focus', dismissTutoOnInput);
+            betInput.addEventListener('click', dismissTutoOnInput);
+            betInput.addEventListener('input', dismissTutoOnInput); // Sécurité supplémentaire si le joueur tape un chiffre
+        }, 250);
+    }
 
   }
-}
+
+  }
 
 function closeTuto() {
   document.getElementById("tutoContainer").style.display = "none";
   clearTutoHighlights();
   window.sessionTutoDone = true;
   window.currentTutoStep = 0;
+  
+  // NOUVEAU : Affiche le bouton "Revoir le tutoriel" une fois qu'il est terminé ou passé
+  const replayBtn = document.getElementById("replayTutoBtn");
+  if (replayBtn) replayBtn.style.display = "block";
 }
 
 function playNext() {
@@ -2607,32 +2654,37 @@ function openBetPanel(cIndex, ansIndex, betType) {
     selectedAnswers[cIndex] = null;
     selectedBets[cIndex] = 0;
     renderAnswersForChallenge(cIndex); // Met à jour l'UI pour désélectionner
-    // (updateBalanceDisplay n'existe plus, on a updateGlobalBalance à la place si besoin)
     updateGlobalBalance(); 
   }
 
   // CORRECTION UI : Affichage du solde avec l'émoji au lieu de "unités"
   document.getElementById("betAvailable").textContent = currentPlayerBalance + " 💰";
-  document.getElementById("betInput").value = "";
+  
+  const betInputEl = document.getElementById("betInput");
+  betInputEl.value = "";
+  // CORRECTION : On force le champ à se désélectionner pour empêcher le clavier de popper tout seul !
+  betInputEl.blur();
   document.getElementById("betPotential").textContent = "0 💰";
   document.getElementById("betError").textContent = "";
 
   document.getElementById("betPanelOverlay").classList.add("open");
   document.getElementById("betPanel").classList.add("open");
   
-  // Focus sur l'input après l'animation
-  setTimeout(() => document.getElementById("betInput").focus(), 300);
+  // CORRECTION : On a supprimé le "focus()" automatique ici ! 
+  // Désormais, le panneau s'ouvre, reste tranquille, le tutoriel apparaît, et c'est au joueur de cliquer.
 }
 
 function closeBetPanel() {
   const panel = document.getElementById("betPanel");
   document.getElementById("betPanelOverlay").classList.remove("open");
   panel.classList.remove("open");
-  panel.style.transform = ''; // Sécurité : on réinitialise sa position s'il avait été glissé
+  panel.style.transform = ''; 
   
-  // TUTO : Si le joueur clique sur Annuler en plein tuto, il doit re-cliquer sur une réponse
-  if (window.currentTutoStep === 3) {
-      nextTuto(1); // CORRECTION : L'étape 2 n'existe plus, on le renvoie à l'étape 1 par sécurité
+  // CORRECTION TUTO : Si le joueur annule (ou glisse vers le bas) pendant l'étape 4, on le fait passer à l'étape 5 !
+  if (window.currentTutoStep === 4) {
+      nextTuto(5);
+  } else if (window.currentTutoStep === 3) {
+      nextTuto(1); 
   }
 }
 
