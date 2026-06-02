@@ -364,23 +364,23 @@ button {
 
 .side-panel {
    position: fixed; bottom: -100%; left: 0; width: 100%; height: auto; 
-   /* CORRECTION : Utilisation de dvh (Dynamic Viewport) pour s'adapter à la barre blanche du navigateur */
-   max-height: 85dvh; 
+   /* CORRECTION : On repasse en vh pour que l'ouverture du clavier virtuel ne compresse pas violemment le panneau */
+   max-height: 90vh; 
    
-   /* DESIGN SUPERCONSCIOUS : Verre fumé violet profond et arrondi supérieur accentué */
    background: rgba(15, 10, 30, 0.85);
    backdrop-filter: blur(25px);
    -webkit-backdrop-filter: blur(25px);
    border-top: 1px solid rgba(168, 85, 247, 0.4); 
-   border-left: none; border-right: none; border-bottom: none;
    border-radius: 32px 32px 0 0;
    box-shadow: 0 -15px 40px rgba(0,0,0,0.8), inset 0 1px 15px rgba(168,85,247,0.15);
    
    z-index: 1000; transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-   /* CORRECTION : Ajout d'un coussin de sécurité de +15px pour protéger le bouton Annuler */
-   padding: 15px 20px calc(max(24px, env(safe-area-inset-bottom)) + 15px); 
+   
+   /* CORRECTION : Ajout du défilement interne (scroll) si l'écran est petit, et un padding fixe en bas plus sûr */
+   padding: 15px 20px calc(env(safe-area-inset-bottom) + 24px); 
    display: flex; flex-direction: column;
    box-sizing: border-box;
+   overflow-y: auto; 
  }
  .side-panel.open { bottom: 0; }
  
