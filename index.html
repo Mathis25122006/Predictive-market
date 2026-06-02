@@ -167,7 +167,7 @@ button {
 .answer-btn {
    background: rgba(255, 255, 255, 0.03); 
    border: 1px solid rgba(255, 255, 255, 0.08);
-   padding: clamp(10px, 1.5vh, 16px) 16px; 
+   padding: 0 16px; 
    border-radius: 16px;
    margin-bottom: 0; 
    cursor: pointer;
@@ -175,9 +175,11 @@ button {
    justify-content: space-between;
    align-items: center;
    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-   flex: 1 1 auto;
-   min-height: 48px; /* CORRECTION : Hauteur minimale sécurisée pour le confort */
-   max-height: 90px; /* CORRECTION : Plafond très haut pour que les boutons s'étirent naturellement s'il n'y a que 2 réponses */
+   
+   flex: 1 1 0px; 
+   min-height: 32px; 
+   /* CORRECTION : On lève considérablement le plafond. S'il n'y a que 2 réponses, elles pourront devenir très grandes et remplir tout l'espace ! */
+   max-height: 150px; 
    overflow: hidden;
  }
  .answer-btn:hover {
@@ -2026,8 +2028,8 @@ function renderPlayChallenges(){
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
-    /* CORRECTION : L'espacement dynamique "gap" et le flex: 1 des boutons assurent une répartition parfaite sans déborder. */
-    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; gap: clamp(8px, 1.5vh, 12px); min-height: 0; overflow-y: auto; padding-bottom: 10px;";
+    /* CORRECTION : "justify-content: stretch" oblige les boutons à s'étirer verticalement pour combler tout le vide disponible (jusqu'à leur max-height). */
+    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: stretch; gap: clamp(6px, 1.2vh, 10px); min-height: 0; overflow-y: auto; padding-bottom: 5px;";
     answersBox.classList.add("hide-scrollbar");
     
     // On insère la boîte de réponses à l'intérieur de la zone globale
