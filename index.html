@@ -2363,7 +2363,10 @@ const div = document.createElement("div");
              if (window.currentTutoStep === 3) nextTuto(5); // On passe au Swipe
          } else {
              openBetPanel(cIndex, i, 'YES');
-             if (window.currentTutoStep === 3) nextTuto(4); // On passe à l'étape Crédits
+             // CORRECTION : On attend 0.5s (500ms) pour laisser le temps au panneau de monter de façon fluide !
+             if (window.currentTutoStep === 3) {
+                 setTimeout(() => nextTuto(4), 500); 
+             }
          }
        };
     }
