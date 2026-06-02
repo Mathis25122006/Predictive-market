@@ -167,17 +167,17 @@ button {
 .answer-btn {
    background: rgba(255, 255, 255, 0.03); 
    border: 1px solid rgba(255, 255, 255, 0.08);
-   padding: clamp(8px, 1.2vh, 14px) 16px; /* CORRECTION : Moins de padding pour faire de la place aux 4 réponses */
+   padding: clamp(10px, 1.5vh, 16px) 16px; 
    border-radius: 16px;
-   margin-bottom: 0; /* CORRECTION : On retire la marge, c'est le conteneur parent qui gère l'espacement */
+   margin-bottom: 0; 
    cursor: pointer;
    display: flex;
    justify-content: space-between;
    align-items: center;
    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
    flex: 1 1 auto;
-   min-height: 36px; /* CORRECTION : Hauteur minimum plus souple */
-   max-height: 55px; /* Empêche les boutons de devenir immenses s'il n'y en a que 2 */
+   min-height: 48px; /* CORRECTION : Hauteur minimale sécurisée pour le confort */
+   max-height: 90px; /* CORRECTION : Plafond très haut pour que les boutons s'étirent naturellement s'il n'y a que 2 réponses */
    overflow: hidden;
  }
  .answer-btn:hover {
@@ -2013,11 +2013,12 @@ function renderPlayChallenges(){
     // NOUVEAU : On regroupe la question et les réponses dans une même zone pour pouvoir les éclairer ensemble dans le tutoriel
     const qnaZone = document.createElement("div");
     qnaZone.className = "challenge-qna-zone";
-    /* CORRECTION : L'ensemble de la zone se justifie vers le haut, et sera centré globalement avec un "margin: auto 0" */
-    qnaZone.style.cssText = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin: auto 0; padding-bottom: 4px;";
+    /* CORRECTION : On retire le "margin: auto 0" qui poussait la zone à chevaucher l'en-tête s'il y a 4 réponses. 
+       On le remplace par un padding dynamique pour encrer la zone vers le haut de manière aérée. */
+    qnaZone.style.cssText = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; padding-top: clamp(10px, 2vh, 20px); padding-bottom: 4px;";
 
     qnaZone.innerHTML = `
-      <div style="flex-shrink: 0; font-size:clamp(13px, 2vh, 16px); font-weight:600; line-height:1.25; margin-bottom: 16px; color:#f9fafb;">
+      <div style="flex-shrink: 0; font-size:clamp(14px, 2.2vh, 18px); font-weight:600; line-height:1.3; margin-bottom: clamp(12px, 2vh, 20px); color:#f9fafb;">
          ${ch.question}
          ${betInfoHtml}
       </div>
@@ -2025,9 +2026,8 @@ function renderPlayChallenges(){
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
-    /* CORRECTION : justify-content: flex-start force les réponses à toujours commencer EXACTEMENT 16px sous la question, sans déborder !
-       Ajout d'un overflow-y: auto invisible par sécurité si l'écran du joueur est vraiment minuscule */
-    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; gap: clamp(6px, 1.2vh, 10px); min-height: 0; overflow-y: auto;";
+    /* CORRECTION : L'espacement dynamique "gap" et le flex: 1 des boutons assurent une répartition parfaite sans déborder. */
+    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-start; gap: clamp(8px, 1.5vh, 12px); min-height: 0; overflow-y: auto; padding-bottom: 10px;";
     answersBox.classList.add("hide-scrollbar");
     
     // On insère la boîte de réponses à l'intérieur de la zone globale
@@ -2623,13 +2623,63 @@ function openBetPanel(cIndex, ansIndex, betType) {
 }
 
 function closeBetPanel() {
+  const panel = document.getElementById("betPanel");
   document.getElementById("betPanelOverlay").classList.remove("open");
-  document.getElementById("betPanel").classList.remove("open");
+  panel.classList.remove("open");
+  panel.style.transform = ''; // Sécurité : on réinitialise sa position s'il avait été glissé
+  
   // TUTO : Si le joueur clique sur Annuler en plein tuto, il doit re-cliquer sur une réponse
   if (window.currentTutoStep === 3) {
       nextTuto(1); // CORRECTION : L'étape 2 n'existe plus, on le renvoie à l'étape 1 par sécurité
   }
 }
+
+// --- NOUVEAU : Moteur de glissement (Swipe Down) pour le panneau de mise ---
+const betPanelEl = document.getElementById("betPanel");
+let betPanelStartY = 0;
+let isBetPanelDragging = false;
+
+if (betPanelEl) {
+    betPanelEl.addEventListener('touchstart', (e) => {
+        // On n'active le glissement que si on est tout en haut du panneau (pour laisser le défilement naturel fonctionner s'il y en a un)
+        if (betPanelEl.scrollTop > 0) return;
+        
+        betPanelStartY = e.touches[0].clientY;
+        isBetPanelDragging = true;
+        betPanelEl.style.transition = 'none'; // Désactive le lissage CSS pour coller exactement au doigt
+    }, {passive: true});
+
+    betPanelEl.addEventListener('touchmove', (e) => {
+        if (!isBetPanelDragging) return;
+        
+        const deltaY = e.touches[0].clientY - betPanelStartY;
+        
+        // Si le doigt va vers le bas
+        if (deltaY > 0) {
+            if (e.cancelable) e.preventDefault(); // Empêche l'élasticité native de l'écran du navigateur
+            betPanelEl.style.transform = `translateY(${deltaY}px)`; // Déplace le panneau physiquement
+        }
+    }, {passive: false}); // passive: false permet d'utiliser preventDefault() proprement
+
+    betPanelEl.addEventListener('touchend', (e) => {
+        if (!isBetPanelDragging) return;
+        isBetPanelDragging = false;
+        
+        // On réactive le lissage CSS pour que l'animation de fin (ou le rebond) soit fluide
+        betPanelEl.style.transition = 'bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        
+        const deltaY = e.changedTouches[0].clientY - betPanelStartY;
+        
+        // Si on a tiré plus de 80px vers le bas, on valide la fermeture
+        if (deltaY > 80) {
+            closeBetPanel();
+        } else {
+            // Sinon, effet élastique : le panneau remonte à sa place initiale
+            betPanelEl.style.transform = '';
+        }
+    });
+}
+// ---------------------------------------------------------------------------
 
 function updatePotentialGain() {
   const val = parseInt(document.getElementById("betInput").value) || 0;
