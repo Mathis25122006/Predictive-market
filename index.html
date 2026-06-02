@@ -1254,7 +1254,15 @@ function getLMSRProbs(votesArray) {
   const maxV = Math.max(...votesArray);
   const exps = votesArray.map(v => Math.exp((v - maxV) / B));
   const sumExp = exps.reduce((a, b) => a + b, 0);
-  return exps.map(e => e / sumExp);
+  
+  let probs = exps.map(e => e / sumExp);
+  
+  // CORRECTION : Forcer les probabilités à rester entre 1% et 99% (pas de certitude absolue)
+  probs = probs.map(p => Math.max(0.01, Math.min(0.99, p)));
+  
+  // Renormalisation mathématique pour garantir que la somme totale fasse exactement 1 (100%)
+  const newSum = probs.reduce((a, b) => a + b, 0);
+  return probs.map(p => p / newSum);
 }
 
 function getLMSRCost(votesArray) {
@@ -2203,7 +2211,6 @@ window.swipeNextCard = function() {
     e.preventDefault(); 
     if(!isDragging) return;
     
-    // CORRECTION : On autorise le mouvement du doigt pour les étapes 4, 5, 6 ET 7 !
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
@@ -2218,13 +2225,19 @@ window.swipeNextCard = function() {
     if(!isDragging) return;
     isDragging = false;
     
-    // CORRECTION : On autorise le relâchement pour les étapes 4, 5, 6 ET 7 !
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
+
+    // CORRECTION MAJEURE : On bloque tout mouvement inférieur à 30px (comme un doigt qui tremble ou un clic appuyé).
+    // Cela empêche un "faux mouvement" d'être interprété comme un ordre de fermeture du tutoriel !
+    if (Math.abs(deltaY) < 30) {
+        activeCard.style.transform = ''; 
+        return; 
+    }
 
     if (deltaY < -80) { // Glissement vers le haut (Suivant)
       if (window.currentTutoStep === 6) { activeCard.style.transform = ''; return; } // Bloque le swipe up à l'étape 6
@@ -2235,7 +2248,6 @@ window.swipeNextCard = function() {
               activeCard.style.transform = ''; 
           }
       } else {
-          // CORRECTION TUTO : S'il n'y a qu'une seule carte et qu'on est au tuto, on gère les étapes finales
           if (window.currentTutoStep === 5) {
               activeCard.style.transform = ''; 
               nextTuto(7);
@@ -2264,10 +2276,16 @@ window.swipeNextCard = function() {
     }
   });
 
-  // NOUVEAU : Clic n'importe où pour avancer le tutoriel (Étapes de lecture uniquement)
+// CORRECTION : Écouteur de clics permissif
   containerEl.addEventListener('click', (e) => {
-      if (window.currentTutoStep === 1) nextTuto(3);
-  });
+      if (window.currentTutoStep === 1) {
+          nextTuto(3);
+      } 
+      // NOUVEAU : Si on est à l'étape 5, 6 ou 7, le moindre clic (action quelconque) ferme instantanément le tutoriel !
+      else if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
+          closeTuto();
+      }
+  }, true); 
 
   updateCardStack();
 
@@ -2355,16 +2373,22 @@ const div = document.createElement("div");
     } else {
        if(selectedAnswers[cIndex] === i) div.classList.add("selected"); 
        div.onclick = (e) => {
-         e.stopPropagation(); // CORRECTION : Empêche le clic de remonter et de fermer le tutoriel !
+         e.stopPropagation(); 
          if (currentPlayerMode === 'easy') {
              selectedAnswers[cIndex] = i; 
              selectedBets[cIndex] = 1; 
              renderAnswersForChallenge(cIndex); 
-             if (window.currentTutoStep === 3) nextTuto(5); // On passe au Swipe
+             if (window.currentTutoStep === 3) nextTuto(5); 
          } else {
              openBetPanel(cIndex, i, 'YES');
-             // CORRECTION : On attend 0.5s (500ms) pour laisser le temps au panneau de monter de façon fluide !
+             
              if (window.currentTutoStep === 3) {
+                 // CORRECTION : On cache immédiatement la bulle et le halo de l'étape 3 dès le clic !
+                 clearTutoHighlights();
+                 const step3El = document.getElementById("tutoStep3");
+                 if (step3El) step3El.classList.add("hidden");
+                 
+                 // Puis on attend 0.5s que le panneau finisse de glisser pour allumer l'étape 4
                  setTimeout(() => nextTuto(4), 500); 
              }
          }
@@ -2994,26 +3018,37 @@ function computeHistories(){
   const histories = game.challenges.map(() => []);
 
   game.challenges.forEach((ch, cIndex)=>{
-    // Initialisation de la courbe avec les votes de base (les bots)
+    // Initialisation de la courbe avec les votes de base
     const votes = ch.baseVotes ? ch.baseVotes.slice() : new Array(ch.answers.length).fill(0);
-    const total0 = Math.max(1, votes.reduce((a,b)=>a+b,0));
-    histories[cIndex].push(votes.map(v => v/total0));
+    
+    // CORRECTION : On utilise la formule LMSR pour la courbe, pour correspondre aux pourcentages réels
+    let initialProbs = typeof getLMSRProbs === 'function' ? getLMSRProbs(votes) : votes.map(v => v / Math.max(1, votes.reduce((a,b)=>a+b,0)));
+    histories[cIndex].push(initialProbs);
 
     // On parcourt tous les joueurs pour construire l'évolution
     game.players.forEach(p => {
-      // On s'assure que le joueur possède bien le nouveau système de portefeuille
       if (p.portfolio) {
-        // On récupère toutes ses mises spécifiques à CE challenge
         const investments = p.portfolio.filter(snap => snap.cIndex === cIndex);
         
         investments.forEach(snap => {
           const ansIndex = snap.ansIndex;
           const betWeight = snap.bet || 1; 
           
-          // On ajoute le poids de son investissement sur la courbe
-          votes[ansIndex] += betWeight;
-          const total = Math.max(1, votes.reduce((a, b) => a + b, 0));
-          histories[cIndex].push(votes.map(v => v / total));
+          // CORRECTION : Prise en compte exacte des paris OUI / NON dans l'historique
+          if (snap.type === 'YES' || !snap.type) {
+             votes[ansIndex] += betWeight;
+          } else {
+             const sumOthers = votes.reduce((a, b) => a + b, 0) - votes[ansIndex];
+             for (let i = 0; i < votes.length; i++) {
+               if (i !== ansIndex) {
+                 const weight = sumOthers > 0 ? (votes[i] / sumOthers) : (1 / (votes.length - 1));
+                 votes[i] += betWeight * weight;
+               }
+             }
+          }
+
+          let probs = typeof getLMSRProbs === 'function' ? getLMSRProbs(votes) : votes.map(v => v / Math.max(1, votes.reduce((a,b)=>a+b,0)));
+          histories[cIndex].push(probs);
         });
       }
     });
@@ -3867,7 +3902,7 @@ function renderManageDashboard() {
             const pBets = p.portfolio.filter(b => b.cIndex === i);
             pBets.forEach(b => {
                 hasBets = true;
-                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet}u</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
+                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet}</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
             });
         }
     });
@@ -4084,21 +4119,26 @@ function updateRecapUI(pseudo) {
   }
   const maxScorePossible = (player.balance + totalPotentialPoints).toFixed(2);
 
-  // GÉNÉRATION DU CLASSEMENT PROVISOIRE
+  // CORRECTION : GÉNÉRATION DU CLASSEMENT PROVISOIRE (Aligné avec l'écran d'affichage)
+  const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
+  
   const provLeaderboard = (game.players || []).map(p => {
-    let pot = 0;
-    (p.portfolio || []).forEach(snap => {
-      const ch = game.challenges[snap.cIndex];
-      const isWin = (snap.type === 'YES' && snap.ansIndex === ch.correct) ||
-                    (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
-                    (!snap.type && snap.ansIndex === ch.correct);
-      
-      // CORRECTION : Évite le double comptage des gains pour le top 3
-      if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
-        pot += snap.pts;
-      }
-    });
-    return { name: p.name, score: parseFloat((p.balance + pot).toFixed(2)) };
+    let displayScore = 0;
+    
+    if (isEasyScreen) {
+        // Mode Facile : On affiche uniquement les gains encaissés (résultats validés) ou revendus
+        if (p.portfolio) {
+           p.portfolio.forEach(snap => {
+              if (snap.paidOut) displayScore += snap.pts;
+              else if (snap.cashedOut && snap.cashedOutAmount) displayScore += snap.cashedOutAmount;
+           });
+        }
+    } else {
+        // Mode Avancé : On prend simplement le solde actuel disponible
+        displayScore = p.balance || 0;
+    }
+    
+    return { name: p.name, score: parseFloat(displayScore.toFixed(2)) };
   }).sort((a, b) => b.score - a.score);
 
   const myRank = provLeaderboard.findIndex(p => p.name === pseudo) + 1;
@@ -4124,16 +4164,14 @@ function updateRecapUI(pseudo) {
       <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
     </div>
     
-    <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #3b82f6; border-radius:15px; padding:15px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:11px; color:#9ca3af; text-transform:uppercase;">Gain Max Potentiel</div>
-          <div style="font-size:28px; font-weight:800; color:#3b82f6;">${maxScorePossible} <span style="font-size:14px;">💰</span></div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:11px; color:#9ca3af;">Rang Provisoire</div>
-          <div style="font-size:22px; font-weight:800; color:#4ade80;">#${myRank}</div>
-        </div>
+    <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #3b82f6; border-radius:15px; padding:20px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.5); text-align:center;">
+      <div style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px;">
+        <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Gain Max Potentiel</div>
+        <div style="font-size:34px; font-weight:900; color:#3b82f6;">${maxScorePossible} <span style="font-size:18px;">💰</span></div>
+      </div>
+      <div>
+        <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Rang Provisoire</div>
+        <div style="font-size:28px; font-weight:900; color:#4ade80;">#${myRank}</div>
       </div>
     </div>
 
@@ -4211,9 +4249,9 @@ function drawSingleChart(hist, canvasId, cIndex) {
   });
   if(maxPct < 5) maxPct = 5;
 
-  // CORRECTION UI : Plus de légende en bas ! On donne un espace géant à droite pour le texte.
+// CORRECTION : On réduit considérablement l'espace à droite puisqu'on n'affiche plus les noms des réponses !
   const paddingLeft = 10; 
-  const paddingRight = 130; // Espace réservé pour écrire le nom et le score au bout de la ligne
+  const paddingRight = 45; // Espace juste suffisant pour afficher "100%"
   const paddingTop = 25; 
   const paddingBottom = 15; 
   const chartW = w - paddingLeft - paddingRight;
@@ -4295,16 +4333,9 @@ function drawSingleChart(hist, canvasId, cIndex) {
       }
   }
 
-  // 3. Affichage du texte
+// 3. Affichage du texte : On ne dessine plus aucun texte, seulement le point final
   lastPoints.forEach(pt => {
-      // On coupe le nom de la réponse s'il est trop long pour ne pas déborder du cadre
-      const labelText = pt.label && pt.label.length > 10 ? pt.label.slice(0,9) + "…" : pt.label;
-      const displayStr = `${pt.pct.toFixed(0)}% ${labelText}`;
-
-      ctx.font = "bold 13px system-ui";
-      ctx.fillStyle = pt.color;
-      // On écrit le texte légèrement à droite et centré verticalement par rapport au point final
-      ctx.fillText(displayStr, pt.x + 10, pt.y + 4); 
+      // Le texte est désormais retiré pour un design 100% épuré
   });
 }
 
@@ -5617,23 +5648,24 @@ function renderBsProgress(ch) {
      probs = ch.votes.map(v=>v/t);
   }
   
-  const letters = ['A','B','C','D','E','F'];
-  const colors = ['#a855f7', '#d946ef', '#6366f1', '#f97316']; // Couleurs tech de l'image
+  const letters = ['A','B','C','D','E','F','G','H'];
+  // CORRECTION : Même palette de couleurs que le graphique pour que chaque courbe corresponde exactement à sa réponse !
+  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
   
 let html = '';
       ch.answers.forEach((ans, i) => {
          const pct = (probs[i]*100).toFixed(0);
          const c = colors[i % colors.length];
-         // NOUVEAU : flex:1, min-height et max-height permettent à la réponse de se tasser si l'écran est petit !
+         
          html += `
             <div style="display:flex; align-items:center; flex:1; min-height:30px; max-height:48px; margin-bottom:8px;">
                <div style="width:100%; background:rgba(255,255,255,0.05); border-radius:12px; height:100%; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
-                  <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.8; transition:width 1s ease-in-out;"></div>
+                  <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.6; transition:width 1s ease-in-out;"></div>
                   <div style="position:absolute; top:0; left:15px; height:100%; display:flex; align-items:center; font-size:16px; font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); white-space:nowrap;">
-                     <span style="margin-right:10px; opacity:0.7;">${letters[i]}:</span> ${ans}
+                     <span style="margin-right:10px; color:${c}; font-weight:900;">${letters[i]} •</span> ${ans}
                   </div>
                </div>
-               <div style="width:60px; text-align:right; font-size:20px; font-weight:800;">${pct}%</div>
+               <div style="width:60px; text-align:right; font-size:20px; font-weight:900; color:${c};">${pct}%</div>
             </div>
          `;
       });
