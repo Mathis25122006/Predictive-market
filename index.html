@@ -59,6 +59,12 @@ body {
    color: #9ca3af;
    margin-bottom: 16px;
  }
+/* NOUVEAU : Animation d'apparition douce (Glissement vers le haut + Fondu) */
+ @keyframes smoothFadeIn {
+   from { opacity: 0; transform: translateY(15px); }
+   to { opacity: 1; transform: translateY(0); }
+ }
+
  .card {
    background: radial-gradient(circle at top left, rgba(30,64,175,0.6), rgba(15,23,42,0.96));
    border-radius: 20px;
@@ -66,6 +72,8 @@ body {
    margin-top: 16px;
    border: 1px solid rgba(148,163,184,0.4);
    box-shadow: 0 18px 40px rgba(15,23,42,0.9);
+   /* Application de l'animation à chaque ouverture d'un écran */
+   animation: smoothFadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
  }
  label {
    font-size: 12px;
@@ -94,7 +102,7 @@ input, select, textarea {
    border-color: #f97316;
    box-shadow: 0 0 0 1px rgba(248,113,113,0.5);
  }
- button {
+button {
    width: 100%;
    padding: 11px 14px;
    border-radius: 999px;
@@ -106,24 +114,55 @@ input, select, textarea {
    background: linear-gradient(135deg,#f97316,#ec4899);
    color: #fff;
    box-shadow: 0 14px 30px rgba(236,72,153,0.5);
+   /* NOUVEAU : Transition fluide pour tous les changements d'état */
+   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+ }
+ button:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 16px 35px rgba(236,72,153,0.6);
+   filter: brightness(1.1);
  }
  button:active {
-   transform: translateY(1px) scale(0.99);
+   transform: translateY(1px) scale(0.97);
    box-shadow: 0 8px 20px rgba(236,72,153,0.45);
  }
- .answer-btn {
-   background: radial-gradient(circle at top left, rgba(56,189,248,0.2), rgba(15,23,42,0.98));
-   border: 1px solid rgba(148,163,184,0.7);
-   padding: 10px 10px 8px;
-   border-radius: 14px;
-   margin-bottom: 8px;
-   cursor:pointer;
-   font-size: 14px;
+
+ /* --- NOUVEAU : Classes UI standardisées pour les boutons --- */
+ .btn-primary { background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4); }
+ .btn-secondary { background: rgba(55,65,81,0.5); box-shadow: none; border: 1px solid rgba(148,163,184,0.3); color: #f9fafb; }
+ .btn-outline { background: none; border: 1px solid #4b5563; box-shadow: none; color: #9ca3af; }
+ .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 10px 20px rgba(245,158,11,0.4); }
+ .btn-spacing { margin-top: 12px; }
+ /* ----------------------------------------------------------- */
+
+.answer-btn {
+   background: rgba(15,23,42,0.6);
+   border: 1px solid transparent;
+   padding: clamp(6px, 1.2vh, 12px) 14px;
+   border-radius: 12px;
+   margin-bottom: 6px;
+   cursor: pointer;
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+   flex: 1 1 auto;
+   min-height: 36px;
+   overflow: hidden;
+ }
+ .answer-btn:hover {
+   background: rgba(30,41,59,0.8);
+   border-color: rgba(148,163,184,0.3);
+ }
+ .answer-btn:active {
+   transform: translateY(2px) scale(0.98);
  }
  .answer-btn.selected {
-   border: 2px solid #f97316;
-   box-shadow: 0 0 0 1px rgba(248,113,113,0.7);
+   background: rgba(147, 51, 234, 0.3) !important;
+   border: 1px solid #a855f7 !important;
+   box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
  }
+ 
  .answer-title {
    display:flex;
    justify-content:space-between;
@@ -383,11 +422,13 @@ body.play-mode-active {
   max-height: 750px;
   box-sizing: border-box;
   
-  background: linear-gradient(135deg, #2e1065 0%, #4c1d95 30%, #ea580c 100%) !important;
+  /* CORRECTION : Harmonisation avec l'identité Premium Bleu Nuit du reste de l'app */
+  background: radial-gradient(circle at top left, rgba(30,64,175,0.8), rgba(15,23,42,0.98)) !important;
+  border: 1px solid rgba(148,163,184,0.2) !important;
+  backdrop-filter: blur(10px);
   border-radius: 20px !important;
   padding: 24px 24px 12px 24px !important;
-  border: none !important; 
-  box-shadow: 0 15px 35px rgba(0,0,0,0.6) !important;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.8) !important;
   
   display: flex;
   flex-direction: column;
@@ -529,17 +570,17 @@ body.play-mode-active {
   <h2>Bienvenue</h2>
   <p class="subtitle">Choisissez votre mode d'accès pour commencer la session.</p>
   <button onclick="checkAdminPassword()">Accès Administrateur</button>
-  <button onclick="showScreen('play')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top: 12px;">Jouer</button>
+  <button onclick="showScreen('play')" class="btn-primary btn-spacing">Jouer</button>
 </div>
 
 <div id="adminMenu" class="card" style="display:none">
   <h2>Menu Administrateur</h2>
   <p class="subtitle">Session déverrouillée. Choisissez une option :</p>
   <button onclick="askResume()">Créer un nouveau jeu</button>
-  <button onclick="showScreen('manageAuth')" style="background: rgba(55,65,81,0.5); margin-top: 12px;">Gérer un jeu existant</button>
-  <button onclick="showScreen('bigScreenAuth')" style="background: linear-gradient(135deg,#a855f7,#d946ef); margin-top: 12px; box-shadow:0 10px 20px rgba(168,85,247,0.4);">Affichage Grand Écran</button>
-  <button onclick="showScreen('simulationSetup')" style="background: linear-gradient(135deg,#f59e0b,#d97706); margin-top: 12px; box-shadow:0 10px 20px rgba(245,158,11,0.4);">Simulateur de Joueurs</button>
-  <button onclick="showScreen('home')" style="background: none; border: 1px solid #4b5563; margin-top: 12px; box-shadow: none;">Retour à l'accueil</button>
+  <button onclick="showScreen('manageAuth')" class="btn-secondary btn-spacing">Gérer un jeu existant</button>
+  <button onclick="showScreen('bigScreenAuth')" class="btn-primary btn-spacing">Affichage Grand Écran</button>
+  <button onclick="showScreen('simulationSetup')" class="btn-warning btn-spacing">Simulateur de Joueurs</button>
+  <button onclick="showScreen('home')" class="btn-outline btn-spacing">Retour à l'accueil</button>
 </div>
 
 <div id="simulationSetup" class="card" style="display:none">
@@ -552,8 +593,8 @@ body.play-mode-active {
   <label>Nombre de bots à générer</label>
   <input type="number" id="simBotCount" value="10" min="1" max="500">
   
-  <button id="startSimBtn" onclick="startSimulation()" style="background:linear-gradient(135deg,#10b981,#059669);">Démarrer la simulation</button>
-  <button id="stopSimBtn" onclick="stopSimulation()" class="hidden" style="background:#ef4444;">🛑 Arrêter la simulation</button>
+  <button id="startSimBtn" onclick="startSimulation()" class="btn-success btn-spacing">Démarrer la simulation</button>
+  <button id="stopSimBtn" onclick="stopSimulation()" class="hidden" style="background:#ef4444; margin-top: 12px;">🛑 Arrêter la simulation</button>
   
   <div id="simMsg" class="msg"></div>
   
@@ -561,16 +602,16 @@ body.play-mode-active {
     <em>Les actions des bots apparaîtront ici...</em>
   </div>
 
-  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:12px;">Retour</button>
+  <button onclick="showScreen('adminMenu')" class="btn-outline btn-spacing">Retour</button>
 </div>
 
 <div id="selectMode" class="card" style="display:none">
   <h2>Type de jeu</h2>
   <p class="subtitle">Comment souhaitez-vous que les joueurs misent ?</p>
   <button onclick="startSetup('easy')">Créer un jeu Facile (1 unité / question)</button>
-  <button onclick="startSetup('advanced')" style="margin-top:10px;">Créer un jeu Avancé (Solde & Mises libres)</button>
-  <button onclick="startSetup('both')" style="background: linear-gradient(135deg,#6366f1,#a855f7); margin-top:10px;">Créer les deux modes</button>
-  <button onclick="showScreen('adminMenu')" style="background: none; border: 1px solid #4b5563; margin-top: 15px;">Retour</button>
+  <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé (Solde & Mises libres)</button>
+  <button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
+  <button onclick="showScreen('adminMenu')" class="btn-outline" style="margin-top: 15px;">Retour</button>
 </div>
 
 <div id="manageAuth" class="card" style="display:none">
@@ -597,6 +638,16 @@ body.play-mode-active {
         </div>
         <textarea id="adminMessageInput" placeholder="Tapez une annonce (ex: Plus que 5 minutes !)..." style="width:100%; height:50px; background:rgba(0,0,0,0.3); color:white; border:1px solid #4b5563; border-radius:8px; padding:10px; font-family:inherit; resize:none; font-size:13px; box-sizing:border-box;"></textarea>
         <button onclick="sendBroadcastMessage()" style="background:linear-gradient(135deg,#a855f7,#d946ef); margin-top:8px; padding:10px; font-size:13px;">Envoyer l'annonce</button>
+      </div>
+
+      <div style="background:rgba(16,185,129,0.1); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(16,185,129,0.3);">
+        <h3 style="color:#10b981; margin:0 0 5px 0;">🔗 Prochaine session</h3>
+        <p class="subtitle" style="font-size:11px; margin-bottom:10px;">Affiche le QR Code de la partie suivante sur le Grand Écran à la fin de cette session.</p>
+        <div style="display:flex; gap:10px;">
+           <input id="nextSessionInput" placeholder="Code (Ex: A1B2C3)" style="text-transform: uppercase; margin:0; flex:1;">
+           <button onclick="linkNextSession()" style="background:linear-gradient(135deg,#10b981,#059669); margin:0; width:auto; padding:0 15px; font-size:12px;">Lier la session</button>
+        </div>
+        <div id="nextSessionMsg" class="msg" style="margin-top:5px;"></div>
       </div>
 
       <div id="manageChallengesContainer"></div>
@@ -702,12 +753,6 @@ body.play-mode-active {
       </div>
     </div>
     
-    <div id="playerSessionCodeContainer" style="background: rgba(59,130,246,0.1); border: 1px dashed #3b82f6; padding: 12px; border-radius: 12px; margin-bottom: 15px; text-align: center; cursor: pointer;" onclick="copySessionCode()">
-       <div style="font-size:11px; color:#9ca3af; margin-bottom: 4px;">Pour revenir plus tard, conservez ce code :</div>
-       <div style="font-size:24px; font-weight:900; color:#3b82f6; letter-spacing: 3px;" id="playerSessionCodeDisplay">------</div>
-       <div style="font-size:11px; color:#4ade80; margin-top: 4px; font-weight: bold; opacity: 0; transition: opacity 0.3s;" id="copyCodeFeedback">✅ Copié dans le presse-papier !</div>
-    </div>
-
     <div id="challengesPlay"></div>
     
 <div class="sticky-action-bar">
@@ -858,8 +903,13 @@ body.play-mode-active {
   <div style="display:flex; flex-direction:column; height:100%;">
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-shrink:0;">
-       <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
+       
+       <!-- Bloc Gauche : QR Code de la partie en cours -->
+       <div style="width:320px; display:flex; justify-content:flex-start;">
+           <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
+       </div>
 
+       <!-- Bloc Central : Logo et Titre -->
        <div style="text-align:center; flex:1; cursor:pointer;" onclick="showScreen('home')">
           <img src="Logo_Viva_Technology.svg" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
           <div style="font-size:34px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">LIVE PREDICTION GAME</div>
@@ -869,14 +919,16 @@ body.play-mode-active {
           </div>
        </div>
 
-       <div style="width:250px; text-align:right;">
+       <!-- NOUVEAU Bloc Droit : Espace pour le QR Code de la Prochaine Session -->
+       <div style="width:320px; display:flex; justify-content:flex-end;">
+          <div id="bsNextSessionHeaderContainer"></div>
        </div>
     </div>
 
     <div style="display:flex; justify-content:space-between; gap:25px; flex:1; min-height:0;">
-       <div id="bsLeft" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column;"></div>
-       <div id="bsMiddle" style="flex:1; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column;"></div>
-       <div id="bsRight" style="flex:0.8; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:18px; box-shadow:0 20px 40px rgba(0,0,0,0.4); display:flex; flex-direction:column; overflow-y:auto;"></div>
+       <div id="bsLeft" style="flex:1; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column;"></div>
+       <div id="bsMiddle" style="flex:1; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column;"></div>
+       <div id="bsRight" style="flex:0.8; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column; overflow-y:auto;"></div>
     </div>
     
   </div>
@@ -1895,12 +1947,15 @@ function renderPlayChallenges(){
     }
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
+    // CORRECTION : Épuration de l'en-tête (Remplacement du texte "TEMPS RESTANT" par un indicateur compact avec icône)
     header.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(2px, 0.5vh, 6px);">
-        <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px;">RARE</div>
-        <div style="text-align:right;">
-           <div id="open-timer-${cIndex}" style="color:#fde047; font-size:14px; font-weight:900; font-family:monospace;">--:--</div>
-           <div style="color:#fde047; font-size:9px; letter-spacing:1px; opacity:0.9;">TEMPS RESTANT</div>
+        <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px; display:flex; align-items:center; gap:4px;">
+           <span style="opacity:0.8;">💎</span> RARE
+        </div>
+        <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
+           <span style="font-size:10px; opacity:0.8;">⏱️</span>
+           <div id="open-timer-${cIndex}" style="color:#fde047; font-size:13px; font-weight:900; font-family:monospace; margin-top:1px;">--:--</div>
         </div>
       </div>
       <div style="font-size:clamp(14px, 2.5vh, 20px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
@@ -1930,27 +1985,28 @@ function renderPlayChallenges(){
     // CORRECTION : On enlève le padding inférieur du footer pour laisser la carte gérer le bord
     footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(4px, 1vh, 12px); padding-bottom: 0;";
     
-    // NOUVEAU : Indicateur textuel pour expliquer qu'on peut passer/revenir sans parier
+    // CORRECTION : L'indicateur textuel de Swipe est remplacé par de simples icônes très discrètes
     const hintText = cIndex > 0 
-       ? `<div style="text-align:center; color:#9ca3af; font-size:9px; margin-top:clamp(4px, 0.8vh, 8px);">↑ Glissez haut pour passer • ↓ Bas pour revenir</div>` 
-       : `<div style="text-align:center; color:#9ca3af; font-size:9px; margin-top:clamp(4px, 0.8vh, 8px);">↑ Glissez vers le haut pour passer</div>`;
+       ? `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4; letter-spacing:8px;">↕</div>` 
+       : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`;
 
-    // CORRECTION : Les boutons et le score rétrécissent dynamiquement
+    // Amélioration UI des boutons (effets d'ombre et couleurs unifiées)
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
-       ? `<button onclick="playNext()" style="background: linear-gradient(90deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: none; font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; margin-top:clamp(6px, 1vh, 12px);">Valider mes paris</button>${hintText}`
-       : `<button onclick="swipeNextCard()" style="background: linear-gradient(90deg, #9333ea, #db2777); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: none; font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; margin-top:clamp(6px, 1vh, 12px);">Suivant</button>${hintText}`;
+       ? `<button onclick="playNext()" style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: 0 8px 20px rgba(16,185,129,0.3); font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Valider mes paris</button>${hintText}`
+       : `<button onclick="swipeNextCard()" style="background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: 0 8px 20px rgba(99,102,241,0.3); font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Suivant</button>${hintText}`;
 
+    // CORRECTION : Épuration de la zone Score/Leaderboard avec un bloc unique, des icônes et des séparateurs discrets
     footer.innerHTML = `
-    
-      <div class="challenge-score-zone" style="display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:4px;">
-         <div>
-            <div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">SCORE</div>
-            <div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">${currentPlayerBalance} <span style="font-size:11px; font-weight:normal; color:#9ca3af;">pts</span></div>
+      <div class="challenge-score-zone" style="display:flex; justify-content:space-between; align-items:center; padding: 8px 14px; background: rgba(0,0,0,0.25); border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px;">
+         <div style="display:flex; align-items:center; gap:8px;">
+            <div style="font-size:16px; opacity:0.8;">💰</div>
+            <div id="live-score-${cIndex}" style="font-size:clamp(14px, 2vh, 18px); font-weight:900; color:#f9fafb; margin-top:2px;">${currentPlayerBalance} <span style="font-size:10px; font-weight:normal; color:#9ca3af;">pts</span></div>
          </div>
-         <div style="text-align:right;">
-            <div style="font-size:9px; font-weight:bold; letter-spacing:1.5px; color:#e2e8f0;">LEADERBOARD</div>
-            <div style="font-size:clamp(16px, 2.5vh, 20px); font-weight:900; color:#f9fafb;">${myRank} <span style="font-size:11px; font-weight:normal; color:#9ca3af;">${myRankSuffix}</span></div>
+         <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
+         <div style="display:flex; align-items:center; gap:8px;">
+            <div id="live-rank-${cIndex}" style="font-size:clamp(14px, 2vh, 18px); font-weight:900; color:#f9fafb; margin-top:2px;"><span style="font-size:12px; font-weight:normal; color:#9ca3af; margin-right:2px;">#</span>${myRank}</div>
+            <div style="font-size:16px; opacity:0.8;">🏆</div>
          </div>
       </div>
       ${btnHtml}
@@ -2192,12 +2248,11 @@ ch.answers.forEach((a,i)=>{
 
 const div = document.createElement("div");
     div.className = "answer-btn";
-    // CORRECTION : Boutons de réponse bien plus fins (min-height à 28px, padding vertical très réduit)
-    div.style.cssText = "background: rgba(15,23,42,0.6); border: none; padding: clamp(4px, 1vh, 10px) 12px; border-radius: 10px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; flex: 1 1 auto; min-height: 28px; max-height: 46px; overflow: hidden;";
+    // CORRECTION : Le style en ligne lourd est supprimé, le design et les animations sont désormais gérés par le CSS !
     
-    // --- Logique de clic et surbrillance ---
+    // --- Logique de clic et surbrillance fluide ---
     if (snap) {
-       if (snap.ansIndex === i) div.style.background = "rgba(147, 51, 234, 0.4)"; // Surlignage violet
+       if (snap.ansIndex === i) div.classList.add("selected");
        if (currentPlayerMode === 'easy') {
            div.style.cursor = "default";
            if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
@@ -2205,8 +2260,8 @@ const div = document.createElement("div");
            div.onclick = () => openBetPanel(cIndex, i, 'YES');
        }
     } else {
-       if(selectedAnswers[cIndex] === i) div.style.background = "rgba(147, 51, 234, 0.4)"; 
-       div.onclick = () => { 
+       if(selectedAnswers[cIndex] === i) div.classList.add("selected"); 
+       div.onclick = () => {
          if (currentPlayerMode === 'easy') {
              selectedAnswers[cIndex] = i; 
              selectedBets[cIndex] = 1; 
@@ -3160,6 +3215,8 @@ function checkAccess() {
       
       // --- ATTRIBUTION ALÉATOIRE ---
       const n = sessionConfig.n || 1;
+      const marginMs = 120 * 1000; // NOUVEAU : Marge de sécurité de 2 minutes (en millisecondes)
+      
       // On trouve toutes les questions actuellement ouvertes
       let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
                                          .filter(item => getEffectiveStatus(item.ch) === "open");
@@ -3174,13 +3231,28 @@ function checkAccess() {
         activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
       }
       
-      // On pioche au hasard pour compléter jusqu'à n (soit n-1 questions supplémentaires)
-      activeIndices.sort(() => 0.5 - Math.random());
-      while (finalSelection.length < n && activeIndices.length > 0) {
-        finalSelection.push(activeIndices.shift().idx);
+      // NOUVEAU : On sépare les questions "confortables" (> 2 min) et les "urgentes" (< 2 min)
+      let safeQuestions = activeIndices.filter(item => (item.ch.endTime - now) >= marginMs);
+      let urgentQuestions = activeIndices.filter(item => (item.ch.endTime - now) < marginMs);
+      
+      // On mélange les deux groupes indépendamment
+      safeQuestions.sort(() => 0.5 - Math.random());
+      urgentQuestions.sort(() => 0.5 - Math.random());
+      
+      // On rassemble : D'abord les questions avec de la marge, PUIS les urgentes en roue de secours
+      let prioritizedIndices = [...safeQuestions, ...urgentQuestions];
+      
+      let additionalQuestions = [];
+      // On pioche dans la liste priorisée
+      while (finalSelection.length + additionalQuestions.length < n && prioritizedIndices.length > 0) {
+        additionalQuestions.push(prioritizedIndices.shift().idx);
       }
       
-      me.assignedIndices = finalSelection;
+      // On trie les questions supplémentaires par heure de fin croissante (la plus urgente en premier pour l'affichage)
+      additionalQuestions.sort((a, b) => game.challenges[a].endTime - game.challenges[b].endTime);
+      
+      // On assemble le tout : Le fil rouge en premier (si existant), puis les questions triées
+      me.assignedIndices = finalSelection.concat(additionalQuestions);
       game.players.push(me);
       saveToCloud(); 
     } else {
@@ -3223,22 +3295,34 @@ document.getElementById("playerAuth").classList.add("hidden");
         document.getElementById("gameContent").classList.remove("hidden");
         document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
         
-        // NOUVEAU : On affiche la Pop-up géante obligatoire avec le code
-        const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
-        const welcomeDisplay = document.getElementById("welcomeCodeDisplay");
-        if (welcomeOverlay && welcomeDisplay) {
-            welcomeDisplay.textContent = inputCode;
-            welcomeOverlay.style.display = "flex";
+        // CORRECTION : On utilise une variable JavaScript globale pour verrouiller la Pop-up.
+        // Cela empêche les mises à jour en temps réel (comme les bots) de la rouvrir toutes les 3 secondes !
+        if (!window.hasSeenWelcomeCode) {
+            const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+            const welcomeDisplay = document.getElementById("welcomeCodeDisplay");
+            if (welcomeOverlay && welcomeDisplay) {
+                welcomeDisplay.textContent = inputCode;
+                welcomeOverlay.style.display = "flex";
+                window.hasSeenWelcomeCode = true; // Verrouillage définitif pour cette session
+            }
         }
         
         // NOUVEAU : On efface le message "Connexion au serveur..." une fois que l'écran de jeu s'affiche
         const playMsg = document.getElementById("playMsg");
         if (playMsg) playMsg.textContent = "";
         
-        // CORRECTION : On initialise la pile de cartes à 0 uniquement lors de la première connexion
-        window.currentCardIndex = 0; 
-        
-        renderPlayChallenges();
+        // CORRECTION : Mise à jour fluide en temps réel sans réinitialiser les cartes !
+        const container = document.getElementById("challengesPlay");
+        if (container && container.children.length > 0) {
+            // Le jeu est déjà affiché, on actualise juste l'intérieur (cotes, score) à vue d'œil
+            if (typeof updatePlayChallengesLive === 'function') {
+                updatePlayChallengesLive();
+            }
+        } else {
+            // Premier chargement de l'écran, on génère toute la structure
+            window.currentCardIndex = 0; 
+            renderPlayChallenges();
+        }
 
         if (game.isResolved) {
            if (document.getElementById("results").style.display !== "block" && document.getElementById("playerResult").style.display !== "block") {
@@ -3390,6 +3474,9 @@ function checkManageAccess() {
     // On ouvre l'interface de gestion
     msg.textContent = "";
     showScreen('manageGame');
+    
+    // NOUVEAU : Pré-remplir le code de la prochaine session si elle existe déjà
+    document.getElementById("nextSessionInput").value = sessionConfig.nextSessionCode || "";
     
     // On lance le chrono visuel et le rafraîchissement des graphiques
     startManageTimer();
@@ -4976,21 +5063,35 @@ function renderBigScreen() {
   const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
   
-document.getElementById("bsQrContainer").innerHTML = `
+  // CORRECTION : On change dynamiquement le texte si la session est terminée ou en attente de résultats
+  const checkNow = Date.now();
+  const checkLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
+  const isFinished = game.isResolved || (checkNow >= checkLimit);
+  const scanText = isFinished ? "Scannez pour voir<br>votre classement" : "Scannez pour jouer";
+  
+  document.getElementById("bsQrContainer").innerHTML = `
         <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
         <div>
-          <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; font-weight:bold;">Scannez pour jouer</div>
-          <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.code}</div>
+          <div style="font-size:11px; color:#9ca3af; text-transform:uppercase; font-weight:bold; line-height:1.2; margin-bottom:4px;">${scanText}</div>
+          <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px; line-height:1;">${sessionConfig.code}</div>
         </div>
       `;
 
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
-         document.getElementById("bsLeft").style.flex = "1.2";
+         // CORRECTION : Répartition parfaite 40% / 60% pour le podium et les récapitulatifs
+         document.getElementById("bsLeft").style.flex = "1";
          document.getElementById("bsLeft").style.overflowY = "hidden";
-         document.getElementById("bsMiddle").style.flex = "2";
+         document.getElementById("bsMiddle").style.flex = "1.5"; 
          document.getElementById("bsMiddle").style.overflowY = "hidden";
          document.getElementById("bsRight").style.display = "none";
+         
+         // On appelle la fonction qui va maintenant peupler l'en-tête (en haut à droite)
+         if (sessionConfig.nextSessionCode) {
+             renderNextSessionQR();
+         } else {
+             document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
+         }
 
          // 2. Classement Final : GÉNÉRÉ UNE SEULE FOIS pour éviter le clignotement
          if (!document.getElementById("bsLeft").innerHTML.includes("PODIUM FINAL")) {
@@ -5010,23 +5111,27 @@ document.getElementById("bsQrContainer").innerHTML = `
                     finalScore = p.balance || 0;
                 }
                 return { name: p.name, score: finalScore };
-             }).sort((a,b) => b.score - a.score).slice(0, 5);
+             }).sort((a,b) => b.score - a.score).slice(0, 10);
 
-             let lbHtml = `<div style="font-size:32px; font-weight:900; letter-spacing:2px; margin-bottom:30px; color:#fbbf24; text-transform:uppercase; text-align:center;">🏆 PODIUM FINAL 🏆</div>`;
+             let lbHtml = `<div style="font-size:28px; font-weight:900; letter-spacing:2px; margin-bottom:15px; color:#fbbf24; text-transform:uppercase; text-align:center; flex-shrink:0;">🏆 PODIUM FINAL 🏆</div>`;
+             
+             // CORRECTION : Ce conteneur va forcer les 10 barres à s'étirer verticalement pour remplir tout le vide
+             lbHtml += `<div style="display:flex; flex-direction:column; flex:1; justify-content:space-between; gap:8px; min-height:0;">`;
 
              leaderboard.forEach((p, idx) => {
                 let color = "#e2e8f0";
-                let trophy = `<span style="color:#a855f7; font-weight:900; width:40px; font-size:24px;">${idx+1}</span>`;
+                let trophy = `<span style="color:#a855f7; font-weight:900; width:30px; font-size:18px;">${idx+1}</span>`;
                 let bg = "rgba(255,255,255,0.05)";
-                if(idx === 0) { color = "#fbbf24"; trophy = `<span style="font-size:32px; width:40px;">🥇</span>`; bg = "rgba(251,191,36,0.1)"; }
-                else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:28px; width:40px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
-                else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:28px; width:40px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
+                if(idx === 0) { color = "#fbbf24"; trophy = `<span style="font-size:24px; width:30px;">🥇</span>`; bg = "rgba(251,191,36,0.1)"; }
+                else if(idx === 1) { color = "#f3f4f6"; trophy = `<span style="font-size:20px; width:30px;">🥈</span>`; bg = "rgba(243,244,246,0.1)"; }
+                else if(idx === 2) { color = "#d97706"; trophy = `<span style="font-size:20px; width:30px;">🥉</span>`; bg = "rgba(217,119,6,0.1)"; }
 
                 const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
 
+                // CORRECTION : L'ajout de "flex:1;" permet à chaque barre de grandir pour combler l'espace
                 lbHtml += `
-                   <div style="display:flex; justify-content:space-between; align-items:center; font-size:24px; margin-bottom:12px; padding:15px; border-radius:12px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color};">
-                      <div style="display:flex; gap:15px; align-items:center;">
+                   <div style="display:flex; flex:1; justify-content:space-between; align-items:center; font-size:18px; padding:0 15px; border-radius:10px; background:${bg}; border:1px solid rgba(255,255,255,0.1); color:${color}; min-height:0;">
+                      <div style="display:flex; gap:10px; align-items:center;">
                          ${trophy}
                          <span style="font-weight:800; text-transform:capitalize;">${p.name}</span>
                       </div>
@@ -5034,6 +5139,8 @@ document.getElementById("bsQrContainer").innerHTML = `
                    </div>
                 `;
              });
+             
+             lbHtml += `</div>`; // Fin du conteneur étirable
              document.getElementById("bsLeft").innerHTML = lbHtml;
          }
 
@@ -5092,11 +5199,19 @@ document.getElementById("bsQrContainer").innerHTML = `
       const nowTime = Date.now();
       const endTimeLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
       if (nowTime >= endTimeLimit && !game.isResolved) {
+         // CORRECTION : Même répartition harmonieuse que l'écran de fin
          document.getElementById("bsLeft").style.flex = "1";
          document.getElementById("bsLeft").style.overflowY = "hidden";
-         document.getElementById("bsMiddle").style.flex = "1";
+         document.getElementById("bsMiddle").style.flex = "1.5";
          document.getElementById("bsMiddle").style.overflowY = "hidden";
          document.getElementById("bsRight").style.display = "none";
+         
+         // On génère la prochaine session en haut à droite
+         if (sessionConfig.nextSessionCode) {
+             renderNextSessionQR();
+         } else {
+             document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
+         }
 
          document.getElementById("bsLeft").innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
@@ -5126,6 +5241,9 @@ document.getElementById("bsQrContainer").innerHTML = `
       document.getElementById("bsMiddle").style.flex = "1";
       document.getElementById("bsMiddle").style.overflowY = "visible";
       document.getElementById("bsRight").style.display = "flex";
+
+      // CORRECTION : On s'assure que l'en-tête de la prochaine session est vide pendant que le jeu tourne
+      document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
 
       const leftCh = game.challenges[bsLeftIndex];
       const rightCh = game.challenges[bsRightIndex];
@@ -5342,6 +5460,19 @@ function updateBsTimers() {
          }, 800); // 800ms correspond à la durée de l'animation CSS (transition)
      }
   }
+  // 3. MISE À JOUR DU CHRONO DE LA PROCHAINE SESSION
+  const nextTimerEl = document.getElementById("bsNextSessionTimer");
+  if (nextTimerEl && sessionConfig.nextSessionStartTime) {
+     const nextDiff = sessionConfig.nextSessionStartTime - Date.now();
+     if (nextDiff <= 0) {
+        nextTimerEl.textContent = "EN COURS";
+     } else {
+        const h = Math.floor(nextDiff / 3600000);
+        const m = Math.floor((nextDiff % 3600000) / 60000);
+        const s = Math.floor((nextDiff % 60000) / 1000);
+        nextTimerEl.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+     }
+  }
 }
 
 
@@ -5498,11 +5629,18 @@ function simulationTick() {
       const ch = game.challenges[cIndex];
       const ansIndex = Math.floor(Math.random() * ch.answers.length);
       
-      // CORRECTION : On vérifie le mode de la session, pas la variable UI
+      // CORRECTION : Mises aléatoires, mais 100% du capital sera écoulé à la dernière question
       let betAmount = 1; 
       if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
-        const maxPossible = Math.min(bot.balance, 20);
-        betAmount = maxPossible > 5 ? Math.floor(Math.random() * (maxPossible - 5 + 1)) + 5 : maxPossible;
+        if (availableToBet.length === 1) {
+            // C'est sa dernière question, il fait tapis avec TOUT ce qu'il lui reste
+            betAmount = bot.balance;
+        } else {
+            // Il n'est pas à sa dernière question. Il mise une somme aléatoire
+            // mais garde au moins 1 unité de sécurité pour chacune des questions restantes
+            const safeMax = bot.balance - (availableToBet.length - 1);
+            betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
+        }
       }
       
       if (betAmount <= 0) return;
@@ -5601,6 +5739,101 @@ function closeWelcomeCode() {
     if (typeof startTuto === 'function') {
         startTuto();
     }
+}
+
+// ==========================================
+// LOGIQUE : PROCHAINE SESSION
+// ==========================================
+function linkNextSession() {
+    const input = document.getElementById("nextSessionInput").value.trim().toUpperCase();
+    const msg = document.getElementById("nextSessionMsg");
+    
+    if (!input) {
+        msg.textContent = "Veuillez entrer le code de la session suivante.";
+        msg.className = "msg err";
+        return;
+    }
+
+    msg.textContent = "Vérification...";
+    msg.className = "msg ok";
+
+    // On vérifie que la session cible existe sur la base de données
+    db.ref('sessions/' + input + '/sessionConfig').once('value').then(snap => {
+        if (!snap.exists()) {
+            msg.textContent = "Cette session n'existe pas.";
+            msg.className = "msg err";
+            return;
+        }
+        
+        const nextConfig = snap.val();
+        sessionConfig.nextSessionCode = input;
+        // On sauvegarde l'heure de début pour le chronomètre du grand écran
+        sessionConfig.nextSessionStartTime = nextConfig.gameStartTime || Date.now(); 
+        
+        saveToCloud(); // On enregistre ce lien dans la session ACTUELLE
+        
+        msg.textContent = "Prochaine session liée avec succès !";
+        msg.className = "msg ok";
+    }).catch(err => {
+        msg.textContent = "Erreur : " + err.message;
+        msg.className = "msg err";
+    });
+}
+
+function renderNextSessionQR() {
+    if (!sessionConfig.nextSessionCode) return;
+    
+    const currentUrl = window.location.href.split('?')[0];
+    const nextUrl = `${currentUrl}?session=${sessionConfig.nextSessionCode}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(nextUrl)}`;
+    
+    // CORRECTION : Rendu compact inséré en haut à droite, symétrique au bloc de gauche
+    document.getElementById("bsNextSessionHeaderContainer").innerHTML = `
+       <div style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); text-align:right;">
+          <div>
+            <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">Prochaine Session</div>
+            <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.nextSessionCode}</div>
+            <div id="bsNextSessionTimer" style="font-size:13px; font-weight:800; font-family:monospace; color:#10b981; margin-top:2px;">--:--:--</div>
+          </div>
+          <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+       </div>
+    `;
+}
+
+
+// ==========================================
+// MISE À JOUR EN DIRECT (SANS SAUT DE PAGE)
+// ==========================================
+function updatePlayChallengesLive() {
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    
+    // Calcul du Leaderboard provisoire pour mettre à jour le rang
+    const provLeaderboard = (game.players || []).map(p => ({ name: p.name, score: p.balance })).sort((a,b)=>b.score - a.score);
+    const myRankIdx = provLeaderboard.findIndex(p => p.name === game.currentPlayerName);
+    const myRank = myRankIdx >= 0 ? (myRankIdx + 1) : "-";
+    const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
+
+    myIndices.forEach((cIndex) => {
+        // 1. On met à jour le texte du score et du classement sur les cartes
+        const scoreEl = document.getElementById("live-score-" + cIndex);
+        const rankEl = document.getElementById("live-rank-" + cIndex);
+        
+        if (scoreEl) {
+            scoreEl.innerHTML = `${currentPlayerBalance} <span style="font-size:10px; font-weight:normal; color:#9ca3af;">pts</span>`;
+        }
+        if (rankEl) {
+            // CORRECTION : L'actualisation en direct reprend le design épuré (juste le #)
+            rankEl.innerHTML = `<span style="font-size:12px; font-weight:normal; color:#9ca3af; margin-right:2px;">#</span>${myRank}`;
+        }
+
+        // 2. On rafraîchit uniquement la boîte contenant les réponses (pour voir les % bouger)
+        // L'animation de la carte (swipe) n'est pas interrompue car on ne touche pas au bloc parent !
+        const ansBox = document.getElementById("answers-ch" + cIndex);
+        if (ansBox) {
+            renderAnswersForChallenge(cIndex);
+        }
+    });
 }
 
 </script>
