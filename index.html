@@ -851,14 +851,7 @@ body.play-mode-active {
   <div id="tutoStep1" class="hidden" style="position:absolute; bottom:calc(max(20px, env(safe-area-inset-bottom)) + 120px); left:12%; right:12%; background:rgba(147,51,234,0.95); border:1px solid #d946ef; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
     <div style="font-size:20px; margin-bottom:4px;">👑</div>
     <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">LE DÉFI</h3>
-    <p style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:10px;">Voici l'en-tête en surbrillance. Il vous indique le thème de la carte et le temps restant.</p>
-    <div class="tuto-tap-text">👆 Touchez l'écran pour continuer</div>
-  </div>
-
-  <div id="tutoStep2" class="hidden" style="position:absolute; top:calc(max(20px, env(safe-area-inset-top)) + 160px); left:12%; right:12%; background:rgba(16,185,129,0.95); border:1px solid #34d399; border-radius:12px; padding:12px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
-    <div style="font-size:20px; margin-bottom:4px;">💰</div>
-    <h3 style="color:#fde047; margin-bottom:4px; font-size:13px; font-weight:900;">VOTRE SCORE</h3>
-    <p id="tutoStep2Text" style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:10px;"></p>
+    <p style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:10px;">Voici l'en-tête en surbrillance. Il vous indique le thème de la carte, votre solde et le temps restant.</p>
     <div class="tuto-tap-text">👆 Touchez l'écran pour continuer</div>
   </div>
 
@@ -1978,11 +1971,11 @@ function renderPlayChallenges(){
     }
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
-    // CORRECTION : Épuration de l'en-tête (Remplacement du texte "TEMPS RESTANT" par un indicateur compact avec icône)
+    // CORRECTION : On déplace le solde dans l'en-tête (en haut à gauche) sous forme "X 💰"
     header.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(2px, 0.5vh, 6px);">
-        <div style="color:#fde047; font-size:11px; font-weight:800; letter-spacing:1px; display:flex; align-items:center; gap:4px;">
-           <span style="opacity:0.8;">💎</span> RARE
+        <div style="color:#fde047; font-size:15px; font-weight:900; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); padding:4px 12px; border-radius:999px; border: 1px solid rgba(255,255,255,0.1);">
+           <span id="live-score-${cIndex}">${currentPlayerBalance}</span> 💰
         </div>
         <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
            <span style="font-size:10px; opacity:0.8;">⏱️</span>
@@ -1993,13 +1986,13 @@ function renderPlayChallenges(){
       ${imgHtml}
     `;
 
-    // NOUVEAU : On regroupe la question et les réponses dans une même zone pour pouvoir les éclairer ensemble dans le tutoriel
     const qnaZone = document.createElement("div");
     qnaZone.className = "challenge-qna-zone";
     qnaZone.style.cssText = "display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;";
 
+    // CORRECTION : On ajoute "flex-shrink: 0" au bloc de la question pour empêcher qu'elle ne s'écrase sur les réponses
     qnaZone.innerHTML = `
-      <div style="font-size:clamp(13px, 2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb;">
+      <div style="flex-shrink: 0; font-size:clamp(13px, 2vh, 16px); font-weight:600; line-height:1.2; margin-bottom:clamp(8px, 1.5vh, 12px); color:#f9fafb;">
          ${ch.question}
          ${betInfoHtml}
       </div>
@@ -2009,37 +2002,22 @@ function renderPlayChallenges(){
     answersBox.id = "answers-ch" + cIndex;
     answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: clamp(2px, 0.8vh, 6px); min-height: 0; margin-top: 2px;";
     
-    // On insère la boîte de réponses à l'intérieur de la zone globale
     qnaZone.appendChild(answersBox);
 
     const footer = document.createElement("div");
-    // CORRECTION : On enlève le padding inférieur du footer pour laisser la carte gérer le bord
     footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(4px, 1vh, 12px); padding-bottom: 0;";
     
-    // CORRECTION : L'indicateur textuel de Swipe est remplacé par de simples icônes très discrètes
     const hintText = cIndex > 0 
        ? `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4; letter-spacing:8px;">↕</div>` 
        : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`;
 
-// DESIGN SUPERCONSCIOUS : Boutons d'action "Pilule Blanche"
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
        ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
        : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
-    // CORRECTION : Épuration de la zone Score/Leaderboard avec un bloc unique, des icônes et des séparateurs discrets
+    // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
     footer.innerHTML = `
-      <div class="challenge-score-zone" style="display:flex; justify-content:space-between; align-items:center; padding: 8px 14px; background: rgba(0,0,0,0.25); border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 4px;">
-         <div style="display:flex; align-items:center; gap:8px;">
-            <div style="font-size:16px; opacity:0.8;">💰</div>
-            <div id="live-score-${cIndex}" style="font-size:clamp(14px, 2vh, 18px); font-weight:900; color:#f9fafb; margin-top:2px;">${currentPlayerBalance} <span style="font-size:10px; font-weight:normal; color:#9ca3af;">pts</span></div>
-         </div>
-         <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
-         <div style="display:flex; align-items:center; gap:8px;">
-            <div id="live-rank-${cIndex}" style="font-size:clamp(14px, 2vh, 18px); font-weight:900; color:#f9fafb; margin-top:2px;"><span style="font-size:12px; font-weight:normal; color:#9ca3af; margin-right:2px;">#</span>${myRank}</div>
-            <div style="font-size:16px; opacity:0.8;">🏆</div>
-         </div>
-      </div>
       ${btnHtml}
     `;
 
@@ -2201,8 +2179,7 @@ function renderPlayChallenges(){
 
   // NOUVEAU : Clic n'importe où pour avancer le tutoriel (Étapes de lecture uniquement)
   containerEl.addEventListener('click', (e) => {
-      if (window.currentTutoStep === 1) nextTuto(2);
-      else if (window.currentTutoStep === 2) nextTuto(3);
+      if (window.currentTutoStep === 1) nextTuto(3); // CORRECTION : L'étape 2 a été supprimée, on passe direct à la 3
       else if (window.currentTutoStep === 5) closeTuto();
   });
 
@@ -2451,19 +2428,6 @@ function nextTuto(step) {
   if (step === 1) {
     const header = activeCard.querySelector('.challenge-header');
     if (header) header.classList.add('tuto-highlight');
-  } else if (step === 2) {
-    // ÉTAPE 2 : LE SCORE
-    const scoreZone = activeCard.querySelector('.challenge-score-zone');
-    if (scoreZone) scoreZone.classList.add('tuto-highlight');
-
-    const tutoText = document.getElementById("tutoStep2Text");
-    if (tutoText) {
-       if (currentPlayerMode === 'easy') {
-           tutoText.innerHTML = `Voici votre <strong>Score</strong>. Vous débutez à 0. L'objectif est de cumuler un maximum de points en trouvant les bonnes réponses !`;
-       } else {
-           tutoText.innerHTML = `Voici votre <strong>Capital de départ</strong>. Vous l'utiliserez pour placer vos mises et investir sur vos prédictions.`;
-       }
-    }
   } else if (step === 3) {
     // ÉTAPE 3 : LA QUESTION ET LES RÉPONSES
     const qnaZone = activeCard.querySelector('.challenge-qna-zone');
@@ -2611,7 +2575,7 @@ function closeBetPanel() {
   document.getElementById("betPanel").classList.remove("open");
   // TUTO : Si le joueur clique sur Annuler en plein tuto, il doit re-cliquer sur une réponse
   if (window.currentTutoStep === 3) {
-      nextTuto(2);
+      nextTuto(1); // CORRECTION : L'étape 2 n'existe plus, on le renvoie à l'étape 1 par sécurité
   }
 }
 
@@ -5861,17 +5825,14 @@ function updatePlayChallengesLive() {
     const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
 
     myIndices.forEach((cIndex) => {
-        // 1. On met à jour le texte du score et du classement sur les cartes
+        // 1. On met à jour le texte du score sur la carte
         const scoreEl = document.getElementById("live-score-" + cIndex);
-        const rankEl = document.getElementById("live-rank-" + cIndex);
         
         if (scoreEl) {
-            scoreEl.innerHTML = `${currentPlayerBalance} <span style="font-size:10px; font-weight:normal; color:#9ca3af;">pts</span>`;
+            // CORRECTION : Le format est juste le nombre brut désormais (l'émoji 💰 est fixe dans l'HTML)
+            scoreEl.innerHTML = `${currentPlayerBalance}`;
         }
-        if (rankEl) {
-            // CORRECTION : L'actualisation en direct reprend le design épuré (juste le #)
-            rankEl.innerHTML = `<span style="font-size:12px; font-weight:normal; color:#9ca3af; margin-right:2px;">#</span>${myRank}`;
-        }
+        // Plus de mise à jour du classement sur la carte car la barre a été supprimée !
 
         // 2. On rafraîchit uniquement la boîte contenant les réponses (pour voir les % bouger)
         // L'animation de la carte (swipe) n'est pas interrompue car on ne touche pas au bloc parent !
