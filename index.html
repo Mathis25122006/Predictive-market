@@ -525,15 +525,12 @@ body.play-mode-active {
 }
 .tuto-highlight {
   position: relative !important;
-  z-index: 51 !important; /* Passe au-dessus du flou */
+  z-index: 10005 !important; /* CORRECTION : Z-index très élevé pour passer par-dessus le panneau de mise */
   pointer-events: auto !important;
   background: rgba(15,23,42,0.95) !important;
-  /* CORRECTION : Trait plus épais (5px) et halo lumineux plus large */
   box-shadow: 0 0 0 5px #a855f7, 0 0 30px 12px rgba(168,85,247,0.65) !important;
   border-radius: 16px !important;
-  /* CORRECTION : On élargit le cadre de 8px tout autour de l'image/question */
   padding: 8px !important;
-  /* Et on compense avec une marge négative pour ne pas casser votre mise en page */
   margin: -8px !important; 
 }
 
@@ -820,7 +817,7 @@ body.play-mode-active {
   <h2 style="margin-bottom:5px; font-size:24px; text-align:center;">Miser</h2>
   <p class="subtitle" id="betAnswerName" style="margin-bottom:20px; font-size:14px; color:#a855f7; text-align:center;">Réponse</p>
   
-  <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 15px; border-radius:16px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08);">
+  <div id="betAvailableContainer" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 15px; border-radius:16px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.08);">
     <div style="font-size:13px; color:#9ca3af;">Solde disponible</div>
     <div id="betAvailable" style="font-size:18px; font-weight:900; color:#ffffff;">0 💰</div>
   </div>
@@ -883,14 +880,14 @@ body.play-mode-active {
     <p id="tutoStep3Text" style="font-size:11px; color:#e2e8f0; line-height:1.3; margin-bottom:0;"></p>
   </div>
 
-  <div id="tutoStep4" class="hidden" style="position:absolute; top:max(10px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none;">
+  <div id="tutoStep4" class="hidden" style="position:absolute; top:max(10px, env(safe-area-inset-top)); left:5%; right:5%; background:rgba(236,72,153,0.95); border:1px solid #f472b6; border-radius:12px; padding:10px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none; z-index:10007;">
     <div style="display:flex; flex-direction:column; align-items:center;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
          <span style="font-size:18px;">💰</span>
          <h3 style="color:#fde047; margin:0; font-size:13px; font-weight:900;">GÉREZ VOS CRÉDITS</h3>
       </div>
-      <p id="tutoNText" style="font-size:11px; color:#e2e8f0; line-height:1.2; margin-bottom:4px;"></p>
-      <p style="font-size:10px; color:#fde047; font-style:italic; margin:0;">Misez en bas de l'écran et validez.</p>
+      <p id="tutoNText" style="font-size:11px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;"></p>
+      <div class="tuto-tap-text">👆 Touchez l'écran pour miser</div>
     </div>
   </div>
 
@@ -2417,6 +2414,10 @@ function clearTutoHighlights() {
   document.querySelectorAll('.tuto-highlight').forEach(el => el.classList.remove('tuto-highlight'));
   const oldBg = document.getElementById("cardTutoBackdrop");
   if (oldBg) oldBg.remove();
+  
+  // NOUVEAU : Nettoyer le calque de l'étape 4 s'il existe
+  const dismiss = document.getElementById("tutoDismissOverlay");
+  if (dismiss) dismiss.remove();
 }
 
 function nextTuto(step) {
@@ -2464,10 +2465,27 @@ function nextTuto(step) {
        }
     }
   } else if (step === 4) {
-    // ÉTAPE 4 : LA GESTION DES PARIS
+    // ÉTAPE 4 : LA GESTION DES PARIS (DANS LE PANNEAU DE MISE)
+    const betAvailContainer = document.getElementById('betAvailableContainer');
+    if (betAvailContainer) betAvailContainer.classList.add('tuto-highlight');
+
     const n = sessionConfig.n || 1;
     const tutoNText = document.getElementById("tutoNText");
     if (tutoNText) tutoNText.innerHTML = `Attention, gérez vos crédits intelligemment car vous avez <strong>${n} questions</strong> à disposition.`;
+    
+    // NOUVEAU : On ajoute un calque invisible pour intercepter le premier clic, fermer l'explication, et permettre de miser !
+    let dismissOverlay = document.createElement("div");
+    dismissOverlay.id = "tutoDismissOverlay";
+    dismissOverlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; z-index:10006; pointer-events:auto;";
+    dismissOverlay.onclick = () => {
+       clearTutoHighlights();
+       const step4El = document.getElementById("tutoStep4");
+       if (step4El) step4El.classList.add("hidden");
+       dismissOverlay.remove();
+       // On garde window.currentTutoStep = 4 pour que le code lance l'étape 5 automatiquement une fois la mise validée
+    };
+    document.body.appendChild(dismissOverlay);
+
   }
 }
 
