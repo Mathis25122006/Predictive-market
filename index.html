@@ -8,12 +8,25 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
-body {
-   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-   background: radial-gradient(circle at top, #020617, #020617 40%, #020617 60%, #020617);
-   background-color:#020617;
-   color: #f9fafb;
-   /* NOUVEAU : Calcule dynamiquement les marges selon l'encoche de l'iPhone */
+/* IMPORT DE LA NOUVELLE POLICE PREMIUM (Plus Jakarta Sans) */
+ @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+/* ANIMATION DU FOND COSMIQUE */
+ @keyframes cosmicDrift {
+   0% { background-position: 0% 0%; }
+   50% { background-position: 100% 100%; }
+   100% { background-position: 0% 0%; }
+ }
+
+ body {
+   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+   background-color: #05010d;
+   background-image: 
+     radial-gradient(circle at 20% 30%, rgba(91, 33, 182, 0.35) 0%, transparent 60%),
+     radial-gradient(circle at 80% 80%, rgba(30, 10, 60, 0.5) 0%, transparent 50%);
+   background-size: 150% 150%;
+   animation: cosmicDrift 15s ease-in-out infinite;
+   color: #ffffff;
    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
    min-height: 100vh;
    box-sizing: border-box;
@@ -66,29 +79,32 @@ body {
  }
 
  .card {
-   background: radial-gradient(circle at top left, rgba(30,64,175,0.6), rgba(15,23,42,0.96));
-   border-radius: 20px;
-   padding: 18px 16px 18px;
+   /* DESIGN SUPERCONSCIOUS : Translucide violet profond, bordure cristalline */
+   background: rgba(15, 10, 30, 0.4); 
+   backdrop-filter: blur(16px);
+   -webkit-backdrop-filter: blur(16px);
+   border-radius: 24px;
+   padding: 24px 20px;
    margin-top: 16px;
-   border: 1px solid rgba(148,163,184,0.4);
-   box-shadow: 0 18px 40px rgba(15,23,42,0.9);
-   /* Application de l'animation à chaque ouverture d'un écran */
+   border: 1px solid rgba(255, 255, 255, 0.08); 
+   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05);
    animation: smoothFadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
  }
  label {
-   font-size: 12px;
+   font-size: 13px;
    color: #9ca3af;
    display: block;
-   margin-bottom: 4px;
+   margin-bottom: 6px;
+   letter-spacing: 0.5px;
  }
 input, select, textarea {
    width: 100%;
-   padding: 10px 12px;
+   padding: 14px 18px; /* Plus spacieux */
    border-radius: 999px;
-   border: 1px solid rgba(55,65,81,0.9);
-   background: rgba(15,23,42,0.9);
-   color: #f9fafb;
-   margin-bottom: 10px;
+   border: 1px solid rgba(255,255,255,0.1); /* Plus discret */
+   background: rgba(255,255,255,0.03); /* Noir très très léger */
+   color: #ffffff;
+   margin-bottom: 15px;
    /* NOUVEAU : 16px empêche iOS de zoomer de force lors d'un clic */
    font-size: 16px; 
    outline: none;
@@ -104,63 +120,78 @@ input, select, textarea {
  }
 button {
    width: 100%;
-   padding: 11px 14px;
+   padding: 14px 20px; 
    border-radius: 999px;
-   border: none;
-   font-weight: 600;
+   border: 1px solid rgba(255, 255, 255, 0.1) !important;
+   font-weight: 700; 
    font-size: 15px;
    cursor: pointer;
-   margin-top: 8px;
-   background: linear-gradient(135deg,#f97316,#ec4899);
-   color: #fff;
-   box-shadow: 0 14px 30px rgba(236,72,153,0.5);
-   /* NOUVEAU : Transition fluide pour tous les changements d'état */
+   margin-top: 12px;
+   
+   /* CORRECTION : Boutons secondaires (Retour/Annuler) en Verre Fumé clair pour être TOUJOURS lisibles */
+   background: rgba(255, 255, 255, 0.08) !important;
+   color: #ffffff !important;
+   backdrop-filter: blur(10px);
+   -webkit-backdrop-filter: blur(10px);
+   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
  }
  button:hover {
    transform: translateY(-2px);
-   box-shadow: 0 16px 35px rgba(236,72,153,0.6);
-   filter: brightness(1.1);
+   background: rgba(255, 255, 255, 0.15) !important;
+   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4) !important;
  }
  button:active {
-   transform: translateY(1px) scale(0.97);
-   box-shadow: 0 8px 20px rgba(236,72,153,0.45);
+   transform: translateY(1px) scale(0.98);
  }
 
- /* --- NOUVEAU : Classes UI standardisées pour les boutons --- */
- .btn-primary { background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4); }
- .btn-secondary { background: rgba(55,65,81,0.5); box-shadow: none; border: 1px solid rgba(148,163,184,0.3); color: #f9fafb; }
- .btn-outline { background: none; border: 1px solid #4b5563; box-shadow: none; color: #9ca3af; }
- .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 10px 20px rgba(245,158,11,0.4); }
+ /* BOUTONS D'ACTION PRINCIPALE (Le bouton blanc massif Superconscious) */
+ .btn-primary, button[onclick^="checkAccess"], button[onclick^="playNext"], button[onclick^="confirm"], button[onclick^="checkBigScreen"], button[onclick^="generateSetupFields"], button[onclick^="setupNext"] { 
+   background: #ffffff !important; 
+   color: #000000 !important; 
+   border: none !important;
+   box-shadow: 0 0 25px rgba(255, 255, 255, 0.2) !important;
+ }
+ .btn-primary:hover, button[onclick^="checkAccess"]:hover, button[onclick^="playNext"]:hover {
+   box-shadow: 0 0 40px rgba(255, 255, 255, 0.4) !important;
+ }
+ .btn-warning { background: linear-gradient(135deg, #a855f7, #6366f1) !important; color: #ffffff !important; border:none !important; }
  .btn-spacing { margin-top: 12px; }
  /* ----------------------------------------------------------- */
 
 .answer-btn {
-   background: rgba(15,23,42,0.6);
-   border: 1px solid transparent;
-   padding: clamp(6px, 1.2vh, 12px) 14px;
-   border-radius: 12px;
-   margin-bottom: 6px;
+   background: rgba(255, 255, 255, 0.03); /* Très léger fond gris/blanc */
+   border: 1px solid rgba(255, 255, 255, 0.08);
+   padding: clamp(10px, 1.5vh, 16px) 18px; /* Beaucoup plus d'espace */
+   border-radius: 20px;
+   margin-bottom: 10px;
    cursor: pointer;
    display: flex;
    justify-content: space-between;
    align-items: center;
-   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
    flex: 1 1 auto;
-   min-height: 36px;
+   min-height: 44px;
    overflow: hidden;
  }
  .answer-btn:hover {
-   background: rgba(30,41,59,0.8);
-   border-color: rgba(148,163,184,0.3);
+   background: rgba(255, 255, 255, 0.08);
+   border-color: rgba(255, 255, 255, 0.2);
  }
  .answer-btn:active {
    transform: translateY(2px) scale(0.98);
  }
+@keyframes neonBreathing {
+   0% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.3), inset 0 0 10px rgba(168, 85, 247, 0.1); }
+   50% { box-shadow: 0 0 35px rgba(168, 85, 247, 0.6), inset 0 0 15px rgba(168, 85, 247, 0.3); }
+   100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.3), inset 0 0 10px rgba(168, 85, 247, 0.1); }
+ }
+
  .answer-btn.selected {
-   background: rgba(147, 51, 234, 0.3) !important;
-   border: 1px solid #a855f7 !important;
-   box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+   /* DESIGN SUPERCONSCIOUS : Le Halo Néon Violet / Bleu avec animation de respiration */
+   background: rgba(168, 85, 247, 0.15) !important; 
+   border: 1px solid #a855f7 !important; 
+   animation: neonBreathing 2.5s infinite ease-in-out !important; 
  }
  
  .answer-title {
@@ -412,7 +443,6 @@ body.play-mode-active {
 
 #challengesPlay .challenge-block {
   position: absolute;
-  /* CORRECTION : On centre la carte verticalement au milieu de l'écran avec une hauteur fixe */
   top: 0; 
   bottom: 0;
   left: 15px; 
@@ -422,13 +452,14 @@ body.play-mode-active {
   max-height: 750px;
   box-sizing: border-box;
   
-  /* CORRECTION : Harmonisation avec l'identité Premium Bleu Nuit du reste de l'app */
-  background: radial-gradient(circle at top left, rgba(30,64,175,0.8), rgba(15,23,42,0.98)) !important;
-  border: 1px solid rgba(148,163,184,0.2) !important;
-  backdrop-filter: blur(10px);
-  border-radius: 20px !important;
-  padding: 24px 24px 12px 24px !important;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.8) !important;
+  /* DESIGN SUPERCONSCIOUS : Noir très profond avec lueur interne violette / bleue */
+  background: linear-gradient(180deg, rgba(20, 10, 40, 0.8) 0%, rgba(5, 2, 15, 0.98) 100%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.2) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 36px !important; /* Bords du téléphone */
+  padding: 24px 20px 12px 20px !important;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.95), inset 0 0 40px rgba(139, 92, 246, 0.08) !important;
   
   display: flex;
   flex-direction: column;
@@ -721,7 +752,7 @@ body.play-mode-active {
 </div>
 
 <div id="play" style="display:none;">
-  <div id="playerAuth" class="card" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 420px; margin: 0; padding: 35px 25px; box-sizing: border-box; z-index: 1000;">
+  <div id="playerAuth" class="card" style="position: fixed; top: 0; bottom: 0; left: 0; right: 0; margin: auto; height: fit-content; width: 90%; max-width: 420px; padding: 35px 25px; box-sizing: border-box; z-index: 1000;">
     <h2 style="text-align:center; margin-bottom: 25px; font-size: 26px;">Rejoindre le jeu</h2>
     <label>Pseudo</label>
     <input id="pseudo" placeholder="Ex : Renaud">
@@ -926,9 +957,9 @@ body.play-mode-active {
     </div>
 
     <div style="display:flex; justify-content:space-between; gap:25px; flex:1; min-height:0;">
-       <div id="bsLeft" style="flex:1; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column;"></div>
-       <div id="bsMiddle" style="flex:1; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column;"></div>
-       <div id="bsRight" style="flex:0.8; background:rgba(30,27,75,0.4); backdrop-filter:blur(15px); border:1px solid rgba(168,85,247,0.3); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.05); display:flex; flex-direction:column; overflow-y:auto;"></div>
+       <div id="bsLeft" style="flex:1; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column;"></div>
+       <div id="bsMiddle" style="flex:1; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column;"></div>
+       <div id="bsRight" style="flex:0.8; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column; overflow-y:auto;"></div>
     </div>
     
   </div>
@@ -1990,11 +2021,11 @@ function renderPlayChallenges(){
        ? `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4; letter-spacing:8px;">↕</div>` 
        : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`;
 
-    // Amélioration UI des boutons (effets d'ombre et couleurs unifiées)
+// DESIGN SUPERCONSCIOUS : Boutons d'action "Pilule Blanche"
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     const btnHtml = isLastCard 
-       ? `<button onclick="playNext()" style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: 0 8px 20px rgba(16,185,129,0.3); font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Valider mes paris</button>${hintText}`
-       : `<button onclick="swipeNextCard()" style="background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(10px, 1.5vh, 14px); width: 100%; box-shadow: 0 8px 20px rgba(99,102,241,0.3); font-size:clamp(12px, 1.8vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Suivant</button>${hintText}`;
+       ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+       : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
     // CORRECTION : Épuration de la zone Score/Leaderboard avec un bloc unique, des icônes et des séparateurs discrets
     footer.innerHTML = `
@@ -2787,122 +2818,111 @@ function computeHistories(){
   return histories;
 }
 
-function drawCharts(histories){
-  histories.forEach((hist, cIndex)=>{
-    const canvas = document.getElementById("chart-ch"+cIndex);
-    if(!canvas) return;
-    const ctx = canvas.getContext("2d");
-    const w = canvas.width = canvas.clientWidth || 320;
-    const h = canvas.height;
+// Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
+function drawSingleChart(hist, canvasId, cIndex) {
+  const canvas = document.getElementById(canvasId);
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width = canvas.clientWidth || 320;
+  const h = canvas.height = canvas.clientHeight || 150; 
 
-    ctx.clearRect(0,0,w,h);
+  if(!hist.length){ return; }
 
-    if(!hist.length){
-      ctx.fillStyle = "#6b7280";
-      ctx.font = "12px system-ui";
-      ctx.fillText("Pas de votes pour ce challenge.", 12, h/2);
-      return;
-    }
-
-    let maxPct = 0;
-    hist.forEach(snapshot=>{
-      snapshot.forEach(p=>{
-        const val = p*100;
-        if(val > maxPct) maxPct = val;
-      });
-    });
-    if(maxPct < 5) maxPct = 5;
-
-    const paddingLeft = 32;
-    const paddingRight = 10;
-    const paddingTop = 10;
-    const paddingBottom = 45; // CORRECTION : Espace augmenté pour la légende multi-lignes
-    const chartW = w - paddingLeft - paddingRight;
-    const chartH = h - paddingTop - paddingBottom;
-
-    ctx.strokeStyle = "rgba(55,65,81,0.9)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(paddingLeft, paddingTop);
-    ctx.lineTo(paddingLeft, paddingTop + chartH);
-    ctx.lineTo(paddingLeft + chartW, paddingTop + chartH);
-    ctx.stroke();
-
-    ctx.fillStyle = "#6b7280";
-    ctx.font = "10px system-ui";
-
-    const yBottom = paddingTop + chartH;
-    ctx.fillText("0%", 4, yBottom+3);
-
-    const yTop = paddingTop;
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(55,65,81,0.4)";
-    ctx.moveTo(paddingLeft, yTop);
-    ctx.lineTo(paddingLeft + chartW, yTop);
-    ctx.stroke();
-    ctx.fillStyle = "#6b7280";
-    ctx.fillText(maxPct.toFixed(0) + "%", 4, yTop+3);
-
-    const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
-    const answersCount = game.challenges[cIndex].answers.length;
-    const steps = hist.length;
-
-    function xPos(stepIndex){
-      if(steps === 1) return paddingLeft + chartW/2;
-      return paddingLeft + (stepIndex/(steps-1))*chartW;
-    }
-
-    for(let ans=0; ans<answersCount; ans++){
-      ctx.beginPath();
-      ctx.lineWidth = 2.2;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.strokeStyle = colors[ans % colors.length];
-      let lastX = null;
-      let lastY = null;
-      hist.forEach((snapshot, idx)=>{
-        const pct = snapshot[ans] * 100;
-        const x = xPos(idx);
-        const y = paddingTop + chartH - (pct/maxPct)*chartH;
-        if(idx===0) ctx.moveTo(x,y);
-        else ctx.lineTo(x,y);
-        lastX = x;
-        lastY = y;
-      });
-      ctx.stroke();
-      // petit marqueur sur le dernier point
-      if(lastX !== null){
-        ctx.beginPath();
-        ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
-        ctx.fillStyle = colors[ans % colors.length];
-        ctx.fill();
-      }
-    }
-
-    ctx.font = "10px system-ui";
-    let currentX = paddingLeft;
-    let currentY = paddingTop + chartH + 18; // Départ juste sous le graphique
-    
-    game.challenges[cIndex].answers.forEach((label, ans)=>{
-      const color = colors[ans % colors.length];
-      const labelText = label && label.length > 20 ? label.slice(0,19) + "…" : (label || ("Réponse " + (ans+1)));
-      const textW = ctx.measureText(labelText).width;
-      const itemW = 15 + textW + 12; // Espace requis par cette réponse (Carré + texte + marge)
-      
-      // Si on dépasse le bord droit, on passe à la ligne suivante !
-      if (currentX + itemW > w - paddingRight && currentX > paddingLeft) {
-          currentX = paddingLeft;
-          currentY += 15;
-      }
-      
-      ctx.fillStyle = color; 
-      ctx.fillRect(currentX, currentY - 4, 10, 3);
-      ctx.fillStyle = "#e5e7eb"; 
-      ctx.fillText(labelText, currentX + 14, currentY);
-      
-      currentX += itemW;
-    });
+  // 1. On récupère UNIQUEMENT la dernière "photo" des votes (l'état présent)
+  const lastSnapshot = hist[hist.length - 1];
+  
+  // 2. Préparation des données pour faire la "Course"
+  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
+  let data = game.challenges[cIndex].answers.map((ans, i) => {
+      return {
+          label: ans,
+          pct: lastSnapshot[i] * 100,
+          color: colors[i % colors.length]
+      };
   });
+
+  // Tri par pourcentage décroissant (La meilleure réponse sera toujours en haut)
+  data.sort((a, b) => b.pct - a.pct);
+
+  // Valeur d'échelle : Le max est basé sur le gagnant (minimum visuel de 5%)
+  const maxPct = Math.max(5, data[0].pct);
+
+  // 3. Configuration de l'espace
+  const paddingLeft = 15;
+  const paddingRight = 75; // Grand espace réservé pour écrire "XX%" au bout de la ligne
+  const paddingTop = 20;
+  const paddingBottom = 15;
+  const chartW = w - paddingLeft - paddingRight;
+  const chartH = h - paddingTop - paddingBottom;
+  
+  // Tailles proportionnelles
+  const barHeight = Math.min(35, (chartH / data.length) - 8); 
+  const spacing = (chartH - (data.length * barHeight)) / (data.length > 1 ? data.length - 1 : 1);
+
+  // 4. Moteur d'Animation Fluide
+  let progress = 0;
+
+  function renderFrame() {
+      ctx.clearRect(0, 0, w, h);
+      
+      data.forEach((item, index) => {
+          const y = paddingTop + index * (barHeight + spacing);
+          const currentPct = item.pct * progress;
+          
+          let barW = (currentPct / maxPct) * chartW;
+          if (barW < 5) barW = 5; // Empêche un bug d'arrondi sur les barres minuscules
+          
+          // Dessin du fond de jauge translucide (Chemin à parcourir)
+          ctx.fillStyle = "rgba(255,255,255,0.05)";
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(paddingLeft, y, chartW, barHeight, 8);
+          else ctx.rect(paddingLeft, y, chartW, barHeight);
+          ctx.fill();
+
+          // Dessin de la barre colorée en cours d'avancement
+          ctx.fillStyle = item.color;
+          ctx.shadowColor = item.color;
+          ctx.shadowBlur = 12; // Effet lumineux Néon
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(paddingLeft, y, barW, barHeight, 8);
+          else ctx.rect(paddingLeft, y, barW, barHeight);
+          ctx.fill();
+          
+          ctx.shadowBlur = 0; // Sécurité : On coupe le néon pour ne pas flouter les textes
+          
+          // Texte : Nom de la réponse
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 14px system-ui";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          
+          const labelText = item.label.length > 25 ? item.label.slice(0, 22) + "…" : item.label;
+          
+          // Si la barre est suffisamment grande, on écrit dedans, sinon juste au-dessus
+          if (barW > ctx.measureText(labelText).width + 20) {
+              ctx.fillText(labelText, paddingLeft + 10, y + barHeight / 2);
+          } else {
+              ctx.fillStyle = "#9ca3af";
+              ctx.font = "600 12px system-ui";
+              ctx.fillText(labelText, paddingLeft, y - 6);
+          }
+
+          // Texte : Pourcentage exact (S'affiche dynamiquement pendant l'animation)
+          ctx.fillStyle = item.color;
+          ctx.font = "900 18px system-ui";
+          ctx.fillText(currentPct.toFixed(0) + "%", paddingLeft + barW + 10, y + barHeight / 2);
+      });
+
+      // Boucle permettant à l'animation de s'écouler (Vitesse : 0.06 par frame, soit ~0.3 seconde en tout)
+      if (progress < 1) {
+          progress += 0.06; 
+          if (progress > 1) progress = 1;
+          requestAnimationFrame(renderFrame);
+      }
+  }
+
+  // Lance l'animation
+  renderFrame();
 }
 
 function adminNext(){
@@ -3968,11 +3988,10 @@ function updateRecapUI(pseudo) {
 
 // Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
 function drawSingleChart(hist, canvasId, cIndex) {
-const canvas = document.getElementById(canvasId);
+  const canvas = document.getElementById(canvasId);
   if(!canvas) return;
   const ctx = canvas.getContext("2d");
   const w = canvas.width = canvas.clientWidth || 320;
-  // NOUVEAU : Le canvas prend la hauteur exacte que l'écran lui accorde
   const h = canvas.height = canvas.clientHeight || 150; 
 
   ctx.clearRect(0,0,w,h);
@@ -3988,38 +4007,51 @@ const canvas = document.getElementById(canvasId);
   });
   if(maxPct < 5) maxPct = 5;
 
-  const paddingLeft = 32; const paddingRight = 10;
-  const paddingTop = 10; const paddingBottom = 45; // CORRECTION : Espace augmenté pour la légende
+  // CORRECTION UI : Plus de légende en bas ! On donne un espace géant à droite pour le texte.
+  const paddingLeft = 10; 
+  const paddingRight = 130; // Espace réservé pour écrire le nom et le score au bout de la ligne
+  const paddingTop = 25; 
+  const paddingBottom = 15; 
   const chartW = w - paddingLeft - paddingRight;
   const chartH = h - paddingTop - paddingBottom;
 
-  ctx.strokeStyle = "rgba(55,65,81,0.9)";
-  ctx.lineWidth = 1; ctx.beginPath();
-  ctx.moveTo(paddingLeft, paddingTop);
-  ctx.lineTo(paddingLeft, paddingTop + chartH);
+  // CORRECTION UI : Fond ultra épuré (Juste une très fine ligne de base, pas d'axes verticaux)
+  ctx.strokeStyle = "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1; 
+  ctx.beginPath();
+  ctx.moveTo(paddingLeft, paddingTop + chartH);
   ctx.lineTo(paddingLeft + chartW, paddingTop + chartH);
   ctx.stroke();
-
-  ctx.fillStyle = "#6b7280"; ctx.font = "10px system-ui";
-  ctx.fillText("0%", 4, paddingTop + chartH + 3);
-  ctx.fillText(maxPct.toFixed(0) + "%", 4, paddingTop + 3);
 
   const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
   const answersCount = game.challenges[cIndex].answers.length;
   const steps = hist.length;
 
   function xPos(stepIndex){
-    if(steps === 1) return paddingLeft + chartW/2;
+    if(steps === 1) return paddingLeft + chartW;
     return paddingLeft + (stepIndex/(steps-1))*chartW;
   }
 
+  // Stockage des points de fin pour l'anti-collision du texte
+  const lastPoints = [];
+
   for(let ans=0; ans<answersCount; ans++){
     ctx.beginPath();
-    ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.strokeStyle = colors[ans % colors.length];
+    ctx.lineWidth = 3.5; // CORRECTION UI : Lignes boursières épaisses
+    ctx.lineJoin = "round"; 
+    ctx.lineCap = "round";
+    ctx.strokeStyle = colors[ans % colors.length];
+    
+    // CORRECTION UI : Effet Halo / Néon
+    ctx.shadowColor = colors[ans % colors.length];
+    ctx.shadowBlur = 8;
+
     let lastX = null, lastY = null;
+    let finalPct = 0;
     
     hist.forEach((snapshot, idx)=>{
       const pct = snapshot[ans] * 100;
+      if (idx === hist.length - 1) finalPct = pct;
       const x = xPos(idx);
       const y = paddingTop + chartH - (pct/maxPct)*chartH;
       if(idx===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
@@ -4027,34 +4059,48 @@ const canvas = document.getElementById(canvasId);
     });
     ctx.stroke();
     
+    // Désactiver l'ombre pour le reste des dessins (points et textes)
+    ctx.shadowBlur = 0;
+    
     if(lastX !== null){
-      ctx.beginPath(); ctx.arc(lastX, lastY, 3, 0, Math.PI*2);
+      // Gros point final au bout de la ligne
+      ctx.beginPath(); ctx.arc(lastX, lastY, 5, 0, Math.PI*2);
       ctx.fillStyle = colors[ans % colors.length]; ctx.fill();
+      ctx.strokeStyle = "#1e1b4b"; // Bordure sombre pour bien détacher le point
+      ctx.lineWidth = 2; ctx.stroke();
+
+      lastPoints.push({
+          x: lastX,
+          y: lastY,
+          color: colors[ans % colors.length],
+          label: game.challenges[cIndex].answers[ans],
+          pct: finalPct
+      });
     }
   }
 
-  ctx.font = "10px system-ui";
-  let currentX = paddingLeft;
-  let currentY = paddingTop + chartH + 18; 
+  // --- CORRECTION UI : Direct Labeling (Texte au bout de la ligne) ---
   
-  game.challenges[cIndex].answers.forEach((label, ans)=>{
-    const color = colors[ans % colors.length];
-    const labelText = label && label.length > 20 ? label.slice(0,19) + "…" : label;
-    const textW = ctx.measureText(labelText).width;
-    const itemW = 15 + textW + 12; 
-    
-    // Si on dépasse le bord droit, on passe à la ligne suivante !
-    if (currentX + itemW > w - paddingRight && currentX > paddingLeft) {
-        currentX = paddingLeft;
-        currentY += 15;
-    }
-    
-    ctx.fillStyle = color; 
-    ctx.fillRect(currentX, currentY - 4, 10, 3);
-    ctx.fillStyle = "#e5e7eb"; 
-    ctx.fillText(labelText, currentX + 14, currentY);
-    
-    currentX += itemW;
+  // 1. On trie les points de haut en bas pour éviter qu'ils ne s'écrasent s'ils sont à égalité
+  lastPoints.sort((a,b) => a.y - b.y);
+
+  // 2. Petit algorithme "anti-collision" : si deux points sont trop proches, on décale le texte du bas
+  for (let i = 1; i < lastPoints.length; i++) {
+      if (lastPoints[i].y - lastPoints[i-1].y < 22) {
+          lastPoints[i].y = lastPoints[i-1].y + 22;
+      }
+  }
+
+  // 3. Affichage du texte
+  lastPoints.forEach(pt => {
+      // On coupe le nom de la réponse s'il est trop long pour ne pas déborder du cadre
+      const labelText = pt.label && pt.label.length > 10 ? pt.label.slice(0,9) + "…" : pt.label;
+      const displayStr = `${pt.pct.toFixed(0)}% ${labelText}`;
+
+      ctx.font = "bold 13px system-ui";
+      ctx.fillStyle = pt.color;
+      // On écrit le texte légèrement à droite et centré verticalement par rapport au point final
+      ctx.fillText(displayStr, pt.x + 10, pt.y + 4); 
   });
 }
 
