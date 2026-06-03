@@ -2053,8 +2053,8 @@ function renderPlayChallenges(){
         // On ignore les clics sur les boutons d'action du bas (Suivant / Valider)
         if (e.target.closest('button')) return;
         
-        // En mode facile, si une réponse est déjà sélectionnée, on l'annule !
-        if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null) {
+        // CORRECTION : On vérifie aussi le undefined pour autoriser la désélection proprement
+        if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
             selectedAnswers[cIndex] = null;
             selectedBets[cIndex] = 0;
             renderAnswersForChallenge(cIndex); // Rafraîchit visuellement les boutons
@@ -2462,10 +2462,10 @@ function renderAnswersForChallenge(cIndex){
     }
 
     if (currentPlayerMode === 'easy') {
-        // CORRECTION : On ne grise les autres réponses QUE si le joueur a déjà fait un choix !
         if (snapForThisAns || selectedAnswers[cIndex] === i) {
             div.style.cursor = "default";
-        } else if (selectedAnswers[cIndex] !== null) {
+        // CORRECTION : On s'assure que la mémoire n'est ni null, ni "undefined" !
+        } else if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
             div.style.opacity = "0.4"; 
         }
         
