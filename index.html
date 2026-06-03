@@ -18,13 +18,22 @@
    100% { background-position: 0% 0%; }
  }
 
- body {
+ /* CORRECTION : On masque le compteur global car il est redondant avec l'affichage sur carte */
+#globalBalance {
+    display: none !important;
+}
+
+
+body {
    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
    background-color: #05010d;
    background-image: 
-     radial-gradient(circle at 20% 30%, rgba(91, 33, 182, 0.35) 0%, transparent 60%),
-     radial-gradient(circle at 80% 80%, rgba(30, 10, 60, 0.5) 0%, transparent 50%);
-   background-size: 150% 150%;
+     radial-gradient(circle at 20% 30%, rgba(91, 33, 182, 0.45) 0%, transparent 60%),
+     radial-gradient(circle at 80% 80%, rgba(30, 10, 60, 0.6) 0%, transparent 50%);
+   /* CORRECTION : On force le fond à se calquer sur la fenêtre de l'écran et on le fixe ! */
+   /* Cela empêche totalement la couleur de "sauter" ou de devenir noire entre les pages */
+   background-size: 100vw 100vh; 
+   background-attachment: fixed;
    animation: cosmicDrift 15s ease-in-out infinite;
    color: #ffffff;
    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
@@ -79,19 +88,19 @@
  }
 
 .card {
-   background: rgba(15, 10, 30, 0.6); 
-   backdrop-filter: blur(16px);
-   -webkit-backdrop-filter: blur(16px);
+   background: rgba(15, 10, 30, 0.75); /* Plus sombre, comme sur la capture */
+   backdrop-filter: blur(20px);
+   -webkit-backdrop-filter: blur(20px);
    border-radius: 24px;
    padding: 24px 20px;
    margin-top: 16px;
    
-   /* NOUVEAU : Bordure Néon Violette ultra brillante */
-   border: 2px solid rgba(168, 85, 247, 0.8); 
+   /* CORRECTION : Liseré violet plus fin et élégant, lueur subtile */
+   border: 1px solid rgba(168, 85, 247, 0.5); 
    box-shadow: 
-      0 0 25px rgba(168, 85, 247, 0.5),        /* Lueur externe (Aura) */
-      inset 0 0 15px rgba(168, 85, 247, 0.3),  /* Lueur interne (Profondeur) */
-      0 30px 60px rgba(0, 0, 0, 0.8);          /* Ombre portée classique pour décoller du fond */
+      0 0 20px rgba(168, 85, 247, 0.15),        
+      inset 0 0 10px rgba(168, 85, 247, 0.1),  
+      0 20px 40px rgba(0, 0, 0, 0.6);          
    
    animation: smoothFadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
  }
@@ -127,47 +136,88 @@ button {
    width: 100%;
    padding: 14px 20px; 
    border-radius: 999px;
-   border: 1px solid rgba(255, 255, 255, 0.1) !important;
    font-weight: 700; 
    font-size: 15px;
    cursor: pointer;
    margin-top: 12px;
+   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
    
-   /* CORRECTION : Boutons secondaires (Retour/Annuler) en Verre Fumé clair pour être TOUJOURS lisibles */
-   background: rgba(255, 255, 255, 0.08) !important;
-   color: #ffffff !important;
+   /* Design par défaut : Correspond exactement au bouton sombre de la capture */
+   background: rgba(255, 255, 255, 0.05);
+   color: #e2e8f0;
+   border: 1px solid rgba(255, 255, 255, 0.08);
    backdrop-filter: blur(10px);
    -webkit-backdrop-filter: blur(10px);
-   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
-   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
  }
  button:hover {
    transform: translateY(-2px);
-   background: rgba(255, 255, 255, 0.15) !important;
-   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4) !important;
+   background: rgba(255, 255, 255, 0.1);
+   border: 1px solid rgba(255, 255, 255, 0.15);
+   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
  }
  button:active {
    transform: translateY(1px) scale(0.98);
  }
 
- /* BOUTONS D'ACTION PRINCIPALE (Le bouton blanc massif Superconscious) */
- .btn-primary, button[onclick^="checkAccess"], button[onclick^="playNext"], button[onclick^="confirm"], button[onclick^="checkBigScreen"], button[onclick^="generateSetupFields"], button[onclick^="setupNext"] { 
+ /* --- HARMONISATION SÉMANTIQUE DES BOUTONS --- */
+ 
+ /* 1. Action Principale (Créer, Jouer, Valider) -> Blanc pur */
+ .btn-primary, button[onclick^="showScreen('play')"], button[onclick^="askResume"], button[onclick^="startSetup"], button[onclick^="checkAccess"], button[onclick^="playNext"], button[onclick^="confirmBet"], button[onclick^="generateSetupFields"], button[onclick^="setupNext"], button[onclick^="adminNext"], button[onclick^="fillTestGame"] { 
    background: #ffffff !important; 
    color: #000000 !important; 
    border: none !important;
-   box-shadow: 0 0 25px rgba(255, 255, 255, 0.2) !important;
+   box-shadow: 0 0 20px rgba(255, 255, 255, 0.2) !important;
  }
- .btn-primary:hover, button[onclick^="checkAccess"]:hover, button[onclick^="playNext"]:hover {
-   box-shadow: 0 0 40px rgba(255, 255, 255, 0.4) !important;
+ .btn-primary:hover, button[onclick^="showScreen('play')"]:hover, button[onclick^="checkAccess"]:hover, button[onclick^="playNext"]:hover {
+   box-shadow: 0 0 35px rgba(255, 255, 255, 0.4) !important;
  }
- .btn-warning { background: linear-gradient(135deg, #a855f7, #6366f1) !important; color: #ffffff !important; border:none !important; }
+ 
+ /* 2. Gestion & Admin -> Dégradé Violet/Bleu */
+ .btn-admin, button[onclick^="checkAdminPassword"], button[onclick^="showScreen('manageAuth')"], button[onclick^="showScreen('bigScreenAuth')"], button[onclick^="showScreen('simulationSetup')"], button[onclick^="checkBigScreenAccess"], button[onclick^="checkManageAccess"], button[onclick^="sendBroadcastMessage"] { 
+   background: linear-gradient(135deg, #a855f7, #6366f1) !important; 
+   color: #ffffff !important; 
+   border: none !important; 
+   box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3) !important;
+ }
+
+ /* 3. Actions Positives (Valider fin, Lier Session) -> Dégradé Vert */
+ .btn-success, button[onclick^="finish"], button[onclick^="forceTime("][onclick*="'start'"], button[onclick^="resolveChallenge"], button[onclick^="linkNextSession"], button[onclick^="startSimulation"], button[onclick^="copyWelcomeCode"] { 
+   background: linear-gradient(135deg, #22c55e, #16a34a) !important; 
+   color: #ffffff !important; 
+   border: none !important;
+   box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3) !important;
+ }
+
+ /* 4. Actions Destructives (Cash Out, Stop, Clôturer) -> Dégradé Orange/Rouge */
+ .btn-danger, button[onclick^="confirmSell"], button[onclick^="stopSimulation"], button[onclick^="undoResolveChallenge"], button[onclick^="forceTime("][onclick*="'end'"] { 
+   background: linear-gradient(135deg, #f97316, #ea580c) !important; 
+   color: #ffffff !important; 
+   border: none !important;
+   box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3) !important;
+ }
+
+ /* 5. Actions de Retour / Annuler -> Transparents et Discrets */
+ button[onclick^="showScreen('home')"], button[onclick^="close"], button[onclick^="confirmExit"] {
+   background: transparent !important;
+   border: 1px solid rgba(255,255,255,0.2) !important;
+   color: #9ca3af !important;
+   box-shadow: none !important;
+ }
+ button[onclick^="showScreen('home')"]:hover, button[onclick^="close"]:hover {
+   background: rgba(255,255,255,0.05) !important;
+   color: #ffffff !important;
+ }
+
  .btn-spacing { margin-top: 12px; }
  /* ----------------------------------------------------------- */
 
 .answer-btn {
-   background: rgba(255, 255, 255, 0.03); 
-   border: 1px solid rgba(255, 255, 255, 0.08);
-   padding: 0 16px; 
+   background: rgba(25, 10, 45, 0.85); 
+   border: 1px solid rgba(168, 85, 247, 0.4);
+   box-shadow: inset 0 0 12px rgba(168, 85, 247, 0.15);
+   /* CORRECTION : Padding dynamique pour laisser le bouton s'écraser proprement si besoin */
+   padding: clamp(6px, 1.5vh, 12px) 16px; 
    border-radius: 16px;
    margin-bottom: 0; 
    cursor: pointer;
@@ -176,15 +226,16 @@ button {
    align-items: center;
    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
    
+   /* CORRECTION : Flexibilité absolue, plus de blocage de hauteur minimale ! */
    flex: 1 1 0px; 
-   min-height: 32px; 
-   /* CORRECTION : On lève considérablement le plafond. S'il n'y a que 2 réponses, elles pourront devenir très grandes et remplir tout l'espace ! */
-   max-height: 150px; 
+   min-height: 0; 
+   height: 100%;
    overflow: hidden;
  }
  .answer-btn:hover {
-   background: rgba(255, 255, 255, 0.08);
-   border-color: rgba(255, 255, 255, 0.2);
+   background: rgba(35, 15, 60, 0.95);
+   border-color: rgba(168, 85, 247, 0.7);
+   box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.25);
  }
  .answer-btn:active {
    transform: translateY(2px) scale(0.98);
@@ -366,15 +417,15 @@ button {
 
 .side-panel {
    position: fixed; bottom: -100%; left: 0; width: 100%; height: auto; 
-   /* CORRECTION : On repasse en vh pour que l'ouverture du clavier virtuel ne compresse pas violemment le panneau */
    max-height: 90vh; 
    
-   background: rgba(15, 10, 30, 0.85);
+   /* CORRECTION : Couleur harmonisée avec la charte "Card" de l'accueil */
+   background: rgba(15, 10, 30, 0.95);
    backdrop-filter: blur(25px);
    -webkit-backdrop-filter: blur(25px);
-   border-top: 1px solid rgba(168, 85, 247, 0.4); 
+   border-top: 1px solid rgba(168, 85, 247, 0.5); 
    border-radius: 32px 32px 0 0;
-   box-shadow: 0 -15px 40px rgba(0,0,0,0.8), inset 0 1px 15px rgba(168,85,247,0.15);
+   box-shadow: 0 -10px 40px rgba(0,0,0,0.8), inset 0 1px 15px rgba(168,85,247,0.15);
    
    z-index: 1000; transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
    
@@ -415,8 +466,8 @@ button {
 #challengesPlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  width: 100%; height: 100%; /* Plus sûr que 100vh sur mobile */
-  background: #020617; 
+  width: 100%; height: 100%; 
+  background: transparent; /* CORRECTION : Fond transparent pour garder le beau fond cosmique ! */
   z-index: 800; 
   overflow: hidden; 
   touch-action: none; 
@@ -429,8 +480,7 @@ body.play-mode-active {
   overflow: hidden !important;
   position: fixed !important;
   width: 100% !important;
-  height: 100% !important;
-  /* CORRECTION : Force le centrage de la page même quand le défilement est bloqué */
+  /* CORRECTION : On a retiré le height:100% qui écrasait le fond cosmique sur iOS lors des changements de page ! */
   left: 0 !important;
   right: 0 !important;
   margin: 0 auto !important;
@@ -662,7 +712,7 @@ body.play-mode-active {
 <div id="selectMode" class="card" style="display:none">
   <h2>Type de jeu</h2>
   <p class="subtitle">Comment souhaitez-vous que les joueurs misent ?</p>
-  <button onclick="startSetup('easy')">Créer un jeu Facile (1 unité / question)</button>
+  <button onclick="startSetup('easy')">Créer un jeu Facile (1 💰 / question)</button>
   <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé (Solde & Mises libres)</button>
   <button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
   <button onclick="showScreen('adminMenu')" class="btn-outline" style="margin-top: 15px;">Retour</button>
@@ -744,7 +794,7 @@ body.play-mode-active {
     </div>
 
     <div id="advancedParams" class="hidden">
-      <label>Solde de base par joueur (Unités)</label>
+      <label>Solde de base par joueur (💰)</label>
       <input type="number" id="initialBalance" value="100" min="10">
     </div>
 
@@ -1948,6 +1998,26 @@ function formatTimeDiff(diff) {
   return `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
+// NOUVEAU: Fonction dédiée pour générer la liste des mises sur la carte
+window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
+    let betInfoHtml = "";
+    
+    if (snaps.length > 0) {
+       snaps.forEach(snap => {
+           const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open") 
+             ? `<div style="margin-top:4px;"><button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0;">Revendre (Cash out)</button></div>` 
+             : "";
+           betInfoHtml += `<div style="color:#fde047; font-size:12px; margin-top:8px; font-weight:bold; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid rgba(253,224,71,0.2);">
+             ✅ Mise : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}"
+             ${cashOutBtn}
+           </div>`;
+       });
+    }
+    return betInfoHtml;
+};
+
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
@@ -1968,6 +2038,19 @@ function renderPlayChallenges(){
     block.className = "challenge-block";
     const effStatus = getEffectiveStatus(ch);
 
+    // NOUVEAU : Désélection de la réponse en mode Facile si on clique dans le vide
+    block.onclick = (e) => {
+        // On ignore les clics sur les boutons d'action du bas (Suivant / Valider)
+        if (e.target.closest('button')) return;
+        
+        // En mode facile, si une réponse est déjà sélectionnée, on l'annule !
+        if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null) {
+            selectedAnswers[cIndex] = null;
+            selectedBets[cIndex] = 0;
+            renderAnswersForChallenge(cIndex); // Rafraîchit visuellement les boutons
+        }
+    };
+
     // NOUVEAU : On ne gère plus le statut "pending" pour le joueur (il ne voit que l'actif)
     if (effStatus === "pending") return;
 
@@ -1975,7 +2058,7 @@ function renderPlayChallenges(){
     if (effStatus === "closed" || effStatus === "resolved") {
       const snap = player ? (player.portfolio || []).find(b => b.cIndex === cIndex) : null;
       let label = effStatus === "closed" ? "MISES CLOSES" : "TERMINÉ";
-      let detail = snap ? `<div style="font-size:11px; color:#9ca3af; margin-top:5px;">Mise : ${snap.bet} u</div>` : "";
+      let detail = snap ? `<div style="font-size:11px; color:#9ca3af; margin-top:5px;">Mise : ${snap.bet} 💰</div>` : "";
       
       if (effStatus === "resolved") {
         const isWin = snap && snap.ansIndex === ch.correct;
@@ -1996,15 +2079,8 @@ function renderPlayChallenges(){
     }
 
 // 3. QUESTION OUVERTE (OPEN) - Rendu style Carte Premium
-    const snap = player ? (player.portfolio || []).find(b => b.cIndex === cIndex) : null;
-    let betInfoHtml = "";
-    
-    if (snap) {
-      const extraText = currentPlayerMode === 'advanced' ? " (Vous pouvez remiser)." : "";
-      betInfoHtml = `<div style="color:#fde047; font-size:12px; margin-top:10px; font-weight:bold;">
-        ✅ Mise : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}".${extraText}
-      </div>`;
-    }
+    // CORRECTION : Appel de la fonction centralisée pour afficher toutes les mises
+    const betInfoHtml = window.generateBetInfoHtml(cIndex, ch, effStatus);
 
     const header = document.createElement("div");
     header.className = "challenge-header";
@@ -2055,14 +2131,14 @@ function renderPlayChallenges(){
     qnaZone.innerHTML = `
       <div style="flex-shrink: 0; font-size:clamp(14px, 2.2vh, 18px); font-weight:600; line-height:1.3; margin-bottom: clamp(12px, 2vh, 20px); color:#f9fafb;">
          ${ch.question}
-         ${betInfoHtml}
+         <div id="bet-info-${cIndex}">${betInfoHtml}</div>
       </div>
     `;
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
-    /* CORRECTION : "justify-content: stretch" oblige les boutons à s'étirer verticalement pour combler tout le vide disponible (jusqu'à leur max-height). */
-    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: stretch; gap: clamp(6px, 1.2vh, 10px); min-height: 0; overflow-y: auto; padding-bottom: 5px;";
+    /* CORRECTION : "overflow: hidden" interdit formellement le défilement et force l'élasticité absolue ! */
+    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: stretch; gap: clamp(6px, 1.2vh, 10px); min-height: 0; overflow: hidden; padding-bottom: 5px;";
     answersBox.classList.add("hide-scrollbar");
     
     // On insère la boîte de réponses à l'intérieur de la zone globale
@@ -2076,7 +2152,8 @@ function renderPlayChallenges(){
        : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`;
 
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
-    const btnHtml = isLastCard 
+    // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
+    const btnHtml = (isLastCard || window.isRebetting)
        ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
        : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
@@ -2127,34 +2204,36 @@ function renderPlayChallenges(){
 
 // NOUVEAU : Fonction centralisée pour vérifier si le joueur a le droit de quitter la carte
   window.canPassCurrentCard = function() {
+      // CORRECTION : On doit vérifier la réponse pour LA question de la base de données (cIndex),
+      // et non pas sa position visuelle dans la pile (currentCardIndex) !
       const player = (game.players || []).find(p => p.name === game.currentPlayerName);
       const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
       const cIndex = myIndices[window.currentCardIndex];
-      const ch = game.challenges[cIndex];
 
-      // CORRECTION : On bloque uniquement pour le Mode Facile (Le joueur est libre de passer le Fil Rouge en mode Avancé)
-      if (ch && currentPlayerMode === 'easy') {
-        if (getEffectiveStatus(ch) === "open") {
-           const hasBetInPortfolio = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex);
-           if (selectedAnswers[cIndex] == null && !hasBetInPortfolio) {
-               const msg = document.getElementById("playMsg");
-               if (msg) {
-                   msg.textContent = "Vous devez cocher une réponse pour passer à la suite.";
-                   msg.classList.add("show"); 
-                   setTimeout(() => { if (msg.textContent.includes("cocher")) msg.classList.remove("show"); }, 3000);
-               }
-               return false; 
-           }
-        }
+      if (currentPlayerMode === 'easy') {
+          const ans = selectedAnswers[cIndex]; 
+          // En mode facile, la réponse reste obligatoire
+          if (ans === null || ans === undefined || ans === -1) {
+              const msgEl = document.getElementById("playMsg");
+              if (msgEl) {
+                  msgEl.textContent = "Veuillez choisir une réponse";
+                  msgEl.className = "msg err show";
+                  setTimeout(() => msgEl.classList.remove("show"), 3000);
+              }
+              return false;
+          }
       }
+      // Mode avancé : on autorise toujours le passage
       return true;
   };
 
 window.swipeNextCard = function() {
     if(window.currentCardIndex >= cardsElements.length - 1) return false;
 
-    // CORRECTION TUTO : Bloque le passage à la carte suivante si on est à l'étape 6 (doit balayer vers le bas)
-    if (window.currentTutoStep === 6) return false;
+    // CORRECTION : Si on attendait un swipe vers le bas (étape 6) mais qu'il fait un swipe vers le haut, on ferme le tuto et on autorise.
+    if (window.currentTutoStep === 6) {
+        closeTuto();
+    }
 
     // Utilisation de la vérification centralisée
     if (!window.canPassCurrentCard()) return false;
@@ -2162,6 +2241,7 @@ window.swipeNextCard = function() {
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.classList.add('fly-away'); 
     window.currentCardIndex++;
+    window.saveLocalProgress(); // CORRECTION : Sauvegarde l'avancée lors du swipe vers le haut
     setTimeout(updateCardStack, 100); 
 
     // CORRECTION TUTO : Dès qu'il réussit à passer à la carte suivante, on lance l'étape 6 (Balayage vers le bas)
@@ -2178,10 +2258,13 @@ window.swipeNextCard = function() {
   window.swipePrevCard = function() {
     if(window.currentCardIndex <= 0) return;
 
-    // CORRECTION TUTO : Bloque le retour en arrière si on est à l'étape 5 (doit balayer vers le haut)
-    if (window.currentTutoStep === 5) return false;
+    // CORRECTION : Si on attendait un swipe vers le haut (étape 5) mais qu'il fait un swipe vers le bas, on ferme le tuto et on autorise.
+    if (window.currentTutoStep === 5) {
+        closeTuto();
+    }
 
     window.currentCardIndex--;
+    window.saveLocalProgress(); // CORRECTION : Sauvegarde l'avancée lors du swipe vers le bas
     updateCardStack(); 
 
     // CORRECTION TUTO : Dès qu'il réussit à revenir en arrière, on lance l'étape 7 (Message de fin)
@@ -2232,15 +2315,26 @@ window.swipeNextCard = function() {
     
     const deltaY = e.changedTouches[0].clientY - startY;
 
-    // CORRECTION MAJEURE : On bloque tout mouvement inférieur à 30px (comme un doigt qui tremble ou un clic appuyé).
-    // Cela empêche un "faux mouvement" d'être interprété comme un ordre de fermeture du tutoriel !
     if (Math.abs(deltaY) < 30) {
         activeCard.style.transform = ''; 
         return; 
     }
 
     if (deltaY < -80) { // Glissement vers le haut (Suivant)
-      if (window.currentTutoStep === 6) { activeCard.style.transform = ''; return; } // Bloque le swipe up à l'étape 6
+      
+      // NOUVEAU : Si le joueur est juste venu re-miser, le balayage valide directement et le ramène au récapitulatif !
+      if (window.isRebetting) {
+          if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+              activeCard.style.transform = ''; 
+              activeCard.classList.add('fly-away'); 
+              setTimeout(() => {
+                  if (typeof playNext === 'function') playNext(); 
+              }, 400); 
+          } else {
+              activeCard.style.transform = ''; 
+          }
+          return; // On arrête là !
+      }
 
       if (window.currentCardIndex < cardsElements.length - 1) {
           const success = swipeNextCard(); 
@@ -2248,40 +2342,34 @@ window.swipeNextCard = function() {
               activeCard.style.transform = ''; 
           }
       } else {
-          if (window.currentTutoStep === 5) {
-              activeCard.style.transform = ''; 
-              nextTuto(7);
-              return;
-          } else if (window.currentTutoStep === 7) {
-              activeCard.style.transform = '';
+          // NOUVEAU : Si c'est la dernière carte et qu'il y a un tuto en cours, on le force à se fermer.
+          if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
               closeTuto();
-              return;
           }
 
           if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
               activeCard.style.transform = ''; 
               activeCard.classList.add('fly-away'); 
               setTimeout(() => {
-                  playNext(); 
+                  if (typeof playNext === 'function') playNext(); 
               }, 400); 
           } else {
               activeCard.style.transform = ''; 
           }
       }
     } else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
-      if (window.currentTutoStep === 5) { activeCard.style.transform = ''; return; } // Bloque le swipe down à l'étape 5
+      // CORRECTION : Pareil ici, on laisse swipePrevCard gérer la logique
       swipePrevCard(); 
     } else {
       activeCard.style.transform = ''; 
     }
   });
 
-// CORRECTION : Écouteur de clics permissif
+  // CORRECTION : Écouteur de clics permissif
   containerEl.addEventListener('click', (e) => {
       if (window.currentTutoStep === 1) {
           nextTuto(3);
       } 
-      // NOUVEAU : Si on est à l'étape 5, 6 ou 7, le moindre clic (action quelconque) ferme instantanément le tutoriel !
       else if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
           closeTuto();
       }
@@ -2340,77 +2428,75 @@ function renderAnswersForChallenge(cIndex){
   const box = document.getElementById("answers-ch"+cIndex);
   box.innerHTML = "";
   
-  // NOUVEAU : On récupère la mise existante du joueur s'il y en a une
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const snap = player ? (player.portfolio || []).find(b => b.cIndex === cIndex) : null;
+  // NOUVEAU : On récupère la liste COMPLÈTE des mises actives du joueur
+  const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
   
-  // CALCUL DES PROBABILITES LMSR
   const probs = getLMSRProbs(ch.votes);
 
-ch.answers.forEach((a,i)=>{
+  ch.answers.forEach((a,i)=>{
     const pct = probs[i];
-    
-    // Formule pour l'affichage de base
     const safePct = pct <= 0 ? 0.001 : pct;
-    const pts = +(1 / safePct).toFixed(2); // <-- Précision à 2 décimales
+    const pts = +(1 / safePct).toFixed(2); 
 
-const div = document.createElement("div");
+    const div = document.createElement("div");
     div.className = "answer-btn";
-    // CORRECTION : Le style en ligne lourd est supprimé, le design et les animations sont désormais gérés par le CSS !
     
-    // --- Logique de clic et surbrillance fluide ---
-    if (snap) {
-       if (snap.ansIndex === i) div.classList.add("selected");
-       if (currentPlayerMode === 'easy') {
-           div.style.cursor = "default";
-           if (snap.ansIndex !== i) div.style.opacity = "0.4"; 
-       } else {
-           div.onclick = (e) => {
-               e.stopPropagation(); // Sécurité
-               openBetPanel(cIndex, i, 'YES');
-           };
-       }
+    // Vérifie si le joueur a une mise spécifique sur CETTE réponse
+    const snapForThisAns = snaps.find(b => b.ansIndex === i);
+
+    if (snapForThisAns) {
+       div.classList.add("selected");
+    } else if (selectedAnswers[cIndex] === i) {
+       div.classList.add("selected"); // Pour la mémoire du Mode Facile
+    }
+
+    if (currentPlayerMode === 'easy') {
+        // CORRECTION : On ne grise les autres réponses QUE si le joueur a déjà fait un choix !
+        if (snapForThisAns || selectedAnswers[cIndex] === i) {
+            div.style.cursor = "default";
+        } else if (selectedAnswers[cIndex] !== null) {
+            div.style.opacity = "0.4"; 
+        }
+        
+        div.onclick = (e) => {
+            e.stopPropagation(); 
+            selectedAnswers[cIndex] = i; 
+            selectedBets[cIndex] = 1; 
+            window.saveLocalProgress(); // CORRECTION : Sauvegarde de la réponse sélectionnée
+            renderAnswersForChallenge(cIndex); 
+            if (window.currentTutoStep === 3) nextTuto(5); 
+        };
     } else {
-       if(selectedAnswers[cIndex] === i) div.classList.add("selected"); 
-       div.onclick = (e) => {
-         e.stopPropagation(); 
-         if (currentPlayerMode === 'easy') {
-             selectedAnswers[cIndex] = i; 
-             selectedBets[cIndex] = 1; 
-             renderAnswersForChallenge(cIndex); 
-             if (window.currentTutoStep === 3) nextTuto(5); 
-         } else {
-             openBetPanel(cIndex, i, 'YES');
-             
-             if (window.currentTutoStep === 3) {
-                 // CORRECTION : On cache immédiatement la bulle et le halo de l'étape 3 dès le clic !
-                 clearTutoHighlights();
-                 const step3El = document.getElementById("tutoStep3");
-                 if (step3El) step3El.classList.add("hidden");
-                 
-                 // Puis on attend 0.5s que le panneau finisse de glisser pour allumer l'étape 4
-                 setTimeout(() => nextTuto(4), 500); 
-             }
-         }
-       };
+        // MODE AVANCÉ : Toujours cliquable, permet d'ajouter de nouvelles mises sur n'importe quoi !
+        div.onclick = (e) => {
+            e.stopPropagation(); 
+            openBetPanel(cIndex, i, 'YES');
+            
+            if (window.currentTutoStep === 3) {
+                clearTutoHighlights();
+                const step3El = document.getElementById("tutoStep3");
+                if (step3El) step3El.classList.add("hidden");
+                setTimeout(() => nextTuto(4), 500); 
+            }
+        };
     }
 
     const label = document.createElement("div");
-    // CORRECTION : La police descend à 10px pour que tout tienne
-    label.style.cssText = "font-weight: 600; font-size: clamp(10px, 1.5vh, 13px); color: #f9fafb; flex:1; padding-right:10px; line-height: 1.1;";
+    // CORRECTION UI : Typographie Premium (Poids augmenté, espacement aéré et ombre noire portée pour un contraste absolu)
+    label.style.cssText = "font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: clamp(14px, 1.8vh, 17px); color: #ffffff; flex:1; padding-right:10px; line-height: 1.35; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);";
     label.textContent = a;
 
     const ptsSpan = document.createElement("div");
-    // CORRECTION : La police de la valeur descend aussi
-    ptsSpan.style.cssText = "font-weight: 800; font-size: clamp(11px, 1.6vh, 14px); color: #f9fafb; white-space:nowrap;";
+    // CORRECTION UI : Typographie extra-grasse pour les valeurs, avec la même ombre portée
+    ptsSpan.style.cssText = "font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; font-size: clamp(15px, 2vh, 19px); color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);";
     
-    // Affichage des points (Facile) ou des % (Avancé)
     if (currentPlayerMode === 'easy') {
-        // CORRECTION : On remplace "pt" par l'émoji sac d'argent 💰
-        ptsSpan.innerHTML = `${pts} 💰`;
+        ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100).toFixed(1)}%</span></div>`;
     } else {
-        if (selectedAnswers[cIndex] === i && selectedBets[cIndex] > 0) {
-            ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Attente: ${selectedBets[cIndex]}u</span>`;
+        // Affiche la mise en or si le joueur a parié sur cette réponse
+        if (snapForThisAns) {
+            ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Mise: ${snapForThisAns.bet}u</span>`;
         } else {
             ptsSpan.innerHTML = `${(pct*100).toFixed(0)} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
         }
@@ -2574,7 +2660,7 @@ function nextTuto(step) {
     const tutoText = document.getElementById("tutoStep3Text");
     if (tutoText) {
        if (currentPlayerMode === 'easy') {
-           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les points (pts) indiquent vos gains potentiels. Moins une réponse est jouée, plus elle rapporte !`;
+           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les gains (💰) indiquent ce que vous pouvez remporter. Moins une réponse est jouée, plus elle rapporte !`;
        } else {
            tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les pourcentages (%) évoluent en temps réel selon le montant total des mises placées par tous les joueurs ! Plus la probabilité d'une réponse est faible, plus vos gains potentiels seront important.`;
        }
@@ -2649,71 +2735,53 @@ function closeTuto() {
 }
 
 function playNext() {
-  const pseudo = game.currentPlayerName;
-  const msg = document.getElementById("playMsg");
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    const totalCards = document.querySelectorAll('#challengesPlay .challenge-block').length;
 
-  if(!pseudo) {
-    msg.textContent = "Erreur de session.";
-    msg.classList.add("show");
-    setTimeout(() => { if (msg.textContent.includes("Erreur de session")) msg.classList.remove("show"); }, 3000);
-    return;
-  }
+    // 1. Navigation : si on n'est pas à la fin du paquet ET qu'on n'est pas en train de faire un Retour Rapide (re-miser)
+    if (window.currentCardIndex < totalCards - 1 && !window.isRebetting) {
+        if (typeof window.canPassCurrentCard === 'function' && !window.canPassCurrentCard()) return;
+        if (typeof window.swipeNextCard === 'function') window.swipeNextCard();
+        return;
+    }
 
-  // NOUVEAU : Vérification du nombre de paris "n" attribués au joueur
-  const n = sessionConfig.n || 1;
-  const player = (game.players || []).find(p => p.name === pseudo);
-  const myIndices = player ? (player.assignedIndices || []) : [];
-  
-  // On compte combien de paris sont prêts à être validés (ou déjà validés) parmi ses questions attribuées
-  const currentBetsCount = myIndices.filter(idx => {
-     const hasExistingBet = player.portfolio && player.portfolio.some(b => b.cIndex === idx);
-     const hasPendingBet = selectedAnswers[idx] !== null && selectedAnswers[idx] !== undefined;
-     return hasExistingBet || hasPendingBet;
-  }).length;
-
-  // NOUVEAU : On n'oblige à parier sur les 'n' questions que dans le Mode Facile.
-  // Le Mode Avancé a le droit de ne pas tout miser !
-  if (currentPlayerMode === 'easy' && currentBetsCount < n) {
-    msg.textContent = `Vous devez parier sur vos ${n} questions attribuées avant de valider.`;
-    msg.classList.add("show");
-    setTimeout(() => { if (msg.textContent.includes("attribuées")) msg.classList.remove("show"); }, 3000);
-    return;
-  }
-
-  // En mode facile, on vérifie qu'il a répondu à toutes les questions OUVERTES
-  if (currentPlayerMode === 'easy') {
-    let allOpenAnswered = true;
-    game.challenges.forEach((ch, cIndex) => {
-      if (getEffectiveStatus(ch) === "open" && myIndices.includes(cIndex)) {
-        if (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined) {
-          allOpenAnswered = false;
-        }
-      }
-    });
+    // 2. Sur la dernière carte : Vérification stricte UNIQUEMENT en mode Facile (et si on ne re-mise pas)
+    let missingCardIndex = -1;
     
-    if (!allOpenAnswered) {
-      msg.textContent = "Veuillez répondre à toutes les questions en cours avant de valider.";
-      msg.classList.add("show");
-      setTimeout(() => { if (msg.textContent.includes("toutes les questions")) msg.classList.remove("show"); }, 3000);
-      return;
+    if (currentPlayerMode === 'easy' && !window.isRebetting) {
+        for (let cardIdx = 0; cardIdx < myIndices.length; cardIdx++) {
+            let cIndex = myIndices[cardIdx];
+            if (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1) {
+                missingCardIndex = cardIdx;
+                break;
+            }
+        }
     }
-  }
-  // CORRECTION : En mode avancé, le joueur n'est plus obligé de parier sur le Fil Rouge pour valider
 
-  msg.classList.remove("show");
-
-  // CORRECTION : Nouveau message plus rassurant pour les joueurs
-  if (confirm("Voulez-vous valider ces paris ? Vous pourrez les ajuster à tout moment.")) {
-    closeTuto(); 
-    validate(); 
-  } else {
-    // NOUVEAU : Si le joueur annule la validation après avoir balayé la dernière carte,
-    // on annule son envol (fly-away) pour qu'il ne se retrouve pas face à un écran noir vide !
-    const activeCard = document.querySelector('.challenge-block.active-card');
-    if (activeCard) {
-        activeCard.classList.remove('fly-away');
+    // 3. S'il manque une réponse en Facile, on ramène le joueur sur la carte concernée
+    if (missingCardIndex !== -1) {
+        window.currentCardIndex = missingCardIndex;
+        window.saveLocalProgress(); // CORRECTION : Sauvegarde l'avancée en le ramenant
+        if (typeof updateCardStack === 'function') updateCardStack();
+        
+        const msgEl = document.getElementById("playMsg");
+        if (msgEl) {
+            msgEl.textContent = "Veuillez répondre à toutes les questions";
+            msgEl.className = "msg err show";
+            setTimeout(() => msgEl.classList.remove("show"), 3000);
+        } else {
+            alert("Veuillez répondre à toutes les questions");
+        }
+        return;
     }
-  }
+
+    // 4. Succès -> On VALIDE sur la base de données et on affiche le récapitulatif !
+    if (typeof validate === 'function') {
+        validate(); 
+    } else if (typeof renderPlayerRecap === 'function') {
+        renderPlayerRecap(game.currentPlayerName);
+    }
 }
 
 // On peut supprimer ou vider la fonction updatePlayButton() car on n'en a plus besoin
@@ -2734,37 +2802,31 @@ function openBetPanel(cIndex, ansIndex, betType) {
   // 1. Calcul des probabilités avec LMSR
   const probs = getLMSRProbs(ch.votes);
   const pStartYes = probs[ansIndex];
-  
-  // 2. La probabilité du NON est exactement la somme des autres (soit 1 - pStartYes)
   const pStart = betType === 'YES' ? pStartYes : (1 - pStartYes);
 
-// 3. Affichage dynamique avec la cote actuelle (Plus de OUI/NON)
+  // 3. Affichage dynamique avec la cote actuelle
   document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
 
-  // Si le joueur avait déjà misé sur cette question, on le rembourse temporairement
-  if (selectedAnswers[cIndex] !== null && selectedBets[cIndex] > 0) {
+  // CORRECTION : En Mode Avancé, on NE REMBOURSE PLUS la mise précédente ! 
+  // Le joueur a le droit d'ajouter de l'argent sur la même réponse ou de parier sur une nouvelle !
+  if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedBets[cIndex] > 0) {
     currentPlayerBalance += selectedBets[cIndex];
     selectedAnswers[cIndex] = null;
     selectedBets[cIndex] = 0;
-    renderAnswersForChallenge(cIndex); // Met à jour l'UI pour désélectionner
+    renderAnswersForChallenge(cIndex);
     updateGlobalBalance(); 
   }
 
-  // CORRECTION UI : Affichage du solde avec l'émoji au lieu de "unités"
   document.getElementById("betAvailable").textContent = currentPlayerBalance + " 💰";
   
   const betInputEl = document.getElementById("betInput");
   betInputEl.value = "";
-  // CORRECTION : On force le champ à se désélectionner pour empêcher le clavier de popper tout seul !
   betInputEl.blur();
   document.getElementById("betPotential").textContent = "0 💰";
   document.getElementById("betError").textContent = "";
 
   document.getElementById("betPanelOverlay").classList.add("open");
   document.getElementById("betPanel").classList.add("open");
-  
-  // CORRECTION : On a supprimé le "focus()" automatique ici ! 
-  // Désormais, le panneau s'ouvre, reste tranquille, le tutoriel apparaît, et c'est au joueur de cliquer.
 }
 
 function closeBetPanel() {
@@ -2906,34 +2968,76 @@ function confirmBet() {
   const val = parseInt(document.getElementById("betInput").value) || 0;
   const err = document.getElementById("betError");
   
-  if (val <= 0) {
-    err.textContent = "Veuillez saisir une mise valide.";
-    return;
-  }
-  if (val > currentPlayerBalance) {
-    err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital.";
-    return;
-  }
+  if (val <= 0) { err.textContent = "Veuillez saisir une mise valide."; return; }
+  if (val > currentPlayerBalance) { err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital."; return; }
 
-  // On déduit la mise du solde
   currentPlayerBalance -= val;
-  
-  // CORRECTION : On met à jour le compteur global en haut à droite 💰
   updateGlobalBalance();
 
-// On enregistre le choix, la mise ET le type de pari (OUI/NON)
-  selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
-  selectedBets[tempBetCIndex] = val;
-  selectedBetTypes[tempBetCIndex] = tempBetType; 
+  const ch = game.challenges[tempBetCIndex];
+  const probsStart = getLMSRProbs(ch.votes);
+  const pStartYes = probsStart[tempBetAnsIndex];
+  const pStart = tempBetType === 'YES' ? pStartYes : (1 - pStartYes);
+
+  let simulatedVotes = [...ch.votes];
+  if (tempBetType === 'YES') {
+    simulatedVotes[tempBetAnsIndex] += val; 
+  } else {
+    const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempBetAnsIndex];
+    for (let i = 0; i < simulatedVotes.length; i++) {
+      if (i !== tempBetAnsIndex) {
+        const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+        simulatedVotes[i] += val * weight;
+      }
+    }
+  }
+
+  const probsEnd = getLMSRProbs(simulatedVotes);
+  const pEndYes = probsEnd[tempBetAnsIndex];
+  const pEnd = tempBetType === 'YES' ? pEndYes : (1 - pEndYes);
+  
+  let pAvg = (pStart + pEnd) / 2;
+  if (pAvg <= 0.01) pAvg = 0.01; 
+  if (pAvg >= 0.99) pAvg = 0.99; 
+
+  const pointsPotentiels = +(val / pAvg).toFixed(2); 
+  
+  // NOUVEAU : En Mode Avancé, la mise est injectée IMMÉDIATEMENT (permet les mises multiples)
+  if (currentPlayerMode === 'advanced') {
+      let player = game.players.find(p => p.name === game.currentPlayerName);
+      if (!player) {
+          player = { name: game.currentPlayerName, balance: currentPlayerBalance, portfolio: [] };
+          game.players.push(player);
+      } else {
+          player.balance = currentPlayerBalance;
+          if (!player.portfolio) player.portfolio = [];
+      }
+
+      let existingBet = player.portfolio.find(b => b.cIndex === tempBetCIndex && b.ansIndex === tempBetAnsIndex && b.type === tempBetType);
+      if (existingBet) {
+         existingBet.bet += val;
+         existingBet.pts += pointsPotentiels;
+      } else {
+         player.portfolio.push({ cIndex: tempBetCIndex, ansIndex: tempBetAnsIndex, bet: val, pts: pointsPotentiels, type: tempBetType });
+      }
+
+      ch.votes = simulatedVotes;
+      saveToCloud(); 
+  } else {
+      // Pour le mode Facile, on garde la mise temporaire classique
+      selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
+      selectedBets[tempBetCIndex] = val;
+      selectedBetTypes[tempBetCIndex] = tempBetType; 
+  }
+
+  closeBetPanel();
+  
+  // On rafraîchit visuellement la carte pour afficher le pari ajouté !
+  if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
 
   if (window.currentTutoStep === 4) {
       window.currentTutoStep = 5; 
-      closeBetPanel();
-      renderAnswersForChallenge(tempBetCIndex);
       nextTuto(5);
-  } else {
-      closeBetPanel();
-      renderAnswersForChallenge(tempBetCIndex);
   }
 }
 // ----------------------------------------------
@@ -2951,6 +3055,9 @@ function validate(){
     player.balance = currentPlayerBalance;
     if (!player.portfolio) player.portfolio = [];
   }
+
+  // NOUVEAU : On marque le joueur comme ayant complètement terminé sa session de questions
+  player.hasFinished = true;
 
   // 1. Calcul et enregistrement des NOUVELLES mises
   game.challenges.forEach((ch, cIndex) => {
@@ -3237,7 +3344,7 @@ function displayLeaderboard() {
     leaderboard.slice(0, 10).forEach((p, idx) => {
       const row = document.createElement("div");
       row.className = "leader-entry";
-      row.innerHTML = `<div class="leader-left"><span class="rank-pill">#${idx+1}</span><span>${p.name}</span></div><div>${p.pts} pts</div>`;
+      row.innerHTML = `<div class="leader-left"><span class="rank-pill">#${idx+1}</span><span>${p.name}</span></div><div>${p.pts} 💰</div>`;
       leaderContainer.appendChild(row);
     });
   }
@@ -3375,6 +3482,18 @@ function startConfetti(colors) {
   update();
 }
 
+// NOUVEAU : Helper pour sauvegarder la progression locale en temps réel
+window.saveLocalProgress = function() {
+    // CORRECTION : On lie la sauvegarde à LA SESSION ACTUELLE et au joueur !
+    if (game && game.currentPlayerName && window.currentActiveSessionCode) {
+        const saveKey = window.currentActiveSessionCode + '_' + game.currentPlayerName;
+        localStorage.setItem('savedIndex_' + saveKey, window.currentCardIndex);
+        if (currentPlayerMode === 'easy') {
+            localStorage.setItem('savedAnswers_' + saveKey, JSON.stringify(selectedAnswers));
+        }
+    }
+};
+
 function checkAccess() {
   const pseudoInput = document.getElementById("pseudo").value.trim();
   const emailEl = document.getElementById("playerEmail");
@@ -3383,7 +3502,6 @@ function checkAccess() {
   const msg = document.getElementById("playMsg");
   const now = Date.now();
 
-  // 1. VÉRIFICATION STRICTE DE L'E-MAIL
   if(!pseudoInput || !emailInput || !inputCode) {
     msg.textContent = "Le pseudo, l'e-mail et le code sont obligatoires.";
     msg.className = "msg err";
@@ -3399,7 +3517,6 @@ function checkAccess() {
   msg.textContent = "Connexion au serveur...";
   msg.className = "msg ok";
 
-  // TÉLÉCHARGEMENT DE LA SESSION DEPUIS LE CLOUD FIREBASE
   db.ref('sessions/' + inputCode).get().then((snapshot) => {
     if (!snapshot.exists()) {
       msg.textContent = "Ce code de session n'existe pas ou est inactif.";
@@ -3437,13 +3554,10 @@ function checkAccess() {
 
     const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     
-    // NOUVEAU : On bloque si le temps est écoulé OU si l'Admin a clôturé manuellement
     if (now > checkTime || game.isResolved === true) {
-      // RECHERCHE PAR EMAIL
       const existingPlayer = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
       
       if (game.isResolved === true) {
-        // Le jeu est clos. On envoie vers les résultats. S'il n'existe pas, la fonction affichera le message "Jeu clos".
         showPlayerResult(existingPlayer ? existingPlayer.name : pseudoInput); 
       } else {
         if (existingPlayer) {
@@ -3456,73 +3570,69 @@ function checkAccess() {
             msg.className = "msg ok";
         }
       }
-      return; // TRÈS IMPORTANT : On arrête le code ici, le joueur ne sera jamais ajouté à la BDD !
+      return; 
     }
 
-    // SAUVEGARDE LOCALE
     localStorage.setItem('monPredictionPseudo', pseudoInput);
     localStorage.setItem('monPredictionEmail', emailInput);
 
-    // L'EMAIL DEVIENT LA CLÉ UNIQUE D'IDENTIFICATION
     let me = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
     let finalPseudo = pseudoInput;
 
     if (!me) {
-      // Nouveau joueur
-      let startBal = currentPlayerBalance === 0 && modeToPlay === 'advanced' ? (sessionConfig.initialBalance || 100) : currentPlayerBalance;
+      // NOUVEAU : Vérification de sécurité - Est-ce qu'un autre joueur utilise ce pseudo ?
+      const pseudoExists = game.players.find(p => p.name.toLowerCase() === pseudoInput.toLowerCase());
+      if (pseudoExists) {
+          msg.textContent = "Ce pseudo est déjà utilisé par un autre joueur.";
+          msg.className = "msg err";
+          return;
+      }
+
+      // Nouveau joueur : Création
+      let startBal = (currentPlayerMode === 'advanced') ? (sessionConfig.initialBalance || 100) : 0;
       me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [], assignedIndices: [] };
       
-      // --- ATTRIBUTION ALÉATOIRE ---
+      // [Le reste de votre logique d'attribution des indices reste inchangé ici...]
       const n = sessionConfig.n || 1;
-      const marginMs = 120 * 1000; // NOUVEAU : Marge de sécurité de 2 minutes (en millisecondes)
-      
-      // On trouve toutes les questions actuellement ouvertes
-      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch}))
-                                         .filter(item => getEffectiveStatus(item.ch) === "open");
-      
-      // On identifie explicitement la question Fil Rouge
+      const marginMs = 120 * 1000; 
+      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open");
+      // ... (votre code d'attribution des questions) ...
       const golden = activeIndices.find(item => item.ch.isGolden === true);
-      
       let finalSelection = [];
       if (golden) {
         finalSelection.push(golden.idx);
-        // On retire la golden des choix restants
         activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
       }
-      
-      // NOUVEAU : On sépare les questions "confortables" (> 2 min) et les "urgentes" (< 2 min)
       let safeQuestions = activeIndices.filter(item => (item.ch.endTime - now) >= marginMs);
       let urgentQuestions = activeIndices.filter(item => (item.ch.endTime - now) < marginMs);
-      
-      // On mélange les deux groupes indépendamment
       safeQuestions.sort(() => 0.5 - Math.random());
       urgentQuestions.sort(() => 0.5 - Math.random());
-      
-      // On rassemble : D'abord les questions avec de la marge, PUIS les urgentes en roue de secours
       let prioritizedIndices = [...safeQuestions, ...urgentQuestions];
-      
       let additionalQuestions = [];
-      // On pioche dans la liste priorisée
       while (finalSelection.length + additionalQuestions.length < n && prioritizedIndices.length > 0) {
         additionalQuestions.push(prioritizedIndices.shift().idx);
       }
-      
-      // On trie les questions supplémentaires par heure de fin croissante (la plus urgente en premier pour l'affichage)
       additionalQuestions.sort((a, b) => game.challenges[a].endTime - game.challenges[b].endTime);
-      
-      // On assemble le tout : Le fil rouge en premier (si existant), puis les questions triées
       me.assignedIndices = finalSelection.concat(additionalQuestions);
       game.players.push(me);
       saveToCloud(); 
     } else {
-      // Si le joueur est retrouvé via son email, on force l'utilisation de son pseudo d'origine (Sécurité)
+      // CORRECTION : Vérification stricte du binôme Mail/Pseudo
+      if (me.name.toLowerCase() !== pseudoInput.toLowerCase()) {
+        msg.textContent = "Cette adresse mail a déjà été utilisée avec un autre pseudo.";
+        msg.className = "msg err show";
+        setTimeout(() => msg.classList.remove("show"), 3000);
+        return;
+    }
       finalPseudo = me.name; 
     }
 
     currentPlayerMode = modeToPlay;
     game.currentPlayerName = finalPseudo;
 
-    // ÉCOUTEUR TEMPS RÉEL
+    // CORRECTION : Flag pour savoir si c'est le chargement initial de la reconnexion
+    let isFirstLoad = true;
+
     db.ref('sessions/' + inputCode).on('value', (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -3550,48 +3660,69 @@ function checkAccess() {
           updateGlobalBalance();
         }
 
-document.getElementById("playerAuth").classList.add("hidden");
-        document.getElementById("gameContent").classList.remove("hidden");
-        document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
-        
-        // CORRECTION : On utilise une variable JavaScript globale pour verrouiller la Pop-up.
-        // Cela empêche les mises à jour en temps réel (comme les bots) de la rouvrir toutes les 3 secondes !
-        if (!window.hasSeenWelcomeCode) {
-            const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
-            const welcomeDisplay = document.getElementById("welcomeCodeDisplay");
-            if (welcomeOverlay && welcomeDisplay) {
-                welcomeDisplay.textContent = inputCode;
-                welcomeOverlay.style.display = "flex";
-                window.hasSeenWelcomeCode = true; // Verrouillage définitif pour cette session
+        if (isFirstLoad) {
+            isFirstLoad = false;
+            document.getElementById("playerAuth").classList.add("hidden");
+            
+            if (!window.hasSeenWelcomeCode) {
+                const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+                const welcomeDisplay = document.getElementById("welcomeCodeDisplay");
+                if (welcomeOverlay && welcomeDisplay) {
+                    welcomeDisplay.textContent = inputCode;
+                    welcomeOverlay.style.display = "flex";
+                    window.hasSeenWelcomeCode = true; 
+                }
             }
-        }
-        
-        // NOUVEAU : On efface le message "Connexion au serveur..." une fois que l'écran de jeu s'affiche
-        const playMsg = document.getElementById("playMsg");
-        if (playMsg) playMsg.textContent = "";
-        
-        // CORRECTION : Mise à jour fluide en temps réel sans réinitialiser les cartes !
-        const container = document.getElementById("challengesPlay");
-        if (container && container.children.length > 0) {
-            // Le jeu est déjà affiché, on actualise juste l'intérieur (cotes, score) à vue d'œil
-            if (typeof updatePlayChallengesLive === 'function') {
-                updatePlayChallengesLive();
-            }
-        } else {
-            // Premier chargement de l'écran, on génère toute la structure
-            window.currentCardIndex = 0; 
-            renderPlayChallenges();
-        }
+            
+            const playMsg = document.getElementById("playMsg");
+            if (playMsg) playMsg.textContent = "";
 
-        if (game.isResolved) {
-           if (document.getElementById("results").style.display !== "block" && document.getElementById("playerResult").style.display !== "block") {
-              showPlayerResult(finalPseudo);
-           }
+            // Le joueur a-t-il validé son jeu jusqu'au bout ?
+            const hasFinished = currentPlayer && currentPlayer.hasFinished === true;
+
+            if (game.isResolved) {
+                showPlayerResult(finalPseudo);
+            } else if (hasFinished) {
+                // Le joueur avait fini de répondre -> Récapitulatif
+                renderPlayerRecap(finalPseudo);
+            } else {
+                // Le joueur a été déconnecté avant la fin -> Retour sur sa question
+                document.getElementById("gameContent").classList.remove("hidden");
+                document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
+                
+                // CORRECTION : Restauration de sa progression LIEE À LA SESSION UNIQUEMENT
+                const saveKey = inputCode + '_' + finalPseudo;
+                const savedIndex = localStorage.getItem('savedIndex_' + saveKey);
+                window.currentCardIndex = savedIndex ? parseInt(savedIndex) : 0;
+                
+                if (currentPlayerMode === 'easy') {
+                    const savedAnswers = localStorage.getItem('savedAnswers_' + saveKey);
+                    if (savedAnswers) {
+                        try { selectedAnswers = JSON.parse(savedAnswers); } catch(e){}
+                    }
+                }
+                
+                renderPlayChallenges();
+            }
         } else {
-           const recapEl = document.getElementById("playerRecap");
-           if (recapEl && recapEl.style.display === "block") {
-              updateRecapUI(finalPseudo);
-           }
+            // Mise à jour visuelle en temps réel (Après le premier chargement)
+            if (game.isResolved) {
+               if (document.getElementById("results").style.display !== "block" && document.getElementById("playerResult").style.display !== "block") {
+                  showPlayerResult(finalPseudo);
+               }
+            } else {
+               const recapEl = document.getElementById("playerRecap");
+               if (recapEl && recapEl.style.display === "block") {
+                  updateRecapUI(finalPseudo);
+               } else {
+                   const container = document.getElementById("challengesPlay");
+                   if (container && container.children.length > 0) {
+                       if (typeof updatePlayChallengesLive === 'function') {
+                           updatePlayChallengesLive();
+                       }
+                   }
+               }
+            }
         }
       }
     });
@@ -3902,7 +4033,7 @@ function renderManageDashboard() {
             const pBets = p.portfolio.filter(b => b.cIndex === i);
             pBets.forEach(b => {
                 hasBets = true;
-                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet}</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
+                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet} 💰</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
             });
         }
     });
@@ -4169,9 +4300,16 @@ function updateRecapUI(pseudo) {
         <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Gain Max Potentiel</div>
         <div style="font-size:34px; font-weight:900; color:#3b82f6;">${maxScorePossible} <span style="font-size:18px;">💰</span></div>
       </div>
+      
       <div>
         <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Rang Provisoire</div>
         <div style="font-size:28px; font-weight:900; color:#4ade80;">#${myRank}</div>
+        
+        ${myRank > 3 ? `
+          <div style="margin-top:8px; font-size:12px; color:#9ca3af; font-style:italic;">
+             Vous êtes à ${myRank - 3} place(s) du podium !
+          </div>
+        ` : ''}
       </div>
     </div>
 
@@ -4185,41 +4323,120 @@ function updateRecapUI(pseudo) {
           `).join('')}
         </div>
 
-        <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos paris</h3>
+        <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
       `;
 
-      if (player.portfolio) {
-    player.portfolio.forEach(snap => {
-      const ch = game.challenges[snap.cIndex];
+      // On récupère les indices assignés à ce joueur pour tout afficher
+      const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+
+      myIndices.forEach(cIndex => {
+        const ch = game.challenges[cIndex];
+        // CORRECTION : On récupère TOUTES les mises du joueur pour cette question (utile s'il a misé sur plusieurs réponses)
+        const snaps = (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0);
+        const probs = getLMSRProbs(ch.votes);
+        const effStatus = getEffectiveStatus(ch);
+
+        if (currentPlayerMode === 'easy') {
+          // MODE FACILE : On ne prend que la première mise car c'est 1 choix unique
+          const snap = snaps.length > 0 ? snaps[0] : null;
+          if (snap) {
+            let answersHtml = '';
+            ch.answers.forEach((ans, aIdx) => {
+               const pct = probs[aIdx];
+               const pts = +(1 / Math.max(0.001, pct)).toFixed(2);
+               const isSelected = snap.ansIndex === aIdx;
+               const bg = isSelected ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
+               
+               answersHtml += `
+                 <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                   <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${isSelected ? '✅ ' : ''}${ans}</div>
+                   <div style="text-align:right;">
+                     <div style="font-size:12px; font-weight:bold; color:#fde047;">${pts} 💰</div>
+                     <div style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
+                   </div>
+                 </div>
+               `;
+            });
+
+            summaryContainer.innerHTML += `
+              <div class="challenge-block" style="border-left: 3px solid #3b82f6; padding-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                   <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+                   <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
+                </div>
+                <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+                
+                <div id="summary-ch-${cIndex}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+                  <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
+                  <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+                </div>
+
+                <div id="details-ch-${cIndex}" class="hidden" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
+                  <div style="font-size:11px; color:#a855f7; margin-bottom:8px; font-weight:bold;">Évolution en direct :</div>
+                  ${answersHtml}
+                </div>
+              </div>
+            `;
+          }
+       } else {
+            // MODE AVANCÉ : Cartes cliquables + Affichage des questions avec paris multiples
+            if (snaps.length > 0) {
+              
+              let betsListHtml = '';
+              snaps.forEach(snap => {
+                 betsListHtml += `
+                 <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+                    <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
+                    <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+                 </div>
+                 ${effStatus === "open" ? `
+                 <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:8px;">
+                    <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
+                 </div>
+                 ` : ''}
+                 `;
+              });
+
+              summaryContainer.innerHTML += `
+                <div class="challenge-block" style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
+                  <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+                  <div class="challenge-title">${ch.question}</div>
+                  <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
+                      ${betsListHtml}
+                  </div>
+                  <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                      <div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>
+                  </div>
+                </div>
+              `;
+            } else {
+            // Aucune mise sur cette question
+            summaryContainer.innerHTML += `
+              <div class="challenge-block" style="border-left: 3px solid #64748b; opacity:0.7; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
+                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+                <div class="challenge-title">${ch.question}</div>
+                <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
+                <div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>
+              </div>
+            `;
+          }
+        }
+      });
+
+      // Barre collante avec intégration dynamique des boutons
+      const returnBtnHtml = currentPlayerMode === 'easy' 
+          ? '' // En Mode Facile : pas de bouton retour !
+          : `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>`;
 
       summaryContainer.innerHTML += `
-        <div class="challenge-block" style="border-left: 3px solid #3b82f6;">
-          <div style="font-size:10px; color:#9ca3af;">${ch.category}</div>
-          <div class="challenge-title">${ch.question}</div>
-          <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-            <div style="color:#e2e8f0; font-size:13px; font-weight:bold;">${ch.answers[snap.ansIndex]}</div>
-            <div style="color:#3b82f6; font-size:13px;">+${snap.pts} 💰 potentiels</div>
-          </div>
-          ${getEffectiveStatus(ch) === "open" && snap.bet > 0 && currentPlayerMode !== 'easy' ? `
-          <div style="margin-top:12px; text-align:right;">
-            <button onclick="openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1); color:#f97316; border:1px solid #f97316; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold;">Revendre (Cash out)</button>
-          </div>
-          ` : ''}
+        <div style="padding-bottom: 90px;"></div>
+        <div class="sticky-action-bar">
+          <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; ${currentPlayerMode === 'easy' ? 'flex:1' : 'flex:0.25'}; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
+            💬 ${currentPlayerMode === 'easy' ? 'Messagerie' : ''} <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
+          </button>
+          ${returnBtnHtml}
         </div>
       `;
-    });
-  }
-
-// Barre collante avec intégration du bouton de messagerie
-  summaryContainer.innerHTML += `
-    <div style="padding-bottom: 90px;"></div>
-    <div class="sticky-action-bar">
-      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; flex:0.25; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px;">
-        💬 <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
-      </button>
-      <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>
-    </div>
-  `;
 
   // On s'assure que la pastille de notification est à jour dès l'affichage
   setTimeout(updateMessageBadges, 50);
@@ -4538,16 +4755,54 @@ function confirmSell() {
 
   saveToCloud(); 
   closeSellPanel();
-  renderPlayerRecap(game.currentPlayerName); 
+  
+  // NOUVEAU : On ne renvoie au récapitulatif QUE SI on y était déjà ! 
+  // Sinon, le joueur reste sur la question pour continuer sa stratégie.
+  if (document.getElementById("playerRecap") && document.getElementById("playerRecap").style.display === "block") {
+      renderPlayerRecap(game.currentPlayerName); 
+  } else {
+      if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
+  }
 }
 
 function goToPlayScreen() {
-  // Vide les sélections temporaires pour permettre de faire de nouveaux paris
+  window.isRebetting = false; // CORRECTION : On réinitialise le mode "Retour Rapide"
+  window.currentCardIndex = 0; // On repart toujours de la première question
   selectedAnswers = new Array(game.challenges.length).fill(null);
   selectedBets = new Array(game.challenges.length).fill(0);
   showScreen('play');
   renderPlayChallenges();
 }
+
+window.goToSpecificCard = function(cIndex) {
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    const cardPos = myIndices.indexOf(cIndex);
+    
+    if (cardPos !== -1) {
+        window.currentCardIndex = cardPos; 
+        window.isRebetting = true; // CORRECTION : On active le mode "Retour Rapide" pour la validation
+        showScreen('play');
+        selectedAnswers = new Array(game.challenges.length).fill(null);
+        selectedBets = new Array(game.challenges.length).fill(0);
+        renderPlayChallenges();
+    }
+};
+
+// NOUVEAU : Dérouler les détails d'une question (Mode Facile)
+window.toggleDetails = function(cIndex) {
+    const summary = document.getElementById("summary-ch-" + cIndex);
+    const details = document.getElementById("details-ch-" + cIndex);
+    if (details && summary) {
+        if (details.classList.contains("hidden")) {
+            details.classList.remove("hidden");
+            summary.classList.add("hidden");
+        } else {
+            details.classList.add("hidden");
+            summary.classList.remove("hidden");
+        }
+    }
+};
 
 function toggleCustomCat(index) {
   const select = document.querySelector(`.dynamic-cat-select[data-index="${index}"]`);
@@ -6115,11 +6370,16 @@ function updatePlayChallengesLive() {
         // 2. On rafraîchit uniquement la boîte contenant les réponses (pour voir les % bouger)
         // L'animation de la carte (swipe) n'est pas interrompue car on ne touche pas au bloc parent !
         const ansBox = document.getElementById("answers-ch" + cIndex);
-        if (ansBox) {
-            renderAnswersForChallenge(cIndex);
-        }
-    });
-}
+                    if (ansBox) renderAnswersForChallenge(cIndex);
+                    
+                    // CORRECTION : On rafraîchit aussi les coches vertes et les boutons Cash Out de la carte !
+                    const betInfoEl = document.getElementById("bet-info-" + cIndex);
+                    if (betInfoEl) {
+                        const ch = game.challenges[cIndex];
+                        betInfoEl.innerHTML = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+                    }
+                });
+            }
 
 </script>
 
