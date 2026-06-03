@@ -1097,7 +1097,7 @@ body.play-mode-active {
  function checkAdminPassword() {
   const password = prompt("Veuillez saisir le mot de passe administrateur :");
   
-  if (password === "lol") {
+  if (password === "fdj") {
     showScreen('adminMenu'); // On débloque le menu, pas directement le setup
   } else if (password !== null) {
     alert("Mot de passe incorrect.");
@@ -4217,6 +4217,7 @@ function startRecapSessionTimer() {
 
 // Fonction interne pour mettre à jour les chiffres en temps réel
 // Fonction interne pour mettre à jour les chiffres en temps réel
+// Fonction interne pour mettre à jour les chiffres en temps réel
 function updateRecapUI(pseudo) {
   let player = (game.players || []).find(p => p.name === pseudo);
   if (!player) {
@@ -4225,6 +4226,14 @@ function updateRecapUI(pseudo) {
   
   const summaryContainer = document.getElementById("recapSummary");
   if (!summaryContainer) return;
+
+  // CORRECTION : On mémorise les blocs détails qui sont ouverts pour ne pas les refermer à l'actualisation
+  const openDetails = [];
+  document.querySelectorAll("[id^='details-ch-']").forEach(el => {
+      if (!el.classList.contains("hidden")) {
+          openDetails.push(el.id.replace('details-ch-', ''));
+      }
+  });
 
   const chartsTitle = document.querySelector("#playerRecap h3");
   const chartsContainer = document.getElementById("recapChartsContainer");
@@ -4240,13 +4249,13 @@ function updateRecapUI(pseudo) {
         <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); padding:12px 24px; border-radius:999px; font-weight:bold; box-shadow:0 10px 20px rgba(59,130,246,0.3); border:none;">Retourner aux questions</button>
       </div>
     `;
-    return; // <-- LE MOT-CLÉ QUI EMPÊCHAIT LE BOUTON DE MARCHER !
+    return;
   } else {
     if (chartsTitle) chartsTitle.style.display = "block";
     if (chartsContainer) chartsContainer.style.display = "block";
   }
 
-// CALCUL DU GAIN POTENTIEL MAXIMUM
+  // CALCUL DU GAIN POTENTIEL MAXIMUM
   let totalPotentialPoints = 0;
   if (player.portfolio) {
     player.portfolio.forEach(snap => {
@@ -4255,7 +4264,6 @@ function updateRecapUI(pseudo) {
                     (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
                     (!snap.type && snap.ansIndex === ch.correct);
 
-      // CORRECTION : On ajoute le potentiel UNIQUEMENT s'il n'a pas encore été payé sur le solde
       if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
         totalPotentialPoints += snap.pts;
       }
@@ -4263,14 +4271,12 @@ function updateRecapUI(pseudo) {
   }
   const maxScorePossible = (player.balance + totalPotentialPoints).toFixed(2);
 
-  // CORRECTION : GÉNÉRATION DU CLASSEMENT PROVISOIRE (Aligné avec l'écran d'affichage)
+  // GÉNÉRATION DU CLASSEMENT PROVISOIRE
   const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
   
   const provLeaderboard = (game.players || []).map(p => {
     let displayScore = 0;
-    
     if (isEasyScreen) {
-        // Mode Facile : On affiche uniquement les gains encaissés (résultats validés) ou revendus
         if (p.portfolio) {
            p.portfolio.forEach(snap => {
               if (snap.paidOut) displayScore += snap.pts;
@@ -4278,10 +4284,8 @@ function updateRecapUI(pseudo) {
            });
         }
     } else {
-        // Mode Avancé : On prend simplement le solde actuel disponible
         displayScore = p.balance || 0;
     }
-    
     return { name: p.name, score: parseFloat(displayScore.toFixed(2)) };
   }).sort((a, b) => b.score - a.score);
 
@@ -4302,7 +4306,9 @@ function updateRecapUI(pseudo) {
     timerText = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
   }
 
-  summaryContainer.innerHTML = `
+  // CORRECTION : On utilise une seule grande chaîne de caractères "finalHtml" 
+  // pour éviter les sauts de page causés par l'ajout successif (innerHTML +=)
+  let finalHtml = `
     <div style="text-align:center; margin-bottom:15px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
       <div style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Temps de jeu restant</div>
       <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
@@ -4327,134 +4333,132 @@ function updateRecapUI(pseudo) {
     </div>
 
     <div style="background:rgba(15,23,42,0.6); border-radius:12px; padding:10px; margin-bottom:20px; border:1px solid #334155;">
-          <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
-          ${provLeaderboard.slice(0, 3).map((p, i) => `
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
-              <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
-              <span>${p.score} 💰</span>
+      <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
+      ${provLeaderboard.slice(0, 3).map((p, i) => `
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
+          <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
+          <span>${p.score} 💰</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
+  `;
+
+  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+
+  myIndices.forEach(cIndex => {
+    const ch = game.challenges[cIndex];
+    const snaps = (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0);
+    const probs = getLMSRProbs(ch.votes);
+    const effStatus = getEffectiveStatus(ch);
+
+    if (currentPlayerMode === 'easy') {
+      const snap = snaps.length > 0 ? snaps[0] : null;
+      if (snap) {
+        let answersHtml = '';
+        ch.answers.forEach((ans, aIdx) => {
+           const pct = probs[aIdx];
+           const pts = +(1 / Math.max(0.001, pct)).toFixed(2);
+           const isSelected = snap.ansIndex === aIdx;
+           const bg = isSelected ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
+           
+           answersHtml += `
+             <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+               <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${isSelected ? '✅ ' : ''}${ans}</div>
+               <div style="text-align:right;">
+                 <div style="font-size:12px; font-weight:bold; color:#fde047;">${pts} 💰</div>
+                 <div style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
+               </div>
+             </div>
+           `;
+        });
+
+        // CORRECTION : On applique l'état ouvert/fermé mémorisé juste avant !
+        const isDetailsOpen = openDetails.includes(cIndex.toString());
+        const detailsClass = isDetailsOpen ? "" : "hidden";
+        const summaryClass = isDetailsOpen ? "hidden" : "";
+
+        finalHtml += `
+          <div class="challenge-block" style="border-left: 3px solid #3b82f6; padding-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+               <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+               <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
             </div>
-          `).join('')}
-        </div>
+            <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+            
+            <div id="summary-ch-${cIndex}" class="${summaryClass}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+              <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
+              <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+            </div>
 
-        <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
-      `;
+            <div id="details-ch-${cIndex}" class="${detailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
+              <div style="font-size:11px; color:#a855f7; margin-bottom:8px; font-weight:bold;">Évolution en direct :</div>
+              ${answersHtml}
+            </div>
+          </div>
+        `;
+      }
+   } else {
+        if (snaps.length > 0) {
+          let betsListHtml = '';
+          snaps.forEach(snap => {
+             betsListHtml += `
+             <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+                <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
+                <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+             </div>
+             ${effStatus === "open" ? `
+             <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:8px;">
+                <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
+             </div>
+             ` : ''}
+             `;
+          });
 
-      // On récupère les indices assignés à ce joueur pour tout afficher
-      const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-
-      myIndices.forEach(cIndex => {
-        const ch = game.challenges[cIndex];
-        // CORRECTION : On récupère TOUTES les mises du joueur pour cette question (utile s'il a misé sur plusieurs réponses)
-        const snaps = (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0);
-        const probs = getLMSRProbs(ch.votes);
-        const effStatus = getEffectiveStatus(ch);
-
-        if (currentPlayerMode === 'easy') {
-          // MODE FACILE : On ne prend que la première mise car c'est 1 choix unique
-          const snap = snaps.length > 0 ? snaps[0] : null;
-          if (snap) {
-            let answersHtml = '';
-            ch.answers.forEach((ans, aIdx) => {
-               const pct = probs[aIdx];
-               const pts = +(1 / Math.max(0.001, pct)).toFixed(2);
-               const isSelected = snap.ansIndex === aIdx;
-               const bg = isSelected ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
-               
-               answersHtml += `
-                 <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-                   <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${isSelected ? '✅ ' : ''}${ans}</div>
-                   <div style="text-align:right;">
-                     <div style="font-size:12px; font-weight:bold; color:#fde047;">${pts} 💰</div>
-                     <div style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
-                   </div>
-                 </div>
-               `;
-            });
-
-            summaryContainer.innerHTML += `
-              <div class="challenge-block" style="border-left: 3px solid #3b82f6; padding-bottom:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                   <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-                   <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
-                </div>
-                <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
-                
-                <div id="summary-ch-${cIndex}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-                  <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
-                  <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
-                </div>
-
-                <div id="details-ch-${cIndex}" class="hidden" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
-                  <div style="font-size:11px; color:#a855f7; margin-bottom:8px; font-weight:bold;">Évolution en direct :</div>
-                  ${answersHtml}
-                </div>
+          finalHtml += `
+            <div class="challenge-block" style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
+              <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+              <div class="challenge-title">${ch.question}</div>
+              <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
+                  ${betsListHtml}
               </div>
-            `;
-          }
-       } else {
-            // MODE AVANCÉ : Cartes cliquables + Affichage des questions avec paris multiples
-            if (snaps.length > 0) {
-              
-              let betsListHtml = '';
-              snaps.forEach(snap => {
-                 betsListHtml += `
-                 <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-                    <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
-                    <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
-                 </div>
-                 ${effStatus === "open" ? `
-                 <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:8px;">
-                    <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:6px 12px; font-size:11px; margin:0; border-radius:8px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
-                 </div>
-                 ` : ''}
-                 `;
-              });
-
-              summaryContainer.innerHTML += `
-                <div class="challenge-block" style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
-                  <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-                  <div class="challenge-title">${ch.question}</div>
-                  <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
-                      ${betsListHtml}
-                  </div>
-                  <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                      <div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>
-                  </div>
-                </div>
-              `;
-            } else {
-            // Aucune mise sur cette question
-            summaryContainer.innerHTML += `
-              <div class="challenge-block" style="border-left: 3px solid #64748b; opacity:0.7; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
-                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-                <div class="challenge-title">${ch.question}</div>
-                <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
-                <div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>
+              <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                  <div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>
               </div>
-            `;
-          }
-        }
-      });
+            </div>
+          `;
+        } else {
+        finalHtml += `
+          <div class="challenge-block" style="border-left: 3px solid #64748b; opacity:0.7; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
+            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+            <div class="challenge-title">${ch.question}</div>
+            <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
+            <div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>
+          </div>
+        `;
+      }
+    }
+  });
 
-      // Barre collante avec intégration dynamique des boutons
-      const returnBtnHtml = currentPlayerMode === 'easy' 
-          ? '' // En Mode Facile : pas de bouton retour !
-          : `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>`;
+  const returnBtnHtml = currentPlayerMode === 'easy' 
+      ? '' 
+      : `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>`;
 
-      summaryContainer.innerHTML += `
-        <div style="padding-bottom: 90px;"></div>
-        <div class="sticky-action-bar">
-          <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; ${currentPlayerMode === 'easy' ? 'flex:1' : 'flex:0.25'}; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
-            💬 ${currentPlayerMode === 'easy' ? 'Messagerie' : ''} <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
-          </button>
-          ${returnBtnHtml}
-        </div>
-      `;
+  finalHtml += `
+    <div style="padding-bottom: 90px;"></div>
+    <div class="sticky-action-bar">
+      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; ${currentPlayerMode === 'easy' ? 'flex:1' : 'flex:0.25'}; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
+        💬 ${currentPlayerMode === 'easy' ? 'Messagerie' : ''} <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
+      </button>
+      ${returnBtnHtml}
+    </div>
+  `;
 
-  // On s'assure que la pastille de notification est à jour dès l'affichage
+  // Injection finale dans le DOM d'un seul coup (Aucun saut de page !)
+  summaryContainer.innerHTML = finalHtml;
+
   setTimeout(updateMessageBadges, 50);
-
-  // Lancement du moteur de chronomètre
   startRecapSessionTimer();
 }
 
