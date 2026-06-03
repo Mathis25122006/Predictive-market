@@ -24,23 +24,33 @@
 }
 
 
-body {
-   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+/* NOUVEAU : On crée un "calque" indépendant qui reste figé derrière le site */
+ body::before {
+   content: "";
+   position: fixed;
+   top: 0; left: 0; 
+   width: 100vw; height: 100vh;
+   z-index: -1; /* Reste tout au fond */
    background-color: #05010d;
    background-image: 
      radial-gradient(circle at 20% 30%, rgba(91, 33, 182, 0.45) 0%, transparent 60%),
      radial-gradient(circle at 80% 80%, rgba(30, 10, 60, 0.6) 0%, transparent 50%);
-   /* CORRECTION : On force le fond à se calquer sur la fenêtre de l'écran et on le fixe ! */
-   /* Cela empêche totalement la couleur de "sauter" ou de devenir noire entre les pages */
-   background-size: 100vw 100vh; 
-   background-attachment: fixed;
+   /* On remet 150% pour que votre animation cosmique puisse à nouveau bouger ! */
+   background-size: 150% 150%; 
    animation: cosmicDrift 15s ease-in-out infinite;
+   pointer-events: none; /* Empêche de bloquer les clics */
+ }
+
+ body {
+   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
    color: #ffffff;
    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
    min-height: 100vh;
    box-sizing: border-box;
    max-width: 540px;
    margin: 0 auto;
+   /* Le body devient transparent pour laisser voir la galaxie en dessous */
+   background-color: transparent; 
  }
  h1 {
    font-size: 22px;
@@ -712,8 +722,8 @@ body.play-mode-active {
 <div id="selectMode" class="card" style="display:none">
   <h2>Type de jeu</h2>
   <p class="subtitle">Comment souhaitez-vous que les joueurs misent ?</p>
-  <button onclick="startSetup('easy')">Créer un jeu Facile (1 💰 / question)</button>
-  <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé (Solde & Mises libres)</button>
+  <button onclick="startSetup('easy')">Créer un jeu Facile</button>
+  <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé</button>
   <button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
   <button onclick="showScreen('adminMenu')" class="btn-outline" style="margin-top: 15px;">Retour</button>
 </div>
