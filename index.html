@@ -711,7 +711,11 @@ body.play-mode-active {
   <input type="number" id="simBotCount" value="10" min="1" max="500">
   
   <button id="startSimBtn" onclick="startSimulation()" class="btn-success btn-spacing">Démarrer la simulation</button>
-  <button id="stopSimBtn" onclick="stopSimulation()" class="hidden" style="background:#ef4444; margin-top: 12px;">🛑 Arrêter la simulation</button>
+  
+  <div id="simActiveButtons" class="hidden" style="display:flex; gap:10px; margin-top:12px;">
+     <button id="newSimBtn" onclick="prepareNewSimulation()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; flex:1; border-radius:12px; box-shadow:0 8px 20px rgba(59,130,246,0.3); border:none; color:white; font-weight:bold;">➕ Nouvelle</button>
+     <button id="stopSimBtn" onclick="stopSimulation()" style="background:linear-gradient(135deg,#ef4444,#dc2626); margin:0; flex:1; border-radius:12px; box-shadow:0 8px 20px rgba(239,68,68,0.3); border:none; color:white; font-weight:bold;">🛑 Tout Arrêter</button>
+  </div>
   
   <div id="simMsg" class="msg"></div>
   
@@ -1451,6 +1455,17 @@ function syncFilRougeTime(index) {
   if (endInput && gEnd) endInput.value = gEnd;
 }
 
+// NOUVEAU : Fonction pour revenir de l'étape 2 (Questions) à l'étape 1 (Configuration globale)
+function backToSetupStep1() {
+  // On sauvegarde temporairement la saisie au cas où
+  if (typeof captureSetupData === 'function') {
+    captureSetupData(); 
+  }
+  // On masque la liste des questions et on réaffiche les paramètres
+  document.getElementById("setupStepFields").classList.add("hidden");
+  document.getElementById("setupStepQty").classList.remove("hidden");
+}
+
 function generateSetupFields() {
   const qtyInput = document.getElementById("challengesQty");
   const nInput = document.getElementById("questionsPerPlayer");
@@ -1582,11 +1597,11 @@ function generateSetupFields() {
     container.appendChild(div);
   }
 
-  // Ajout des boutons Retour / Accueil à la fin du formulaire dynamique
+// Ajout des boutons Retour / Accueil à la fin du formulaire dynamique
   const backContainer = document.createElement("div");
   backContainer.style.cssText = "display: flex; gap: 10px; margin-top: 15px;";
   backContainer.innerHTML = `
-    <button type="button" onclick="goBack()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Retour</button>
+    <button type="button" onclick="backToSetupStep1()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Retour</button>
     <button type="button" onclick="showScreen('home')" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Accueil</button>
   `;
   container.appendChild(backContainer);
@@ -1949,13 +1964,20 @@ function showSessionInfo() {
 
   // Bloc Mode Facile
   if (sessionConfig.mode === 'easy' || sessionConfig.mode === 'both') {
-    const urlEasy = `${currentUrl}?session=${sessionConfig.code}`;
+    const codeEasy = sessionConfig.code;
+    const urlEasy = `${currentUrl}?session=${codeEasy}`;
     const qrEasy = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlEasy)}`;
     html += `
-      <div class="card" style="border-color:#22c55e; margin-bottom:15px;">
+      <div class="card" style="border-color:#22c55e; margin-bottom:15px; padding-bottom:15px;">
         <div style="color:#22c55e; font-weight:bold; margin-bottom:10px;">MODE FACILE</div>
-        <div style="font-size:24px; font-weight:800; color:white;">${sessionConfig.code}</div>
+        <div style="font-size:24px; font-weight:800; color:white;">${codeEasy}</div>
         <img src="${qrEasy}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+        
+        <div style="display: flex; gap: 8px; margin-top: 15px;">
+          <button onclick="directManage('${codeEasy}')" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">⚙️ Gestion</button>
+          <button onclick="directBigScreen('${codeEasy}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">📺 Écran</button>
+          <button onclick="directSimulation('${codeEasy}')" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">🤖 Simuler</button>
+        </div>
       </div>`;
   }
 
@@ -1965,26 +1987,29 @@ function showSessionInfo() {
     const urlAdv = `${currentUrl}?session=${codeAdv}`;
     const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
     html += `
-      <div class="card" style="border-color:#f97316;">
+      <div class="card" style="border-color:#f97316; margin-bottom:15px; padding-bottom:15px;">
         <div style="color:#f97316; font-weight:bold; margin-bottom:10px;">MODE AVANCÉ</div>
         <div style="font-size:24px; font-weight:800; color:white;">${codeAdv}</div>
         <img src="${qrAdv}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+        
+        <div style="display: flex; gap: 8px; margin-top: 15px;">
+          <button onclick="directManage('${codeAdv}')" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">⚙️ Gestion</button>
+          <button onclick="directBigScreen('${codeAdv}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">📺 Écran</button>
+          <button onclick="directSimulation('${codeAdv}')" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">🤖 Simuler</button>
+        </div>
       </div>`;
   }
 
-// CORRECTION : On remplace le gros bouton par une rangée (flexbox) de 3 petits boutons
+  // NOUVEAU : Le bouton Gestion Commune qui apparaît sous les deux QR Codes
+  if (sessionConfig.mode === 'both') {
+    html += `
+      <button onclick="directManage('${sessionConfig.code}', true)" style="background:linear-gradient(135deg,#f59e0b,#d97706); margin-bottom: 15px; width:100%; border-radius:12px; font-size:15px; padding:14px; box-shadow:0 8px 20px rgba(245,158,11,0.3); border:none; color:white; font-weight:bold;">
+        👑 GESTION COMMUNE (Synchronise les 2 modes)
+      </button>
+    `;
+  }
+
   html += `
-    <div style="display: flex; gap: 8px; margin-top: 20px;">
-      <button onclick="directManage()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
-        ⚙️ Gestion
-      </button>
-      <button onclick="directBigScreen()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
-        📺 Grand Écran
-      </button>
-      <button onclick="directSimulation()" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
-        🤖 Simulation
-      </button>
-    </div>
     <div style="display: flex; gap: 10px; margin-top: 15px;">
       <button onclick="goBack()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Retour</button>
       <button onclick="showScreen('home')" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Accueil</button>
@@ -3360,9 +3385,17 @@ function finish() {
      }
   }
 
-  // On verrouille le jeu
+// On verrouille le jeu
   game.isResolved = true;
   saveToCloud(); 
+
+  // NOUVEAU : Clôture synchronisée pour l'autre mode (Gestion Commune)
+  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+     if (otherCode) {
+         db.ref('sessions/' + otherCode + '/gameData/isResolved').set(true);
+     }
+  }
 
   // --- NOUVEAU : ENVOI DE L'ALERTE RÉSULTATS FINAUX ---
   sendFinalRankingAlert();
@@ -4903,43 +4936,28 @@ function getRandomCategoryImage(category) {
   return `${fileName}.jpg`; 
 }
 
-function directManage() {
-  // On récupère le code de la session facile (ou unique)
-  const code = sessionConfig.code;
+// --- FONCTIONS DE RACCOURCIS CIBLÉES ---
+
+function directManage(targetCode, isCommon = false) {
+  // CORRECTION : On mémorise de façon globale si on veut synchroniser ou non
+  window.isCommonManagement = isCommon;
+
+  const code = targetCode || sessionConfig.code;
   if (!code) return;
 
-  // On remplit automatiquement le champ de l'écran d'authentification gestion
   const input = document.getElementById("manageCodeInput");
   if (input) input.value = code;
 
-  // On lance la fonction de vérification d'accès existante
   checkManageAccess();
 }
 
-function directManage() {
-  // On récupère le code de la session facile (ou unique)
-  const code = sessionConfig.code;
+function directBigScreen(targetCode) {
+  const code = targetCode || sessionConfig.code;
   if (!code) return;
 
-  // On remplit automatiquement le champ de l'écran d'authentification gestion
-  const input = document.getElementById("manageCodeInput");
-  if (input) input.value = code;
-
-  // On lance la fonction de vérification d'accès existante
-  checkManageAccess();
-}
-
-// --- NOUVELLES FONCTIONS DE RACCOURCIS ---
-
-function directBigScreen() {
-  const code = sessionConfig.code;
-  if (!code) return;
-
-  // On remplit le champ au cas où
   const input = document.getElementById("bsCodeInput");
   if (input) input.value = code;
 
-  // ACCÈS DIRECT : On contourne l'écran d'authentification après une création !
   isBigScreenActive = true;
   window.currentActiveSessionCode = code;
   
@@ -4954,7 +4972,6 @@ function directBigScreen() {
           
           startBigScreenEngine();
           
-          // On écoute les mises en temps réel
           db.ref('sessions/' + code).on('value', (liveSnap) => {
               if (liveSnap.exists()) {
                   game = liveSnap.val().gameData;
@@ -4968,107 +4985,254 @@ function directBigScreen() {
   });
 }
 
-function directSimulation() {
-  const code = sessionConfig.code;
+function directSimulation(targetCode) {
+  const code = targetCode || sessionConfig.code;
   if (!code) return;
 
-  // On remplit automatiquement le champ du simulateur
   const input = document.getElementById("simCodeInput");
   if (input) input.value = code;
 
-  // On affiche le menu du simulateur (l'admin doit quand même cliquer sur Démarrer)
   showScreen('simulationSetup');
 }
 
 function forceTime(index, type) {
   const now = Date.now();
+
+  // 1. DÉMARRAGE IMMÉDIAT
   if (type === 'start') {
     game.challenges[index].startTime = now;
-  } else {
-    // NOUVEAU : Empêcher la fermeture si cela fait chuter les questions actives sous 'n'
-    const n = sessionConfig.n || 1;
-    const currentlyActive = game.challenges.filter(ch => getEffectiveStatus(ch) === "open").length;
-    
-    if (currentlyActive <= n) {
-        alert(`Impossible de clôturer ce challenge maintenant : Il doit toujours y avoir au moins ${n} défis actifs en même temps pour les nouveaux joueurs.`);
-        return;
+    saveToCloud();
+    if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+       const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+       if (otherCode) {
+           db.ref('sessions/' + otherCode).once('value').then(snap => {
+               if(snap.exists()) {
+                   let otherData = snap.val();
+                   otherData.gameData.challenges[index].startTime = now;
+                   db.ref('sessions/' + otherCode).set(otherData);
+               }
+           });
+       }
     }
-    if (game.challenges[index].isGolden) {
-        alert("Impossible de clôturer manuellement la question Fil Rouge avant la fin de la session.");
-        return;
-    }
-    game.challenges[index].endTime = now;
+    renderManageDashboard();
+    return;
   }
-  saveToCloud();
-  renderManageDashboard();
+
+  // 2. CLÔTURE IMMÉDIATE (Avec vérification temporelle avancée)
+  if (game.challenges[index].isGolden) {
+    alert("Impossible de clôturer manuellement la question Fil Rouge avant la fin de la session.");
+    return;
+  }
+
+  const n = sessionConfig.n || 1;
+  const sessionEnd = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+
+  // Fonction utilitaire pour simuler l'avenir et trouver un "trou" dans le planning
+  const checkTimelineDrop = (challengesToCheck) => {
+     const simCh = JSON.parse(JSON.stringify(challengesToCheck));
+     simCh[index].endTime = now; // On simule la fermeture immédiate
+
+     // On récupère tous les repères temporels (les débuts et fins de toutes les questions)
+     let points = [now, sessionEnd];
+     simCh.forEach(c => {
+         if (c.startTime > now && c.startTime < sessionEnd) points.push(c.startTime);
+         if (c.endTime > now && c.endTime < sessionEnd) points.push(c.endTime);
+     });
+     points = [...new Set(points)].sort((a, b) => a - b);
+
+     // On teste chaque intervalle de temps pour voir s'il y a au moins "n" questions actives
+     for (let i = 0; i < points.length - 1; i++) {
+         const testTime = points[i] + 1000; // On teste 1 seconde dans l'intervalle
+         const activeCount = simCh.filter(c => testTime >= c.startTime && testTime < c.endTime).length;
+         if (activeCount < n) {
+             return { start: points[i], end: points[i+1] }; // On renvoie l'intervalle problématique
+         }
+     }
+     return null; // Tout va bien !
+  };
+
+  const formatTime = (ts) => {
+     const d = new Date(ts);
+     return d.getHours().toString().padStart(2,'0') + "h" + d.getMinutes().toString().padStart(2,'0');
+  };
+
+  // La fonction qui exécute réellement la fermeture si tout est validé
+  const proceedWithClosure = () => {
+     game.challenges[index].endTime = now;
+     saveToCloud();
+
+     if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+         const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+         if (otherCode) {
+             db.ref('sessions/' + otherCode).once('value').then(snap => {
+                 if(snap.exists()) {
+                     let otherData = snap.val();
+                     otherData.gameData.challenges[index].endTime = now;
+                     db.ref('sessions/' + otherCode).set(otherData);
+                 }
+             });
+         }
+     }
+     renderManageDashboard();
+  };
+
+  // 3. VÉRIFICATION AVANT EXÉCUTION
+  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+     
+     // On lit le planning du 2ème mode en tâche de fond
+     db.ref('sessions/' + otherCode + '/gameData/challenges').once('value').then(snap => {
+         let otherChallenges = snap.exists() ? snap.val() : game.challenges;
+
+         let defect1 = checkTimelineDrop(game.challenges);
+         let defect2 = checkTimelineDrop(otherChallenges);
+         let defect = defect1 || defect2; // S'il y a un défaut dans un des deux modes
+
+         if (defect) {
+             let msg = "";
+             if (defect.end >= sessionEnd - 60000) {
+                 msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent après ${formatTime(defect.start)} auront moins de ${n} questions disponibles.`;
+             } else {
+                 msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent entre ${formatTime(defect.start)} et ${formatTime(defect.end)} auront moins de ${n} questions disponibles.`;
+             }
+             if (!confirm(msg + "\n\nÊtes-vous sûr de votre choix pour les deux modes ?")) return;
+         }
+         proceedWithClosure();
+     });
+  } else {
+     // Vérification locale (Mode simple ou Gestion Séparée)
+     let defect = checkTimelineDrop(game.challenges);
+     if (defect) {
+         let msg = "";
+         if (defect.end >= sessionEnd - 60000) {
+             msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent après ${formatTime(defect.start)} auront moins de ${n} questions disponibles.`;
+         } else {
+             msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent entre ${formatTime(defect.start)} et ${formatTime(defect.end)} auront moins de ${n} questions disponibles.`;
+         }
+         if (!confirm(msg + "\n\nÊtes-vous sûr de votre choix ?")) return;
+     }
+     proceedWithClosure();
+  }
 }
 
 function resolveChallenge(index) {
-  const sel = document.getElementById(`res-${index}`);
-  if(!sel) return;
-  
-  const correctIdx = parseInt(sel.value);
-  game.challenges[index].correct = correctIdx;
+  // CORRECTION : Le bon identifiant du menu déroulant est "res-" !
+  const select = document.getElementById("res-" + index);
+  if (!select) return;
+  const ansIndex = parseInt(select.value);
+  if (isNaN(ansIndex)) {
+    alert("Veuillez sélectionner une réponse valide.");
+    return;
+  }
+
+  const currentCh = game.challenges[index];
+  const currentStatus = getEffectiveStatus(currentCh);
+  const isCurrentActive = (currentStatus === 'open' || currentStatus === 'pending');
+
+  // --- VÉRIFICATION INTELLIGENTE (GESTION COMMUNE) ---
+  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+     const isCurrentFacile = (window.currentActiveSessionCode === sessionConfig.code);
+     
+     const currentModeName = isCurrentFacile ? "Facile" : "Avancé";
+     const otherModeName = isCurrentFacile ? "Avancé" : "Facile";
+     const otherCode = isCurrentFacile ? sessionConfig.codeAdvanced : sessionConfig.code;
+     
+     // On lit discrètement l'état de la question dans le 2ème jeu sur la base de données
+     db.ref('sessions/' + otherCode + '/gameData/challenges/' + index).once('value').then(snap => {
+        if (snap.exists()) {
+           const otherCh = snap.val();
+           const otherStatus = getEffectiveStatus(otherCh);
+           const isOtherActive = (otherStatus === 'open' || otherStatus === 'pending');
+           
+           let warningMsg = "";
+           
+           if (!isCurrentActive && isOtherActive) {
+               warningMsg = `Attention, cette question n'a pas été clôturée dans le mode ${otherModeName}.`;
+           } else if (isCurrentActive && !isOtherActive) {
+               warningMsg = `Attention, cette question n'a pas été clôturée dans le mode ${currentModeName}.`;
+           } else if (isCurrentActive && isOtherActive) {
+               warningMsg = `Attention, cette question n'a été clôturée dans AUCUN des deux modes.`;
+           }
+           
+           if (warningMsg !== "") {
+               if (!confirm(`${warningMsg}\nÊtes-vous sûr de vouloir promulguer les résultats de cette question pour les deux modes ?`)) {
+                   return; // L'administrateur a annulé
+               }
+           }
+           
+           // Si tout est clôturé ou si l'admin a forcé, on publie !
+           executeResolution(index, ansIndex);
+        } else {
+           executeResolution(index, ansIndex);
+        }
+     });
+  } else {
+     // --- VÉRIFICATION CLASSIQUE (GESTION UNIQUE) ---
+     if (isCurrentActive) {
+         if (!confirm("Attention, cette question n'est pas encore clôturée. Êtes-vous sûr de vouloir promulguer le résultat ?")) {
+             return;
+         }
+     }
+     executeResolution(index, ansIndex);
+  }
+}
+
+// Fonction interne qui gère la distribution des gains (l'ancien code de resolveChallenge)
+function executeResolution(index, ansIndex) {
   game.challenges[index].status = "resolved";
+  game.challenges[index].correct = ansIndex;
   
-// DISTRIBUTION DES GAINS : Prise en compte du OUI et du NON
   if (game.players) {
     game.players.forEach(p => {
       if (p.portfolio) {
-        // On filtre TOUS les paris gagnants (Ceux qui ont dit OUI sur la bonne, ou NON sur une mauvaise)
-        const winningBets = p.portfolio.filter(b => b.cIndex === index && (
-          (b.type === 'YES' && b.ansIndex === correctIdx) ||
-          (b.type === 'NO' && b.ansIndex !== correctIdx) ||
-          (!b.type && b.ansIndex === correctIdx) // Rétrocompatibilité
-        ));
-        
-        winningBets.forEach(winningBet => {
-          if (!winningBet.paidOut) {
-            p.balance = parseFloat((p.balance + winningBet.pts).toFixed(2));
-            winningBet.paidOut = true; 
+        p.portfolio.forEach(b => {
+          if (b.cIndex === index && !b.paidOut) {
+            const isWin = (b.type === 'YES' && b.ansIndex === ansIndex) ||
+                          (b.type === 'NO' && b.ansIndex !== ansIndex) ||
+                          (!b.type && b.ansIndex === ansIndex);
+            if (isWin) {
+              p.balance += b.pts;
+            }
+            b.paidOut = true;
           }
         });
       }
     });
   }
-  
-saveToCloud();
-      
-  // --- NOUVEAU : LE PONT MAGIQUE POUR VALIDER L'AUTRE MODE ---
-  if (sessionConfig.mode === 'both') {
+  saveToCloud();
+
+  // Synchronisation avec l'autre session si on est en gestion commune
+  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
      const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
      if (otherCode) {
-         db.ref('sessions/' + otherCode).once('value').then(snap => {
-             if(snap.exists()) {
-                 let otherData = snap.val();
-                 let otherGame = otherData.gameData;
-                 
-                 otherGame.challenges[index].correct = correctIdx;
-                 otherGame.challenges[index].status = "resolved";
-                 
-                 if (otherGame.players) {
-                     otherGame.players.forEach(p => {
-                         if (p.portfolio) {
-                             const winningBets = p.portfolio.filter(b => b.cIndex === index && (
-                                 (b.type === 'YES' && b.ansIndex === correctIdx) ||
-                                 (b.type === 'NO' && b.ansIndex !== correctIdx) ||
-                                 (!b.type && b.ansIndex === correctIdx)
-                             ));
-                             winningBets.forEach(wBet => {
-                                 if (!wBet.paidOut) {
-                                     p.balance = parseFloat((p.balance + wBet.pts).toFixed(2));
-                                     wBet.paidOut = true; 
-                                 }
-                             });
-                         }
-                     });
-                 }
-                 db.ref('sessions/' + otherCode).set(otherData);
-             }
-         });
+        db.ref('sessions/' + otherCode).once('value').then(snap => {
+           if(snap.exists()) {
+               let otherData = snap.val();
+               otherData.gameData.challenges[index].status = "resolved";
+               otherData.gameData.challenges[index].correct = ansIndex;
+               
+               if (otherData.gameData.players) {
+                   otherData.gameData.players.forEach(p => {
+                       if (p.portfolio) {
+                           p.portfolio.forEach(b => {
+                               if (b.cIndex === index && !b.paidOut) {
+                                   const isWin = (b.type === 'YES' && b.ansIndex === ansIndex) ||
+                                                 (b.type === 'NO' && b.ansIndex !== ansIndex) ||
+                                                 (!b.type && b.ansIndex === ansIndex);
+                                   if (isWin) {
+                                       p.balance += b.pts;
+                                   }
+                                   b.paidOut = true;
+                               }
+                           });
+                       }
+                   });
+               }
+               db.ref('sessions/' + otherCode).set(otherData);
+           }
+        });
      }
   }
-
   renderManageDashboard();
 }
 
@@ -5107,7 +5271,7 @@ function undoResolveChallenge(index) {
   saveToCloud();
 
   // --- NOUVEAU : SYNCHRONISATION DE L'ANNULATION ---
-  if (sessionConfig.mode === 'both') {
+  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
      const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
      if (otherCode) {
          db.ref('sessions/' + otherCode).once('value').then(snap => {
@@ -5403,13 +5567,26 @@ function sendBroadcastMessage() {
   const text = input.value.trim();
   if (!text) return;
 
-  // 1. Envoi interne (pour la cloche de notification in-app)
+// 1. Envoi interne (pour la cloche de notification in-app)
+  const now = Date.now();
   if (!game.messages) game.messages = [];
-  game.messages.push({
-    text: text,
-    timestamp: Date.now()
-  });
+  game.messages.push({ text: text, timestamp: now });
   saveToCloud(); 
+
+  // NOUVEAU : Synchronisation du message à l'autre mode (Gestion Commune)
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+     if (otherCode) {
+         db.ref('sessions/' + otherCode).once('value').then(snap => {
+             if(snap.exists()) {
+                 let otherData = snap.val();
+                 if (!otherData.gameData.messages) otherData.gameData.messages = [];
+                 otherData.gameData.messages.push({ text: text, timestamp: now });
+                 db.ref('sessions/' + otherCode).set(otherData);
+             }
+         });
+     }
+  }
 
   // 2. PRÉPARATION DE L'ALERTE EXTERNE (Pour Make.com / Zapier)
   const currentUrl = window.location.href.split('?')[0];
@@ -6165,11 +6342,9 @@ function updateBsTimers() {
 
 
 // ==========================================
-// MOTEUR DU SIMULATEUR DE BOTS (PLANIFICATION LINÉAIRE)
+// MOTEUR MULTI-SIMULATEUR DE BOTS (PARALLÈLE)
 // ==========================================
-let simulationInterval = null;
-let simulationActive = false;
-window.pendingSimBots = []; // File d'attente des bots avec leur heure d'arrivée prévue
+window.activeSimulators = {}; // NOUVEAU : Stocke TOUTES les simulations en cours par code de session
 
 function startSimulation() {
   const code = document.getElementById("simCodeInput").value.trim().toUpperCase();
@@ -6177,6 +6352,13 @@ function startSimulation() {
   const msg = document.getElementById("simMsg");
   
   if (!code) { msg.textContent = "Veuillez entrer un code de session."; msg.className = "msg err"; return; }
+  
+  // Sécurité : Vérifie si une simulation ne tourne pas DÉJÀ pour ce code précis
+  if (window.activeSimulators[code]) {
+      msg.textContent = `Une simulation est déjà en cours pour la session ${code} !`; 
+      msg.className = "msg err"; 
+      return;
+  }
   
   msg.textContent = "Calcul du planning des bots..."; msg.className = "msg ok";
   
@@ -6186,84 +6368,88 @@ function startSimulation() {
     }
     
     const data = snapshot.val();
-    sessionConfig = data.sessionConfig;
-    game = data.gameData;
-    window.currentActiveSessionCode = code;
+    let simConfig = data.sessionConfig;
+    let simGame = data.gameData;
     
-    if (!game.players) game.players = [];
+    if (!simGame.players) simGame.players = [];
     
-    // --- CORRECTION : Sécurisation du calcul du temps ---
     const now = Date.now();
-    // Si gameStartTime est manquant, on utilise l'heure actuelle
-    // CORRECTION : On commence à faire arriver les bots dès maintenant, peu importe l'heure de début du jeu
     const startTime = now; 
+    const sessionEnd = Number(simConfig.gameEndTime) || Number(simConfig.expiresAt) || (now + 3600000);
+    const windowSize = sessionEnd - startTime;
 
-    // Sécurisation du calcul de la fin (conversion en nombre pour éviter les bugs de calcul)
-    const sessionEnd = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt) || (now + 3600000);
-    const endTime = sessionEnd;
-
-    const windowSize = endTime - startTime;
-
-    // Si le jeu est déjà fini
     if (windowSize <= 0) {
       msg.textContent = "Simulation impossible : La session est déjà terminée.";
       msg.className = "msg err";
       return;
     }
 
-    // --- PLANIFICATION ---
-    window.pendingSimBots = [];
-    const currentBotsCount = game.players.filter(p => p.name.startsWith("Bot_")).length;
+    let pendingBots = [];
+    const currentBotsCount = simGame.players.filter(p => p.name.startsWith("Bot_")).length;
     const botsToAdd = Math.max(0, botCount - currentBotsCount);
 
     if (botsToAdd === 0) {
-      logSim(`ℹ️ L'objectif de ${botCount} bots est déjà atteint.`);
+      logSim(`ℹ️ L'objectif de ${botCount} bots est déjà atteint pour [${code}].`);
     } else {
       for (let i = 0; i < botsToAdd; i++) {
-        window.pendingSimBots.push({
+        pendingBots.push({
           num: currentBotsCount + i + 1,
-          // Répartition uniforme entre maintenant et la fin
           arrivalTime: startTime + (Math.random() * windowSize)
         });
       }
-      logSim(`📢 Planning : ${botsToAdd} nouveaux bots programmés sur ${Math.round(windowSize/60000)} minutes.`);
+      logSim(`📢 Planning [${code}] : ${botsToAdd} nouveaux bots programmés.`);
     }
     
-    simulationActive = true;
+    // Initialisation du moteur EXCLUSIVEMENT pour CETTE session
+    window.activeSimulators[code] = {
+        game: simGame,
+        config: simConfig,
+        pendingBots: pendingBots,
+        interval: setInterval(() => simulationTick(code), 3000)
+    };
+    
+    // Changement d'interface
     document.getElementById("startSimBtn").classList.add("hidden");
-    document.getElementById("stopSimBtn").classList.remove("hidden");
-    msg.textContent = "Simulation en cours : Arrivée linéaire activée.";
+    const activeBtns = document.getElementById("simActiveButtons");
+    if (activeBtns) activeBtns.classList.remove("hidden");
     
-    db.ref('sessions/' + code).on('value', simUpdateState);
+    msg.textContent = `Simulation [${code}] en cours...`;
     
-    if(simulationInterval) clearInterval(simulationInterval);
-    simulationInterval = setInterval(simulationTick, 3000); 
+    // Écouteur indépendant pour CETTE session (Prend en compte les paris des vrais joueurs en même temps)
+    db.ref('sessions/' + code).on('value', (snap) => {
+        if (window.activeSimulators[code] && snap.exists()) {
+            const liveData = snap.val();
+            window.activeSimulators[code].game = liveData.gameData;
+            window.activeSimulators[code].config = liveData.sessionConfig;
+            if (!window.activeSimulators[code].game.players) window.activeSimulators[code].game.players = [];
+        }
+    });
     
   }).catch(err => {
     msg.textContent = "Erreur: " + err.message; msg.className = "msg err";
   });
 }
 
-function simulationTick() {
-  // CORRECTION : Si game.players est manquant, on l'initialise au lieu de quitter la fonction
-  if (!simulationActive || !game) return;
-  if (!game.players) game.players = [];
+function simulationTick(code) {
+  const sim = window.activeSimulators[code];
+  if (!sim || !sim.game) return;
 
+  const simGame = sim.game;
+  const simConfig = sim.config;
   const now = Date.now();
   
   let madeChanges = false;
-  const n = sessionConfig.n || 1;
+  const n = simConfig.n || 1;
 
   // --- 1. GESTION DES ARRIVÉES ---
-  if (window.pendingSimBots && window.pendingSimBots.length > 0) {
-    const arrivals = window.pendingSimBots.filter(b => now >= b.arrivalTime);
+  if (sim.pendingBots && sim.pendingBots.length > 0) {
+    const arrivals = sim.pendingBots.filter(b => now >= b.arrivalTime);
     
     if (arrivals.length > 0) {
       arrivals.forEach(b => {
         const botName = "Bot_" + b.num;
-        // CORRECTION : Les bots démarrent à 0 en mode Facile pour ne pas fausser le classement !
-        let isEasy = (sessionConfig.mode === 'easy') || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code);
-        let startBal = isEasy ? 0 : (sessionConfig.initialBalance || 100);
+        let isEasy = (simConfig.mode === 'easy') || (simConfig.mode === 'both' && code === simConfig.code);
+        let startBal = isEasy ? 0 : (simConfig.initialBalance || 100);
         
         const newBot = {
           name: botName, 
@@ -6273,9 +6459,7 @@ function simulationTick() {
           assignedIndices: [] 
         };
 
-        // CORRECTION : On attribue des questions parmi TOUTES celles qui ne sont pas résolues
-        // (Sinon le bot arrive avec 0 question si rien n'est 'open' à cet instant précis)
-        let poolIndices = game.challenges.map((ch, idx) => ({idx, ch}))
+        let poolIndices = simGame.challenges.map((ch, idx) => ({idx, ch}))
                                          .filter(item => getEffectiveStatus(item.ch) !== "resolved");
         
         const golden = poolIndices.find(item => item.ch.isGolden === true);
@@ -6290,42 +6474,37 @@ function simulationTick() {
         }
         
         newBot.assignedIndices = finalSelection;
-        game.players.push(newBot);
-        logSim(`🚀 <strong>${botName}</strong> est entré en jeu.`);
+        simGame.players.push(newBot);
+        logSim(`🚀 [${code}] <strong>${botName}</strong> est entré en jeu.`);
       });
 
-      window.pendingSimBots = window.pendingSimBots.filter(b => now < b.arrivalTime);
+      sim.pendingBots = sim.pendingBots.filter(b => now < b.arrivalTime);
       madeChanges = true;
     }
   }
 
   // --- 2. LOGIQUE DE JEU ---
-  const botsInGame = game.players.filter(p => p.name.startsWith("Bot_"));
-  // 20% de chance qu'un bot présent parie à chaque tick (toutes les 3s)
-  const activeBots = botsInGame.filter(() => Math.random() < 0.20);
+  const botsInGame = simGame.players.filter(p => p.name.startsWith("Bot_"));
+  const activeBots = botsInGame.filter(() => Math.random() < 0.20); // 20% de chances de miser
   
   activeBots.forEach(bot => {
     if (!bot.assignedIndices) return;
     const availableToBet = bot.assignedIndices.filter(idx => {
-      const ch = game.challenges[idx];
+      const ch = simGame.challenges[idx];
       const hasNotBet = !bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx);
       return ch && getEffectiveStatus(ch) === "open" && hasNotBet;
     });
     
     if (availableToBet.length > 0) {
       const cIndex = availableToBet[Math.floor(Math.random() * availableToBet.length)];
-      const ch = game.challenges[cIndex];
+      const ch = simGame.challenges[cIndex];
       const ansIndex = Math.floor(Math.random() * ch.answers.length);
       
-      // CORRECTION : Mises aléatoires, mais 100% du capital sera écoulé à la dernière question
       let betAmount = 1; 
-      if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
+      if (simConfig.mode === 'advanced' || simConfig.mode === 'both') {
         if (availableToBet.length === 1) {
-            // C'est sa dernière question, il fait tapis avec TOUT ce qu'il lui reste
-            betAmount = bot.balance;
+            betAmount = bot.balance; // Tapis sur la dernière
         } else {
-            // Il n'est pas à sa dernière question. Il mise une somme aléatoire
-            // mais garde au moins 1 unité de sécurité pour chacune des questions restantes
             const safeMax = bot.balance - (availableToBet.length - 1);
             betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
         }
@@ -6347,40 +6526,50 @@ function simulationTick() {
       bot.balance -= betAmount;
       ch.votes = simulatedVotes;
       
-      logSim(`🎯 <strong>${bot.name}</strong> a misé sur "${ch.category}"`);
+      logSim(`🎯 [${code}] <strong>${bot.name}</strong> a misé.`);
       madeChanges = true;
     }
   });
   
-  if (madeChanges) saveToCloud();
+  // Sauvegarde INDÉPENDANTE et ciblée pour ce code précis
+  if (madeChanges) {
+      db.ref('sessions/' + code).set({
+          sessionConfig: simConfig,
+          gameData: simGame
+      }).catch(err => console.error(err));
+  }
+}
+
+// NOUVEAU : Fonction pour libérer la barre de recherche tout en gardant l'ancienne simulation active
+function prepareNewSimulation() {
+  document.getElementById("simCodeInput").value = "";
+  document.getElementById("simMsg").textContent = "Vous pouvez entrer un nouveau code pour lancer une simulation en parallèle.";
+  document.getElementById("simMsg").className = "msg";
+  
+  document.getElementById("simActiveButtons").classList.add("hidden");
+  document.getElementById("startSimBtn").classList.remove("hidden");
+}
+
+function stopSimulation() {
+  // NOUVEAU : Coupe toutes les simulations qui tournent en tâche de fond !
+  const activeCodes = Object.keys(window.activeSimulators);
+  activeCodes.forEach(code => {
+      clearInterval(window.activeSimulators[code].interval);
+      db.ref('sessions/' + code).off(); // Débranche l'écouteur de la BDD
+  });
+  window.activeSimulators = {}; // Vide le dictionnaire
+  
+  document.getElementById("simActiveButtons").classList.add("hidden");
+  document.getElementById("startSimBtn").classList.remove("hidden");
+  document.getElementById("simMsg").textContent = "Toutes les simulations parallèles ont été arrêtées.";
+  document.getElementById("simMsg").className = "msg ok";
+  logSim("🛑 TOUTES les simulations ont été stoppées.");
 }
 
 function logSim(text) {
   const logs = document.getElementById("simLogs");
   const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
   logs.innerHTML = `<div><span style="color:#60a5fa">[${time}]</span> ${text}</div>` + logs.innerHTML;
-}
-
-function simUpdateState(snapshot) {
-  if (simulationActive && snapshot.exists()) {
-    const data = snapshot.val();
-    game = data.gameData;
-    sessionConfig = data.sessionConfig;
-    
-    // CORRECTION : On s'assure que game.players est toujours un tableau
-    // pour que le moteur de simulation ne s'arrête pas s'il est vide sur le serveur.
-    if (!game.players) game.players = [];
-  }
-}
-
-function stopSimulation() {
-  simulationActive = false;
-  if (simulationInterval) clearInterval(simulationInterval);
-  if (window.currentActiveSessionCode) db.ref('sessions/' + window.currentActiveSessionCode).off('value', simUpdateState);
-  document.getElementById("startSimBtn").classList.remove("hidden");
-  document.getElementById("stopSimBtn").classList.add("hidden");
-  document.getElementById("simMsg").textContent = "Simulation arrêtée.";
-  logSim("🛑 La simulation est stoppée.");
 }
 
 
@@ -6460,6 +6649,15 @@ function linkNextSession() {
         
         saveToCloud(); // On enregistre ce lien dans la session ACTUELLE
         
+        // NOUVEAU : Synchronisation à l'autre mode (Gestion Commune)
+        if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+            const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
+            if (otherCode) {
+                db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionCode').set(input);
+                db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionStartTime').set(sessionConfig.nextSessionStartTime);
+            }
+        }
+
         msg.textContent = "Prochaine session liée avec succès !";
         msg.className = "msg ok";
     }).catch(err => {
