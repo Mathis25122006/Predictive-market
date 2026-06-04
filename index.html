@@ -858,16 +858,17 @@ body.play-mode-active {
 <div id="play" style="display:none;">
   <div id="playerAuth" class="card" style="position: fixed; top: 0; bottom: 0; left: 0; right: 0; margin: auto; height: fit-content; width: 90%; max-width: 420px; padding: 35px 25px; box-sizing: border-box; z-index: 1000;">
     <h2 style="text-align:center; margin-bottom: 25px; font-size: 26px;">Rejoindre le jeu</h2>
-    <label>Pseudo</label>
-    <input id="pseudo" placeholder="Ex : Renaud">
     
+    <label>Pseudo</label>
+    <input id="pseudo" placeholder="Ex : Renaud" oninput="checkPseudoAvailability()" style="margin-bottom: 5px;">
+    <div id="pseudoFeedback" style="font-size:11.5px; font-weight:bold; margin-bottom:12px; margin-top:-2px; min-height:15px; transition: color 0.3s; padding-left:5px;"></div>
 
     <label>Adresse E-mail</label>
-    <input id="playerEmail" type="email" placeholder="Ex: joueur@email.com" style="margin-bottom: 10px;">
+    <input id="playerEmail" type="email" placeholder="Ex: joueur@email.com" style="margin-bottom: 10px;" oninput="checkPseudoAvailability()">
     
     <div id="accessCodeContainer">
       <label>Code de session (6 caractères)</label>
-      <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
+      <input id="accessCode" placeholder="Ex: A1B2C3" style="text-transform: uppercase;" oninput="checkPseudoAvailability()">
     </div>
     
     <div id="qrScannerContainer" class="hidden">
@@ -2043,12 +2044,19 @@ function showSessionInfo() {
     const urlEasy = `${currentUrl}?session=${codeEasy}`;
     const qrEasy = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlEasy)}`;
     html += `
-      <div class="card" style="border-color:#22c55e; margin-bottom:15px; padding-bottom:15px;">
-        <div style="color:#22c55e; font-weight:bold; margin-bottom:10px;">MODE FACILE</div>
-        <div style="font-size:24px; font-weight:800; color:white;">${codeEasy}</div>
-        <img src="${qrEasy}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+      <div class="card" style="border-color:#22c55e; margin-bottom:15px; padding-bottom:15px; text-align:center;">
+        <div style="color:#22c55e; font-weight:bold; margin-bottom:15px; letter-spacing:1px;">MODE FACILE</div>
         
-        <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <div style="display:flex; justify-content:center; align-items:center; gap:12px; background:rgba(0,0,0,0.3); padding:8px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+               <div style="font-size:26px; font-weight:900; color:white; letter-spacing:3px;">${codeEasy}</div>
+               <button onclick="window.copyCodeToClipboard('${codeEasy}', this)" style="background:rgba(255,255,255,0.15) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#fff !important; padding:6px 12px; font-size:11px; width:auto; border-radius:6px; margin:0; box-shadow:0 4px 10px rgba(0,0,0,0.2) !important; font-weight:bold;">Copier</button>
+            </div>
+            
+            <img src="${qrEasy}" style="width:140px; height:140px; border:4px solid white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.5);">
+        </div>
+        
+        <div style="display: flex; gap: 8px; margin-top: 20px;">
           <button onclick="directManage('${codeEasy}')" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">⚙️ Gestion</button>
           <button onclick="directBigScreen('${codeEasy}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">📺 Écran</button>
           <button onclick="directSimulation('${codeEasy}')" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">🤖 Simuler</button>
@@ -2062,12 +2070,19 @@ function showSessionInfo() {
     const urlAdv = `${currentUrl}?session=${codeAdv}`;
     const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
     html += `
-      <div class="card" style="border-color:#f97316; margin-bottom:15px; padding-bottom:15px;">
-        <div style="color:#f97316; font-weight:bold; margin-bottom:10px;">MODE AVANCÉ</div>
-        <div style="font-size:24px; font-weight:800; color:white;">${codeAdv}</div>
-        <img src="${qrAdv}" style="margin-top:10px; border:4px solid white; border-radius:8px;">
+      <div class="card" style="border-color:#f97316; margin-bottom:15px; padding-bottom:15px; text-align:center;">
+        <div style="color:#f97316; font-weight:bold; margin-bottom:15px; letter-spacing:1px;">MODE AVANCÉ</div>
         
-        <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <div style="display:flex; justify-content:center; align-items:center; gap:12px; background:rgba(0,0,0,0.3); padding:8px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+               <div style="font-size:26px; font-weight:900; color:white; letter-spacing:3px;">${codeAdv}</div>
+               <button onclick="window.copyCodeToClipboard('${codeAdv}', this)" style="background:rgba(255,255,255,0.15) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#fff !important; padding:6px 12px; font-size:11px; width:auto; border-radius:6px; margin:0; box-shadow:0 4px 10px rgba(0,0,0,0.2) !important; font-weight:bold;">Copier</button>
+            </div>
+            
+            <img src="${qrAdv}" style="width:140px; height:140px; border:4px solid white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.5);">
+        </div>
+        
+        <div style="display: flex; gap: 8px; margin-top: 20px;">
           <button onclick="directManage('${codeAdv}')" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">⚙️ Gestion</button>
           <button onclick="directBigScreen('${codeAdv}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">📺 Écran</button>
           <button onclick="directSimulation('${codeAdv}')" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">🤖 Simuler</button>
@@ -2116,9 +2131,67 @@ function startPlayScreenTimers() {
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
+// --- NOUVEAU : REMPLACEMENT DYNAMIQUE ET INTELLIGENT DES CARTES FUTURES ---
+    let indicesModified = false;
+    const maxSeen = window.maxCardIndexSeen || 0;
+    
+    for (let i = maxSeen + 1; i < myIndices.length; i++) {
+        const cIndex = myIndices[i];
+        const ch = game.challenges[cIndex];
+        
+        const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+        const timeToEnd = ch ? (ch.endTime - now) : 0;
+        
+        let needsReplacement = false;
+        // On remplace si la carte est expirée, OU SI elle se termine dans moins d'1 minute
+        if (effStatus !== "open" && effStatus !== "pending") {
+            needsReplacement = true;
+        } else if (effStatus === "open" && timeToEnd < 60000) {
+            needsReplacement = true;
+        }
+
+        if (needsReplacement) {
+            const notInHand = game.challenges.map((c, idx) => ({c, idx})).filter(item => !myIndices.includes(item.idx));
+            
+            // Priorité 1 : Ouverte et se termine dans + d'1 minute (Sûre)
+            let p1 = notInHand.filter(item => getEffectiveStatus(item.c) === "open" && (item.c.endTime - now) >= 60000);
+            // Priorité 2 : En attente, mais commence dans - d'1 minute (Suspense)
+            let p2 = notInHand.filter(item => getEffectiveStatus(item.c) === "pending" && (item.c.startTime - now) < 60000);
+            // Priorité 3 : Ouverte et se termine dans - d'1 minute (Le dernier recours)
+            let p3 = notInHand.filter(item => getEffectiveStatus(item.c) === "open" && (item.c.endTime - now) < 60000);
+            
+            let bestOption = null;
+            if (p1.length > 0) {
+                p1.sort(() => 0.5 - Math.random());
+                bestOption = p1[0].idx;
+            } else if (p2.length > 0) {
+                p2.sort((a,b) => a.c.startTime - b.c.startTime);
+                bestOption = p2[0].idx;
+            } else if (p3.length > 0) {
+                p3.sort(() => 0.5 - Math.random());
+                bestOption = p3[0].idx;
+            }
+            
+            if (bestOption !== null) {
+                // Si on a le choix entre notre propre carte (urgence) ou une autre (urgence), on garde la nôtre
+                if (effStatus === "open" && timeToEnd < 60000 && bestOption === p3[0]?.idx) {
+                    // Ne rien faire
+                } else {
+                    myIndices[i] = bestOption;
+                    indicesModified = true;
+                }
+            }
+        }
+    }
+    if (indicesModified) {
+        player.assignedIndices = myIndices;
+        saveToCloud();
+        needsRefresh = true;
+    }
+    // ------------------------------------------------------------------
+
     game.challenges.forEach((ch, i) => {
       // CORRECTION MAJEURE : On ignore les questions qui ne sont pas sur l'écran du joueur
-      // Cela empêche le jeu de tourner en boucle et de bloquer le Swipe !
       if (!myIndices.includes(i)) return;
 
       const effStatus = getEffectiveStatus(ch);
@@ -2135,6 +2208,9 @@ function startPlayScreenTimers() {
       } 
       // 2. GESTION DU DÉCOMPTE DE FIN (OPEN)
       else if (effStatus === "open") {
+        // NOUVEAU : Si le calque flou est encore présent à l'écran, on force la destruction et le rafraîchissement !
+        if (pendingTimer) needsRefresh = true;
+        
         if (openTimer) {
           const diff = ch.endTime - now;
           if (diff <= 0) needsRefresh = true;
@@ -2147,7 +2223,8 @@ function startPlayScreenTimers() {
       }
     });
 
-    if (needsRefresh) renderPlayChallenges();
+    // NOUVEAU : On bloque le rechargement si le joueur est en train de glisser la carte pour ne pas saccader l'animation ou lui annuler sa touche !
+    if (needsRefresh && !window.isCardDragging) renderPlayChallenges();
   }, 1000);
 }
 
@@ -2165,13 +2242,21 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
     const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
     let betInfoHtml = "";
     
+    // Si la carte comporte beaucoup de réponses, on passe en mode ultra-compact
+    const isCompact = ch.answers && ch.answers.length > 4;
+    
     if (snaps.length > 0) {
        snaps.forEach(snap => {
+           // CORRECTION : Le bouton Cash Out est maintenant aligné sur la même ligne (flexbox) pour économiser la moitié de la hauteur !
            const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open") 
-             ? `<div style="margin-top:4px;"><button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0;">Revendre (Cash out)</button></div>` 
+             ? `<button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
              : "";
-           betInfoHtml += `<div style="color:#fde047; font-size:12px; margin-top:8px; font-weight:bold; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px; border:1px solid rgba(253,224,71,0.2);">
-             ✅ Mise : ${snap.bet} u sur "${ch.answers[snap.ansIndex]}"
+           
+           let ansText = ch.answers[snap.ansIndex];
+           if (isCompact && ansText.length > 18) ansText = ansText.substring(0, 15) + "..."; 
+
+           betInfoHtml += `<div style="color:#fde047; font-size:${isCompact ? '11px' : '12px'}; margin-top:${isCompact ? '4px' : '6px'}; font-weight:bold; background:rgba(255,255,255,0.05); padding:${isCompact ? '6px 8px' : '8px'}; border-radius:8px; border:1px solid rgba(253,224,71,0.2); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✅ ${snap.bet}u sur "${ansText}"</div>
              ${cashOutBtn}
            </div>`;
        });
@@ -2201,8 +2286,7 @@ function renderPlayChallenges(){
 
     // CORRECTION : La désélection au clic sur la carte a été supprimée car elle entrait en conflit avec le "Swipe" (glissement) sur mobile et annulait le choix par erreur !
 
-    // NOUVEAU : On ne gère plus le statut "pending" pour le joueur (il ne voit que l'actif)
-    if (effStatus === "pending") return;
+
 
     // 2. QUESTION TERMINÉE (CLOSED ou RESOLVED)
     if (effStatus === "closed" || effStatus === "resolved") {
@@ -2222,8 +2306,9 @@ function renderPlayChallenges(){
           <div class="chip">${ch.category}</div>
           <div style="font-size:10px; font-weight:bold; color:#f87171;">${label}</div>
         </div>
-        <div class="challenge-title" style="opacity:0.5; font-size:13px; margin-top:5px;">${ch.question}</div>
+<div class="challenge-title" style="opacity:0.5; font-size:13px; margin-top:5px;">${ch.question}</div>
         ${detail}`;
+        
       container.appendChild(block);
       return;
     }
@@ -2312,21 +2397,41 @@ function renderPlayChallenges(){
       ${btnHtml}
     `;
 
-    block.appendChild(header);
-    block.appendChild(qnaZone); // CORRECTION : On ajoute le conteneur groupé (Question + Réponses)
+   block.appendChild(header);
+    block.appendChild(qnaZone); 
     block.appendChild(footer);
+    
+    // --- NOUVEAU : Effet de flou mystère si la carte est en attente ---
+    if (effStatus === "pending") {
+        // On récupère tout le design de la vraie carte qui vient d'être générée
+        const realCardContent = block.innerHTML;
+        
+        block.innerHTML = `
+            <div style="filter:blur(12px) brightness(0.6); opacity:0.8; pointer-events:none; width:100%; height:100%; display:flex; flex-direction:column;">
+                ${realCardContent}
+            </div>
+            
+            <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; pointer-events:none;">
+                <div style="font-size:20px; font-weight:800; color:#ffffff; text-shadow:0 4px 15px rgba(0,0,0,1); text-align:center; padding:0 20px; letter-spacing:1px;">La question ouvre dans</div>
+                <div id="pending-timer-${cIndex}" style="font-size:55px; font-weight:900; color:#3b82f6; font-family:monospace; margin-top:15px; text-shadow:0 0 25px rgba(59,130,246,1), 0 4px 10px rgba(0,0,0,0.8);">--:--</div>
+            </div>
+        `;
+    }
+
     container.appendChild(block);
+    // On génère les boutons de réponses (qui seront visibles mais incliquables grâce au flou)
     renderAnswersForChallenge(cIndex);
   });
-  
 // --- NOUVEAU : Moteur de Swipe (Cartes Empilées type Panini/Tinder) ---
   const containerEl = document.getElementById("challengesPlay");
   const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
   
-  // CORRECTION : On utilise une variable globale pour ne pas revenir à la carte 1 à chaque clic
+// CORRECTION : On utilise une variable globale pour ne pas revenir à la carte 1 à chaque clic
   if (typeof window.currentCardIndex === 'undefined' || window.currentCardIndex >= cardsElements.length) {
       window.currentCardIndex = 0;
   }
+  // NOUVEAU : On met à jour le record de la carte la plus loin atteinte
+  window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
 
   function updateCardStack() {
     cardsElements.forEach((card, i) => {
@@ -2354,11 +2459,12 @@ function renderPlayChallenges(){
 
 // NOUVEAU : Fonction centralisée pour vérifier si le joueur a le droit de quitter la carte
   window.canPassCurrentCard = function() {
-      // CORRECTION : On doit vérifier la réponse pour LA question de la base de données (cIndex),
-      // et non pas sa position visuelle dans la pile (currentCardIndex) !
       const player = (game.players || []).find(p => p.name === game.currentPlayerName);
       const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
       const cIndex = myIndices[window.currentCardIndex];
+      const ch = game.challenges[cIndex];
+
+
 
       if (currentPlayerMode === 'easy') {
           const ans = selectedAnswers[cIndex]; 
@@ -2391,8 +2497,12 @@ window.swipeNextCard = function() {
     const activeCard = cardsElements[window.currentCardIndex];
     activeCard.classList.add('fly-away'); 
     window.currentCardIndex++;
-    window.saveLocalProgress(); // CORRECTION : Sauvegarde l'avancée lors du swipe vers le haut
-    setTimeout(updateCardStack, 100); 
+    
+    // NOUVEAU : On verrouille cette nouvelle carte pour qu'elle ne change plus jamais en arrière-plan !
+    window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
+    
+    window.saveLocalProgress(); 
+    setTimeout(updateCardStack, 100);
 
     // CORRECTION TUTO : Dès qu'il réussit à passer à la carte suivante, on lance l'étape 6 (Balayage vers le bas)
     if (window.currentTutoStep === 5) {
@@ -2426,9 +2536,9 @@ window.swipeNextCard = function() {
     }
   };
 
-  // --- Moteur Tactile (Touch Events) ---
+// --- Moteur Tactile (Touch Events) ---
   let startY = 0; let startX = 0;
-  let isDragging = false;
+  window.isCardDragging = false; // CORRECTION : Rendu global pour être lu par le chronomètre
 
   containerEl.addEventListener('touchstart', (e) => {
     const activeCard = cardsElements[window.currentCardIndex];
@@ -2436,13 +2546,13 @@ window.swipeNextCard = function() {
     
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
-    isDragging = true;
+    window.isCardDragging = true;
     activeCard.style.transition = 'none'; 
   }, {passive: false});
 
   containerEl.addEventListener('touchmove', (e) => {
     e.preventDefault(); 
-    if(!isDragging) return;
+    if(!window.isCardDragging) return;
     
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
@@ -2455,8 +2565,8 @@ window.swipeNextCard = function() {
   }, {passive: false});
 
   containerEl.addEventListener('touchend', (e) => {
-    if(!isDragging) return;
-    isDragging = false;
+    if(!window.isCardDragging) return;
+    window.isCardDragging = false;
     
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
@@ -2576,12 +2686,36 @@ window.swipeNextCard = function() {
 function renderAnswersForChallenge(cIndex){
   const ch = game.challenges[cIndex];
   const box = document.getElementById("answers-ch"+cIndex);
+  if (!box) return;
   box.innerHTML = "";
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  // NOUVEAU : On récupère la liste COMPLÈTE des mises actives du joueur
   const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
   
+  // --- NOUVEAU : MOTEUR DE COMPRESSION DYNAMIQUE ---
+  // Adapte les marges et les polices si la carte est surchargée
+  const hasBets = snaps.length > 0;
+  const ansCount = ch.answers.length;
+
+  let btnPadding = "clamp(6px, 1.5vh, 12px) 16px";
+  let labelFontSize = "clamp(14px, 1.8vh, 17px)";
+  let ptsFontSize = "clamp(15px, 2vh, 19px)";
+
+  if (ansCount > 4 && hasBets) {
+      box.style.gap = "clamp(2px, 0.6vh, 4px)";
+      btnPadding = "clamp(2px, 0.8vh, 6px) 12px";
+      labelFontSize = "clamp(11px, 1.3vh, 13px)";
+      ptsFontSize = "clamp(12px, 1.4vh, 14px)";
+  } else if (ansCount > 4) {
+      box.style.gap = "clamp(4px, 1vh, 6px)";
+      btnPadding = "clamp(4px, 1.2vh, 8px) 12px";
+      labelFontSize = "clamp(12px, 1.5vh, 15px)";
+      ptsFontSize = "clamp(13px, 1.6vh, 16px)";
+  } else {
+      box.style.gap = "clamp(6px, 1.2vh, 10px)";
+  }
+  // --------------------------------------------------
+
   const probs = getLMSRProbs(ch.votes);
 
   ch.answers.forEach((a,i)=>{
@@ -2591,27 +2725,25 @@ function renderAnswersForChallenge(cIndex){
 
     const div = document.createElement("div");
     div.className = "answer-btn";
+    div.style.padding = btnPadding; // On applique le padding compressé
     
-    // Vérifie si le joueur a une mise spécifique sur CETTE réponse
     const snapForThisAns = snaps.find(b => b.ansIndex === i);
 
     if (snapForThisAns) {
        div.classList.add("selected");
     } else if (selectedAnswers[cIndex] === i) {
-       div.classList.add("selected"); // Pour la mémoire du Mode Facile
+       div.classList.add("selected");
     }
 
     if (currentPlayerMode === 'easy') {
         if (snapForThisAns || selectedAnswers[cIndex] === i) {
-            div.style.cursor = "pointer"; // CORRECTION : Reste cliquable pour pouvoir désélectionner
+            div.style.cursor = "pointer";
         } else if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
             div.style.opacity = "0.4"; 
         }
         
         div.onclick = (e) => {
             e.stopPropagation(); 
-            
-            // CORRECTION : Si on reclique sur la réponse déjà sélectionnée, ça l'annule !
             if (selectedAnswers[cIndex] === i) {
                 selectedAnswers[cIndex] = null; 
                 selectedBets[cIndex] = 0; 
@@ -2619,21 +2751,17 @@ function renderAnswersForChallenge(cIndex){
                 selectedAnswers[cIndex] = i; 
                 selectedBets[cIndex] = 1; 
             }
-            
             window.saveLocalProgress(); 
             renderAnswersForChallenge(cIndex); 
             
-            // On ne passe à l'étape suivante du tuto que si une réponse est bien cochée
             if (window.currentTutoStep === 3 && selectedAnswers[cIndex] !== null) {
                 nextTuto(5); 
             }
         };
     } else {
-        // MODE AVANCÉ : Toujours cliquable, permet d'ajouter de nouvelles mises sur n'importe quoi !
         div.onclick = (e) => {
             e.stopPropagation(); 
             openBetPanel(cIndex, i, 'YES');
-            
             if (window.currentTutoStep === 3) {
                 clearTutoHighlights();
                 const step3El = document.getElementById("tutoStep3");
@@ -2644,18 +2772,15 @@ function renderAnswersForChallenge(cIndex){
     }
 
     const label = document.createElement("div");
-    // CORRECTION UI : Typographie Premium (Poids augmenté, espacement aéré et ombre noire portée pour un contraste absolu)
-    label.style.cssText = "font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: clamp(14px, 1.8vh, 17px); color: #ffffff; flex:1; padding-right:10px; line-height: 1.35; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);";
+    label.style.cssText = `font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: ${labelFontSize}; color: #ffffff; flex:1; padding-right:10px; line-height: 1.2; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
     label.textContent = a;
 
     const ptsSpan = document.createElement("div");
-    // CORRECTION UI : Typographie extra-grasse pour les valeurs, avec la même ombre portée
-    ptsSpan.style.cssText = "font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; font-size: clamp(15px, 2vh, 19px); color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);";
+    ptsSpan.style.cssText = `font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; font-size: ${ptsFontSize}; color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
     
     if (currentPlayerMode === 'easy') {
         ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100).toFixed(1)}%</span></div>`;
     } else {
-        // Affiche la mise en or si le joueur a parié sur cette réponse
         if (snapForThisAns) {
             ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Mise: ${snapForThisAns.bet}u</span>`;
         } else {
@@ -3663,6 +3788,67 @@ window.saveLocalProgress = function() {
     }
 };
 
+// --- NOUVEAU : Vérification du pseudo en temps réel ---
+let currentSessionPlayersForCheck = null;
+let lastCheckedCode = "";
+
+window.checkPseudoAvailability = function() {
+    const pseudo = document.getElementById("pseudo").value.trim();
+    const email = document.getElementById("playerEmail").value.trim().toLowerCase();
+    const code = document.getElementById("accessCode").value.trim().toUpperCase();
+    const feedback = document.getElementById("pseudoFeedback");
+
+    if (!feedback) return;
+
+    if (pseudo.length === 0) {
+        feedback.textContent = "";
+        return;
+    }
+
+    if (code.length !== 6) {
+        feedback.textContent = "Entrez un code de session pour vérifier que le pseudo est disponible";
+        feedback.style.color = "#9ca3af"; // Gris
+        return;
+    }
+
+    // Requête Firebase en arrière-plan (si le code a changé)
+    if (lastCheckedCode !== code) {
+        feedback.textContent = "Vérification...";
+        feedback.style.color = "#9ca3af";
+        
+        db.ref('sessions/' + code + '/gameData/players').once('value').then(snap => {
+            lastCheckedCode = code;
+            currentSessionPlayersForCheck = snap.exists() ? snap.val() : [];
+            evaluatePseudo(pseudo, email, feedback);
+        }).catch(() => {
+            feedback.textContent = "";
+        });
+    } else {
+        evaluatePseudo(pseudo, email, feedback);
+    }
+};
+
+function evaluatePseudo(pseudo, email, feedback) {
+    if (!currentSessionPlayersForCheck) currentSessionPlayersForCheck = [];
+    
+    const existingPlayer = currentSessionPlayersForCheck.find(p => p.name && p.name.toLowerCase() === pseudo.toLowerCase());
+    
+    if (existingPlayer) {
+        // Le pseudo existe. Est-ce le mien (même email) ?
+        if (email && existingPlayer.email && existingPlayer.email.toLowerCase() === email) {
+            feedback.textContent = "Pseudo reconnu (Reconnexion possible) ✅";
+            feedback.style.color = "#4ade80"; // Vert
+        } else {
+            feedback.textContent = "Ce pseudo est déjà utilisé ❌";
+            feedback.style.color = "#ef4444"; // Rouge
+        }
+    } else {
+        feedback.textContent = "Pseudo disponible ✅";
+        feedback.style.color = "#4ade80"; // Vert
+    }
+}
+// ------------------------------------------------------
+
 function checkAccess() {
   const pseudoInput = document.getElementById("pseudo").value.trim();
   const emailEl = document.getElementById("playerEmail");
@@ -3764,27 +3950,35 @@ function checkAccess() {
       let startBal = (modeToPlay === 'advanced') ? (sessionConfig.initialBalance || 100) : 0;
       me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [], assignedIndices: [] };
       
-      // [Le reste de votre logique d'attribution des indices reste inchangé ici...]
-      const n = sessionConfig.n || 1;
-      const marginMs = 120 * 1000; 
-      let activeIndices = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open");
-      // ... (votre code d'attribution des questions) ...
-      const golden = activeIndices.find(item => item.ch.isGolden === true);
+const n = sessionConfig.n || 1;
+      const marginMs = 60 * 1000; // 1 minute
+      
+      let poolOpenSafe = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) >= marginMs);
+      let poolPendingSoon = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) < marginMs);
+      let poolOpenUrgent = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
+      
+      // On cherche d'abord le Fil Rouge dans l'un des 3 pools
+      const golden = poolOpenSafe.find(item => item.ch.isGolden) || poolPendingSoon.find(item => item.ch.isGolden) || poolOpenUrgent.find(item => item.ch.isGolden);
+      
       let finalSelection = [];
       if (golden) {
         finalSelection.push(golden.idx);
-        activeIndices = activeIndices.filter(item => item.idx !== golden.idx);
+        poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
+        poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
+        poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
       }
-      let safeQuestions = activeIndices.filter(item => (item.ch.endTime - now) >= marginMs);
-      let urgentQuestions = activeIndices.filter(item => (item.ch.endTime - now) < marginMs);
-      safeQuestions.sort(() => 0.5 - Math.random());
-      urgentQuestions.sort(() => 0.5 - Math.random());
-      let prioritizedIndices = [...safeQuestions, ...urgentQuestions];
+      
+      poolOpenSafe.sort(() => 0.5 - Math.random());
+      poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime); // Celle qui ouvre le plus tôt d'abord
+      poolOpenUrgent.sort(() => 0.5 - Math.random());
+      
+      // La priorité : Ouvertes Sûres > Bientôt Ouvertes (Décompte) > Ouvertes Urgentes (Moins d'1min)
+      let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent];
       let additionalQuestions = [];
       while (finalSelection.length + additionalQuestions.length < n && prioritizedIndices.length > 0) {
         additionalQuestions.push(prioritizedIndices.shift().idx);
       }
-      additionalQuestions.sort((a, b) => game.challenges[a].endTime - game.challenges[b].endTime);
+      
       me.assignedIndices = finalSelection.concat(additionalQuestions);
       game.players.push(me);
       saveToCloud(); 
@@ -6841,26 +7035,97 @@ function updatePlayChallengesLive() {
     myIndices.forEach((cIndex) => {
         // 1. On met à jour le texte du score sur la carte
         const scoreEl = document.getElementById("live-score-" + cIndex);
-        
         if (scoreEl) {
-            // CORRECTION : Le format est juste le nombre brut désormais (l'émoji 💰 est fixe dans l'HTML)
             scoreEl.innerHTML = `${currentPlayerBalance}`;
         }
-        // Plus de mise à jour du classement sur la carte car la barre a été supprimée !
 
-        // 2. On rafraîchit uniquement la boîte contenant les réponses (pour voir les % bouger)
-        // L'animation de la carte (swipe) n'est pas interrompue car on ne touche pas au bloc parent !
+        // 2. On rafraîchit la boîte contenant les réponses (pour voir les % bouger sur la carte)
         const ansBox = document.getElementById("answers-ch" + cIndex);
-                    if (ansBox) renderAnswersForChallenge(cIndex);
-                    
-                    // CORRECTION : On rafraîchit aussi les coches vertes et les boutons Cash Out de la carte !
-                    const betInfoEl = document.getElementById("bet-info-" + cIndex);
-                    if (betInfoEl) {
-                        const ch = game.challenges[cIndex];
-                        betInfoEl.innerHTML = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
-                    }
-                });
+        if (ansBox) renderAnswersForChallenge(cIndex);
+        
+        // 3. On rafraîchit les informations et les boutons de cash-out sur la carte
+        const betInfoEl = document.getElementById("bet-info-" + cIndex);
+        if (betInfoEl) {
+            const ch = game.challenges[cIndex];
+            betInfoEl.innerHTML = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+        }
+    });
+
+    // --- NOUVEAU : MISE À JOUR EN DIRECT DES PANNEAUX (S'ils sont ouverts par le joueur) ---
+    
+    // A. Panneau de Mise (Miser)
+    const betPanel = document.getElementById("betPanel");
+    if (betPanel && betPanel.classList.contains("open") && tempBetCIndex !== null && tempBetAnsIndex !== null) {
+        const ch = game.challenges[tempBetCIndex];
+        const probs = getLMSRProbs(ch.votes);
+        const pStartYes = probs[tempBetAnsIndex];
+        const pStart = tempBetType === 'YES' ? pStartYes : (1 - pStartYes);
+        
+        // 1. Met à jour la "Cote Actuelle (%)" en direct
+        const betAnswerNameEl = document.getElementById("betAnswerName");
+        if (betAnswerNameEl) {
+            betAnswerNameEl.innerHTML = `${ch.answers[tempBetAnsIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
+        }
+        // 2. Recalcule le Gain Potentiel instantanément en fonction de la nouvelle cote
+        updatePotentialGain(); 
+    }
+
+    // B. Panneau de Revente (Cash Out)
+    const sellPanel = document.getElementById("sellPanel");
+    if (sellPanel && sellPanel.classList.contains("open") && tempSellCIndex !== null && tempSellAnsIndex !== null && tempSellSnap !== null) {
+        const ch = game.challenges[tempSellCIndex];
+        const quantiteTotale = tempSellSnap.pts;
+        
+        const probsStart = getLMSRProbs(ch.votes);
+        const pStartYes = probsStart[tempSellAnsIndex];
+        const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
+        const estimatedWithdraw = quantiteTotale * pStart;
+
+        let simulatedVotes = [...ch.votes];
+        if (tempSellType === 'YES') {
+            simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - estimatedWithdraw);
+        } else {
+            const sumOthers = simulatedVotes.reduce((a, b) => a + b, 0) - simulatedVotes[tempSellAnsIndex];
+            for (let i = 0; i < simulatedVotes.length; i++) {
+                if (i !== tempSellAnsIndex) {
+                    const weight = sumOthers > 0 ? (simulatedVotes[i] / sumOthers) : (1 / (simulatedVotes.length - 1));
+                    simulatedVotes[i] = Math.max(0, simulatedVotes[i] - (estimatedWithdraw * weight));
+                }
             }
+        }
+        
+        const probsEnd = getLMSRProbs(simulatedVotes);
+        const pEndYes = probsEnd[tempSellAnsIndex];
+        const pEnd = tempSellType === 'YES' ? pEndYes : (1 - pEndYes);
+
+        let pAvg = (pStart + pEnd) / 2;
+        if (pAvg <= 0.01) pAvg = 0.01;
+
+        tempSellMaxMoney = parseFloat((quantiteTotale * pAvg).toFixed(2));
+        
+        // 1. Met à jour la valeur "Max" de revente en direct
+        const maxBetEl = document.getElementById("sellMaxBet");
+        const sellInputEl = document.getElementById("sellInput");
+        if (maxBetEl && sellInputEl) {
+            maxBetEl.textContent = tempSellMaxMoney + " 💰";
+            sellInputEl.max = tempSellMaxMoney;
+        }
+        
+        // 2. Ajuste l'estimation de liquidation en direct
+        updateSellPotential();
+    }
+}
+
+// ==========================================
+// POP-UP DE COPIE (CRÉATION DE JEU)
+// ==========================================
+window.copyCodeToClipboard = function(code, btn) {
+    navigator.clipboard.writeText(code).then(() => {
+        const oldTxt = btn.textContent;
+        btn.textContent = "Copié ✅";
+        setTimeout(() => { btn.textContent = oldTxt; }, 2000);
+    }).catch(err => console.error("Erreur de copie", err));
+};
 
 </script>
 
