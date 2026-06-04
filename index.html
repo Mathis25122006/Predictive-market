@@ -2185,7 +2185,11 @@ function startPlayScreenTimers() {
     }
     if (indicesModified) {
         player.assignedIndices = myIndices;
-        saveToCloud();
+        // CORRECTION : Sauvegarde ciblée (Ne pas utiliser saveToCloud() pour ne pas écraser l'Admin !)
+        const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+        if (pIdx !== -1 && window.currentActiveSessionCode) {
+            db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx + '/assignedIndices').set(myIndices);
+        }
         needsRefresh = true;
     }
     // ------------------------------------------------------------------
@@ -2223,8 +2227,13 @@ function startPlayScreenTimers() {
       }
     });
 
-    // NOUVEAU : On bloque le rechargement si le joueur est en train de glisser la carte pour ne pas saccader l'animation ou lui annuler sa touche !
-    if (needsRefresh && !window.isCardDragging) renderPlayChallenges();
+// NOUVEAU : On bloque le rechargement complet si le joueur glisse la carte
+    if (needsRefresh && !window.isCardDragging) {
+        renderPlayChallenges();
+    } else if (!window.isCardDragging && typeof updatePlayChallengesLive === 'function') {
+        // CORRECTION : Actualisation silencieuse et continue chaque seconde !
+        updatePlayChallengesLive();
+    }
   }, 1000);
 }
 
@@ -2280,12 +2289,10 @@ function renderPlayChallenges(){
     const ch = game.challenges[cIndex];
     if (!ch) return;
 
-    const block = document.createElement("div");
+const block = document.createElement("div");
     block.className = "challenge-block";
     const effStatus = getEffectiveStatus(ch);
-
-    // CORRECTION : La désélection au clic sur la carte a été supprimée car elle entrait en conflit avec le "Swipe" (glissement) sur mobile et annulait le choix par erreur !
-
+    // (L'événement de clic est désormais géré intelligemment par le moteur tactile pour éviter les bugs sur mobile)
 
 
     // 2. QUESTION TERMINÉE (CLOSED ou RESOLVED)
@@ -2538,7 +2545,8 @@ window.swipeNextCard = function() {
 
 // --- Moteur Tactile (Touch Events) ---
   let startY = 0; let startX = 0;
-  window.isCardDragging = false; // CORRECTION : Rendu global pour être lu par le chronomètre
+  window.isCardDragging = false; 
+  window.hasMovedCard = false; // NOUVEAU : Détecteur d'intention de mouvement
 
   containerEl.addEventListener('touchstart', (e) => {
     const activeCard = cardsElements[window.currentCardIndex];
@@ -2547,6 +2555,7 @@ window.swipeNextCard = function() {
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
     window.isCardDragging = true;
+    window.hasMovedCard = false; // On réinitialise à chaque touché
     activeCard.style.transition = 'none'; 
   }, {passive: false});
 
@@ -2559,6 +2568,11 @@ window.swipeNextCard = function() {
     const activeCard = cardsElements[window.currentCardIndex];
     const deltaY = e.touches[0].clientY - startY;
     const deltaX = e.touches[0].clientX - startX;
+    
+    // NOUVEAU : Si le doigt parcourt plus de 10 pixels, c'est définitivement un glissement
+    if (Math.abs(deltaY) > 10 || Math.abs(deltaX) > 10) {
+        window.hasMovedCard = true;
+    }
     
     const rotate = deltaY * 0.05; 
     activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
@@ -2574,6 +2588,27 @@ window.swipeNextCard = function() {
     activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
+    const deltaX = e.changedTouches[0].clientX - startX;
+
+    // CORRECTION DU BUG : On exige que le doigt n'ait PAS voyagé (hasMovedCard === false) pour considérer ça comme un Clic !
+    if (!window.hasMovedCard && Math.abs(deltaY) < 15 && Math.abs(deltaX) < 15) {
+        activeCard.style.transform = ''; 
+        
+        // Si on a tapé dans le vide (pas sur un bouton ni sur une réponse), on désélectionne !
+        if (!e.target.closest('button') && !e.target.closest('.answer-btn')) {
+            const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+            const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+            const cIndex = myIndices[window.currentCardIndex];
+            
+            if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
+                selectedAnswers[cIndex] = null;
+                selectedBets[cIndex] = 0;
+                window.saveLocalProgress();
+                renderAnswersForChallenge(cIndex);
+            }
+        }
+        return; 
+    }
 
     if (Math.abs(deltaY) < 30) {
         activeCard.style.transform = ''; 
@@ -3308,7 +3343,12 @@ function confirmBet() {
       }
 
       ch.votes = simulatedVotes;
-      saveToCloud(); 
+      // CORRECTION : Sauvegarde ciblée 
+      const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+      if (pIdx !== -1 && window.currentActiveSessionCode) {
+          db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx).set(player);
+          db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/challenges/' + tempBetCIndex + '/votes').set(simulatedVotes);
+      }
   } else {
       // Pour le mode Facile, on garde la mise temporaire classique
       selectedAnswers[tempBetCIndex] = tempBetAnsIndex;
@@ -3394,7 +3434,16 @@ function validate(){
     }
   });
 
-  saveToCloud(); 
+  // CORRECTION : Sauvegarde ciblée des votes et du joueur
+  const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+      db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx).set(player);
+      game.challenges.forEach((ch, cIndex) => {
+          if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
+              db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/challenges/' + cIndex + '/votes').set(ch.votes);
+          }
+      });
+  }
   
   // On nettoie les sélections temporaires
   selectedAnswers = new Array(game.challenges.length).fill(null);
@@ -4648,7 +4697,7 @@ function updateRecapUI(pseudo) {
   const myRankIndex = provLeaderboard.findIndex(p => p.score === myScore);
   const myRank = myRankIndex + 1;
   const isTied = provLeaderboard.filter(p => p.score === myScore).length > 1;
-  const rankDisplay = isTied ? myRank + "T*" : myRank;
+  const rankDisplay = isTied ? myRank + "t*" : myRank;
 
   // CALCUL IMMÉDIAT DU TEMPS RESTANT
   const now = Date.now();
@@ -4676,7 +4725,7 @@ function updateRecapUI(pseudo) {
       const pRankIndex = provLeaderboard.findIndex(x => x.score === pScore);
       const pRank = pRankIndex + 1;
       const pIsTied = provLeaderboard.filter(x => x.score === pScore).length > 1;
-      const pRankDisplay = pIsTied ? pRank + "T*" : pRank;
+      const pRankDisplay = pIsTied ? pRank + "t*" : pRank;
       
       if (pIsTied) hasTiesInDisplay = true;
 
@@ -5180,7 +5229,13 @@ function confirmSell() {
   const player = game.players.find(p => p.name === game.currentPlayerName);
   player.balance = currentPlayerBalance;
 
-  saveToCloud(); 
+  // CORRECTION : Sauvegarde ciblée 
+  const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+      db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx).set(player);
+      db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/challenges/' + tempSellCIndex + '/votes').set(ch.votes);
+  }
+  
   closeSellPanel();
   
   // NOUVEAU : On ne renvoie au récapitulatif QUE SI on y était déjà ! 
@@ -6863,12 +6918,21 @@ function simulationTick(code) {
     }
   });
   
-  // Sauvegarde INDÉPENDANTE et ciblée pour ce code précis
+// CORRECTION : Sauvegarde ULTRA-CIBLÉE (Seulement les bots et les votes) pour ne jamais écraser l'Admin !
   if (madeChanges) {
-      db.ref('sessions/' + code).set({
-          sessionConfig: simConfig,
-          gameData: simGame
-      }).catch(err => console.error(err));
+      let updates = {};
+      
+      simGame.players.forEach((p, idx) => {
+          if (p.name.startsWith("Bot_")) {
+              updates['gameData/players/' + idx] = p;
+          }
+      });
+      
+      simGame.challenges.forEach((ch, idx) => {
+          updates['gameData/challenges/' + idx + '/votes'] = ch.votes;
+      });
+      
+      db.ref('sessions/' + code).update(updates).catch(err => console.error(err));
   }
 }
 
@@ -7023,37 +7087,44 @@ function renderNextSessionQR() {
 // MISE À JOUR EN DIRECT (SANS SAUT DE PAGE)
 // ==========================================
 function updatePlayChallengesLive() {
+    if (document.getElementById('play').style.display === 'none') return;
+    
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-    
-    // Calcul du Leaderboard provisoire pour mettre à jour le rang
-    const provLeaderboard = (game.players || []).map(p => ({ name: p.name, score: p.balance })).sort((a,b)=>b.score - a.score);
-    const myRankIdx = provLeaderboard.findIndex(p => p.name === game.currentPlayerName);
-    const myRank = myRankIdx >= 0 ? (myRankIdx + 1) : "-";
-    const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
 
     myIndices.forEach((cIndex) => {
-        // 1. On met à jour le texte du score sur la carte
-        const scoreEl = document.getElementById("live-score-" + cIndex);
-        if (scoreEl) {
-            scoreEl.innerHTML = `${currentPlayerBalance}`;
-        }
+        const ch = game.challenges[cIndex];
+        if (!ch) return;
 
-        // 2. On rafraîchit la boîte contenant les réponses (pour voir les % bouger sur la carte)
+        // 1. Mise à jour du score
+        const scoreEl = document.getElementById("live-score-" + cIndex);
+        if (scoreEl) scoreEl.innerHTML = `${currentPlayerBalance}`;
+
+        // 2. Mise à jour intelligente des réponses (Uniquement si les données ont changé !)
         const ansBox = document.getElementById("answers-ch" + cIndex);
-        if (ansBox) renderAnswersForChallenge(cIndex);
+        if (ansBox) {
+            const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
+            // On crée une signature unique de l'état actuel (les votes, vos mises, votre sélection)
+            const stateStr = JSON.stringify(ch.votes) + "_" + JSON.stringify(snaps) + "_" + (selectedAnswers[cIndex] || "null");
+            
+            // Si la signature a changé depuis la dernière seconde, on rafraîchit visuellement !
+            if (ansBox.dataset.state !== stateStr) {
+                ansBox.dataset.state = stateStr;
+                renderAnswersForChallenge(cIndex);
+            }
+        }
         
-        // 3. On rafraîchit les informations et les boutons de cash-out sur la carte
+        // 3. Mise à jour des coches de validation Cash Out
         const betInfoEl = document.getElementById("bet-info-" + cIndex);
         if (betInfoEl) {
-            const ch = game.challenges[cIndex];
-            betInfoEl.innerHTML = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+            const newBetHtml = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+            if (betInfoEl.innerHTML !== newBetHtml) {
+                betInfoEl.innerHTML = newBetHtml;
+            }
         }
     });
 
-    // --- NOUVEAU : MISE À JOUR EN DIRECT DES PANNEAUX (S'ils sont ouverts par le joueur) ---
-    
-    // A. Panneau de Mise (Miser)
+    // --- MISE À JOUR EN DIRECT DES PANNEAUX (Miser et Cash Out) ---
     const betPanel = document.getElementById("betPanel");
     if (betPanel && betPanel.classList.contains("open") && tempBetCIndex !== null && tempBetAnsIndex !== null) {
         const ch = game.challenges[tempBetCIndex];
@@ -7061,24 +7132,21 @@ function updatePlayChallengesLive() {
         const pStartYes = probs[tempBetAnsIndex];
         const pStart = tempBetType === 'YES' ? pStartYes : (1 - pStartYes);
         
-        // 1. Met à jour la "Cote Actuelle (%)" en direct
         const betAnswerNameEl = document.getElementById("betAnswerName");
         if (betAnswerNameEl) {
             betAnswerNameEl.innerHTML = `${ch.answers[tempBetAnsIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
         }
-        // 2. Recalcule le Gain Potentiel instantanément en fonction de la nouvelle cote
         updatePotentialGain(); 
     }
 
-    // B. Panneau de Revente (Cash Out)
     const sellPanel = document.getElementById("sellPanel");
     if (sellPanel && sellPanel.classList.contains("open") && tempSellCIndex !== null && tempSellAnsIndex !== null && tempSellSnap !== null) {
         const ch = game.challenges[tempSellCIndex];
-        const quantiteTotale = tempSellSnap.pts;
-        
         const probsStart = getLMSRProbs(ch.votes);
         const pStartYes = probsStart[tempSellAnsIndex];
         const pStart = tempSellType === 'YES' ? pStartYes : (1 - pStartYes);
+        
+        const quantiteTotale = tempSellSnap.pts;
         const estimatedWithdraw = quantiteTotale * pStart;
 
         let simulatedVotes = [...ch.votes];
@@ -7101,18 +7169,16 @@ function updatePlayChallengesLive() {
         let pAvg = (pStart + pEnd) / 2;
         if (pAvg <= 0.01) pAvg = 0.01;
 
-        tempSellMaxMoney = parseFloat((quantiteTotale * pAvg).toFixed(2));
+        const newMaxMoney = parseFloat((quantiteTotale * pAvg).toFixed(2));
         
-        // 1. Met à jour la valeur "Max" de revente en direct
         const maxBetEl = document.getElementById("sellMaxBet");
         const sellInputEl = document.getElementById("sellInput");
-        if (maxBetEl && sellInputEl) {
+        if (maxBetEl && sellInputEl && tempSellMaxMoney !== newMaxMoney) {
+            tempSellMaxMoney = newMaxMoney;
             maxBetEl.textContent = tempSellMaxMoney + " 💰";
             sellInputEl.max = tempSellMaxMoney;
+            updateSellPotential();
         }
-        
-        // 2. Ajuste l'estimation de liquidation en direct
-        updateSellPotential();
     }
 }
 
