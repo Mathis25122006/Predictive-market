@@ -791,7 +791,7 @@ body.play-mode-active {
   </div>
 </div>
 
-<div id="setup" class="card" style="display:none">
+<div id="setup" class="card" style="display:none" oninput="if(window.markSetupChanged) window.markSetupChanged()" onchange="if(window.markSetupChanged) window.markSetupChanged()">
   <div id="setupStepQty">
     <h2>Configuration</h2>
 <label>Nombre de Challenges</label>
@@ -1048,7 +1048,6 @@ body.play-mode-active {
   <div id="recapChartsContainer"></div>
   
   <div style="display:flex; gap:10px; margin-top:20px;">
-    <button onclick="goBack()" style="margin:0;">Retour</button>
     <button onclick="location.reload()" style="margin:0;">Accueil</button>
   </div>
 </div>
@@ -1453,6 +1452,8 @@ function syncFilRougeTime(index) {
   // Applique l'heure globale aux champs de la question ciblée
   if (startInput && gStart) startInput.value = gStart;
   if (endInput && gEnd) endInput.value = gEnd;
+
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 
 // NOUVEAU : Fonction pour revenir de l'étape 2 (Questions) à l'étape 1 (Configuration globale)
@@ -1606,8 +1607,10 @@ function generateSetupFields() {
   `;
   container.appendChild(backContainer);
 
-  document.getElementById("setupStepQty").classList.add("hidden");
+document.getElementById("setupStepQty").classList.add("hidden");
   document.getElementById("setupStepFields").classList.remove("hidden");
+  
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 let pctModificationCounter = 0; // Compteur pour suivre l'historique des modifications
 
@@ -1672,10 +1675,9 @@ function updateNextPct(chIndex, currentInput) {
 
 function setEquitable(chIndex) {
   const pcts = document.querySelectorAll(`.dynamic-pct[data-ch="${chIndex}"]`);
-  // On utilise 100 / nombre de réponses, arrondi à 1 décimale
   const val = Math.floor((100 / pcts.length) * 10) / 10;
   pcts.forEach(p => p.value = val);
-  // On n'appelle PAS updateLastPct ici pour laisser les valeurs identiques
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 
 function setRandom(chIndex) {
@@ -1692,6 +1694,68 @@ function setRandom(chIndex) {
     remaining -= r;
   }
   pcts[pcts.length - 1].value = Math.max(minVal, remaining).toFixed(1);
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
+}
+
+// NOUVEAU : Logique de surveillance intelligente de la création
+window.isSessionGenerated = false;
+window.hasSetupChanged = false;
+window.originalSetupState = ""; // Garde en mémoire l'état exact lors du lancement
+
+// Fonction qui prend une "photo" de toutes les saisies du formulaire
+window.getCurrentSetupState = function() {
+  const state = {
+    qty: document.getElementById("challengesQty")?.value || "",
+    n: document.getElementById("questionsPerPlayer")?.value || "",
+    gDate: document.getElementById("globalDate")?.value || "",
+    gStart: document.getElementById("globalStartTime")?.value || "",
+    gEnd: document.getElementById("globalEndTime")?.value || "",
+    initBal: document.getElementById("initialBalance")?.value || "",
+    filRouge: document.querySelector('input[name="filRouge"]:checked')?.value || "",
+    challenges: []
+  };
+  
+  const selects = document.querySelectorAll(".dynamic-cat-select");
+  const customCats = document.querySelectorAll(".dynamic-cat-custom");
+  const ques = document.querySelectorAll(".dynamic-que");
+  const starts = document.querySelectorAll(".dynamic-start-time");
+  const ends = document.querySelectorAll(".dynamic-end-time");
+  
+  for (let i = 0; i < selects.length; i++) {
+    state.challenges.push({
+      cat: selects[i].value,
+      customCat: customCats[i] ? customCats[i].value : "",
+      que: ques[i] ? ques[i].value : "",
+      start: starts[i] ? starts[i].value : "",
+      end: ends[i] ? ends[i].value : "",
+      answers: Array.from(document.querySelectorAll(`.dynamic-ans[data-ch="${i}"]`)).map(el => el.value),
+      pcts: Array.from(document.querySelectorAll(`.dynamic-pct[data-ch="${i}"]`)).map(el => el.value)
+    });
+  }
+  return JSON.stringify(state);
+};
+
+window.markSetupChanged = function() {
+  if (window.isSessionGenerated) {
+    // On compare l'état actuel en direct avec l'état sauvegardé
+    const currentState = window.getCurrentSetupState();
+    window.hasSetupChanged = (currentState !== window.originalSetupState);
+    updateSetupBtnState();
+  }
+};
+
+function updateSetupBtnState() {
+  const btn = document.getElementById("setupBtn");
+  if (!btn) return;
+  if (window.isSessionGenerated && !window.hasSetupChanged) {
+    // Si généré ET exactement identique : on propose juste de revoir les QR
+    btn.textContent = "Revenir aux QR code";
+    btn.onclick = function() { showScreen('sessionInfo'); };
+  } else {
+    // Sinon (modifié), on remet le bouton à son état normal de création
+    btn.textContent = "Lancer le jeu";
+    btn.onclick = function() { setupNext(); };
+  }
 }
 
 function setupNext() {
@@ -1923,8 +1987,19 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
      db.ref('sessions/' + sessionConfig.codeAdvanced).set(advPayload).catch(err => console.error(err));
   }
 
-  // On garde une trace locale juste pour que l'admin retrouve sa propre partie
+// On garde une trace locale juste pour que l'admin retrouve sa propre partie
   localStorage.setItem('savedSessionConfig', JSON.stringify(sessionConfig));
+
+  // NOUVEAU : On marque la partie comme officiellement créée et "propre"
+  window.isSessionGenerated = true;
+  window.hasSetupChanged = false;
+  
+  // On prend une photo "parfaite" de tous les champs à l'instant T
+  if (typeof window.getCurrentSetupState === 'function') {
+      window.originalSetupState = window.getCurrentSetupState();
+  }
+  
+  if (typeof updateSetupBtnState === 'function') updateSetupBtnState();
 
   showSessionInfo();
 }
@@ -2124,18 +2199,7 @@ function renderPlayChallenges(){
     block.className = "challenge-block";
     const effStatus = getEffectiveStatus(ch);
 
-    // NOUVEAU : Désélection de la réponse en mode Facile si on clique dans le vide
-    block.onclick = (e) => {
-        // On ignore les clics sur les boutons d'action du bas (Suivant / Valider)
-        if (e.target.closest('button')) return;
-        
-        // CORRECTION : On vérifie aussi le undefined pour autoriser la désélection proprement
-        if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
-            selectedAnswers[cIndex] = null;
-            selectedBets[cIndex] = 0;
-            renderAnswersForChallenge(cIndex); // Rafraîchit visuellement les boutons
-        }
-    };
+    // CORRECTION : La désélection au clic sur la carte a été supprimée car elle entrait en conflit avec le "Swipe" (glissement) sur mobile et annulait le choix par erreur !
 
     // NOUVEAU : On ne gère plus le statut "pending" pour le joueur (il ne voit que l'actif)
     if (effStatus === "pending") return;
@@ -2539,19 +2603,30 @@ function renderAnswersForChallenge(cIndex){
 
     if (currentPlayerMode === 'easy') {
         if (snapForThisAns || selectedAnswers[cIndex] === i) {
-            div.style.cursor = "default";
-        // CORRECTION : On s'assure que la mémoire n'est ni null, ni "undefined" !
+            div.style.cursor = "pointer"; // CORRECTION : Reste cliquable pour pouvoir désélectionner
         } else if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
             div.style.opacity = "0.4"; 
         }
         
         div.onclick = (e) => {
             e.stopPropagation(); 
-            selectedAnswers[cIndex] = i; 
-            selectedBets[cIndex] = 1; 
-            window.saveLocalProgress(); // CORRECTION : Sauvegarde de la réponse sélectionnée
+            
+            // CORRECTION : Si on reclique sur la réponse déjà sélectionnée, ça l'annule !
+            if (selectedAnswers[cIndex] === i) {
+                selectedAnswers[cIndex] = null; 
+                selectedBets[cIndex] = 0; 
+            } else {
+                selectedAnswers[cIndex] = i; 
+                selectedBets[cIndex] = 1; 
+            }
+            
+            window.saveLocalProgress(); 
             renderAnswersForChallenge(cIndex); 
-            if (window.currentTutoStep === 3) nextTuto(5); 
+            
+            // On ne passe à l'étape suivante du tuto que si une réponse est bien cochée
+            if (window.currentTutoStep === 3 && selectedAnswers[cIndex] !== null) {
+                nextTuto(5); 
+            }
         };
     } else {
         // MODE AVANCÉ : Toujours cliquable, permet d'ajouter de nouvelles mises sur n'importe quoi !
@@ -3909,6 +3984,7 @@ function addAnswerField(chIndex) {
     <input type="number" class="dynamic-pct" data-ch="${chIndex}" placeholder="%" style="flex:1;" oninput="updateNextPct(${chIndex}, this)">
   `;
   container.appendChild(div);
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 
 function checkManageAccess() {
@@ -4373,7 +4449,12 @@ function updateRecapUI(pseudo) {
     return { name: p.name, score: parseFloat(displayScore.toFixed(2)) };
   }).sort((a, b) => b.score - a.score);
 
-  const myRank = provLeaderboard.findIndex(p => p.name === pseudo) + 1;
+  // CALCUL DU CLASSEMENT ET DES ÉGALITÉS (TIE)
+  const myScore = provLeaderboard.find(p => p.name === pseudo)?.score || 0;
+  const myRankIndex = provLeaderboard.findIndex(p => p.score === myScore);
+  const myRank = myRankIndex + 1;
+  const isTied = provLeaderboard.filter(p => p.score === myScore).length > 1;
+  const rankDisplay = isTied ? myRank + "T*" : myRank;
 
   // CALCUL IMMÉDIAT DU TEMPS RESTANT
   const now = Date.now();
@@ -4390,9 +4471,54 @@ function updateRecapUI(pseudo) {
     timerText = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
   }
 
+  // --- PRÉPARATION DU HTML DU TOP 3 ---
+  let top3Html = '';
+  let hasTiesInDisplay = false;
+  const top3 = provLeaderboard.slice(0, 3);
+  
+  top3.forEach((p) => {
+      const pScore = p.score;
+      // Index du premier joueur qui a ce score = classement le plus élevé pour l'égalité
+      const pRankIndex = provLeaderboard.findIndex(x => x.score === pScore);
+      const pRank = pRankIndex + 1;
+      const pIsTied = provLeaderboard.filter(x => x.score === pScore).length > 1;
+      const pRankDisplay = pIsTied ? pRank + "T*" : pRank;
+      
+      if (pIsTied) hasTiesInDisplay = true;
+
+      top3Html += `
+      <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
+        <span>${pRankDisplay}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
+        <span>${p.score} 💰</span>
+      </div>
+      `;
+  });
+
+  // Si le joueur n'est pas dans le top 3, on le rajoute en dessous
+  if (myRankIndex >= 3) {
+      if (isTied) hasTiesInDisplay = true;
+      top3Html += `
+        <div style="text-align:center; color:#9ca3af; font-size:10px; margin:4px 0;">...</div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:1">
+          <span>${rankDisplay}. <strong>VOUS</strong></span>
+          <span>${myScore} 💰</span>
+        </div>
+      `;
+  }
+
+  // Légende en cas d'égalité affichée
+  if (hasTiesInDisplay) {
+      top3Html += `<div style="font-size:10px; color:#9ca3af; margin-top:6px; font-style:italic;">* T : égalité avec d'autres joueurs</div>`;
+  }
+
   // CORRECTION : On utilise une seule grande chaîne de caractères "finalHtml" 
   // pour éviter les sauts de page causés par l'ajout successif (innerHTML +=)
   let finalHtml = `
+    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:15px; background:rgba(255,255,255,0.05); padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,0.1);">
+      <div style="font-size:12px; color:#9ca3af;">Code session : <strong style="color:#ffffff; font-size:16px; letter-spacing:1px;">${window.currentActiveSessionCode || sessionConfig.code}</strong></div>
+      <button onclick="window.copyRecapSessionCode(this)" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; padding:4px 10px; border-radius:6px; font-size:11px; color:#fff !important; width:auto; box-shadow:none !important; margin:0; font-weight:bold;">Copier</button>
+    </div>
+
     <div style="text-align:center; margin-bottom:15px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
       <div style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Temps de jeu restant</div>
       <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
@@ -4406,7 +4532,7 @@ function updateRecapUI(pseudo) {
       
       <div>
         <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Rang Provisoire</div>
-        <div style="font-size:28px; font-weight:900; color:#4ade80;">#${myRank}</div>
+        <div style="font-size:28px; font-weight:900; color:#4ade80;">#${rankDisplay}</div>
         
         ${myRank > 3 ? `
           <div style="margin-top:8px; font-size:12px; color:#9ca3af; font-style:italic;">
@@ -4418,12 +4544,7 @@ function updateRecapUI(pseudo) {
 
     <div style="background:rgba(15,23,42,0.6); border-radius:12px; padding:10px; margin-bottom:20px; border:1px solid #334155;">
       <h3 style="font-size:12px; color:#9ca3af; margin-bottom:8px;">TOP 3 PROVISOIRE</h3>
-      ${provLeaderboard.slice(0, 3).map((p, i) => `
-        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
-          <span>${i + 1}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
-          <span>${p.score} 💰</span>
-        </div>
-      `).join('')}
+      ${top3Html}
     </div>
 
     <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
@@ -4545,6 +4666,17 @@ function updateRecapUI(pseudo) {
   setTimeout(updateMessageBadges, 50);
   startRecapSessionTimer();
 }
+
+// NOUVEAU : Fonction pour copier le code depuis la vue Récapitulatif
+window.copyRecapSessionCode = function(btn) {
+    const code = window.currentActiveSessionCode || sessionConfig.code;
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+        const oldTxt = btn.textContent;
+        btn.textContent = "Copié ✅";
+        setTimeout(() => { btn.textContent = oldTxt; }, 2000);
+    }).catch(err => console.error("Erreur de copie", err));
+};
 
 // Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
 function drawSingleChart(hist, canvasId, cIndex) {
@@ -5324,6 +5456,7 @@ function quickTime(index, type) {
       input.value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
     }
   }
+  if(window.markSetupChanged) window.markSetupChanged();
 }
 
 let adminDashboardTimerInterval = null;
@@ -5350,6 +5483,7 @@ function setGlobalQuickTime(type) {
     const end = new Date(baseTime.getTime() + (180 * 60 * 1000));
     document.getElementById("globalEndTime").value = end.getHours().toString().padStart(2,'0') + ":" + end.getMinutes().toString().padStart(2,'0');
   }
+  if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 
 
@@ -5488,6 +5622,7 @@ function fillTestGame() {
            const boundaries = [startM, ...splits, endM]; // Ex: 14h -> 15h12 -> 17h
 
            // On attribue chaque segment continu à une question
+           // ... (fin de la boucle)
            for(let q=0; q<k; q++) {
                const idx = laneQs[q];
                document.getElementById(`start-${idx}`).value = minsToTime(boundaries[q]);
@@ -5495,6 +5630,7 @@ function fillTestGame() {
            }
        }
     }
+    if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
 }
 
 
