@@ -207,14 +207,14 @@ button {
    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3) !important;
  }
 
- /* 5. Actions de Retour / Annuler -> Transparents et Discrets */
- button[onclick^="showScreen('home')"], button[onclick^="close"], button[onclick^="confirmExit"] {
+/* 5. Actions de Retour / Annuler -> Transparents et Discrets */
+ button[onclick^="showScreen('home')"], button[onclick^="goBack()"], button[onclick^="location.reload()"], button[onclick^="close"], button[onclick^="confirmExit"] {
    background: transparent !important;
    border: 1px solid rgba(255,255,255,0.2) !important;
    color: #9ca3af !important;
    box-shadow: none !important;
  }
- button[onclick^="showScreen('home')"]:hover, button[onclick^="close"]:hover {
+ button[onclick^="showScreen('home')"]:hover, button[onclick^="goBack()"]:hover, button[onclick^="location.reload()"]:hover, button[onclick^="close"]:hover {
    background: rgba(255,255,255,0.05) !important;
    color: #ffffff !important;
  }
@@ -674,11 +674,11 @@ body.play-mode-active {
   </div>
 </div>
 
-<div id="mainLogo" class="vivatech-logo" style="margin-top: 25px; margin-bottom: 30px;">
-  <img src="Logo_Viva_Technology.svg" alt="Viva Technology" style="width: 220px; max-width: 80%; height: auto;">
+<div id="mainLogo" class="vivatech-logo" style="margin-top: 5px; margin-bottom: 10px;">
+  <img src="FDJ_Predinno.png" alt="Viva Technology" style="width: 350px; max-width: 95%; height: auto;">
 </div>
 
-<h1 id="mainTitle">Prediction Game</h1>
+<h1 id="mainTitle" style="margin-top: 0;">Prediction Game</h1>
 
 <div id="home" class="card">
   <h2>Bienvenue</h2>
@@ -694,7 +694,10 @@ body.play-mode-active {
   <button onclick="showScreen('manageAuth')" class="btn-secondary btn-spacing">Gérer un jeu existant</button>
   <button onclick="showScreen('bigScreenAuth')" class="btn-primary btn-spacing">Affichage Grand Écran</button>
   <button onclick="showScreen('simulationSetup')" class="btn-warning btn-spacing">Simulateur de Joueurs</button>
-  <button onclick="showScreen('home')" class="btn-outline btn-spacing">Retour à l'accueil</button>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
 </div>
 
 <div id="simulationSetup" class="card" style="display:none">
@@ -716,7 +719,10 @@ body.play-mode-active {
     <em>Les actions des bots apparaîtront ici...</em>
   </div>
 
-  <button onclick="showScreen('adminMenu')" class="btn-outline btn-spacing">Retour</button>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
 </div>
 
 <div id="selectMode" class="card" style="display:none">
@@ -725,7 +731,10 @@ body.play-mode-active {
   <button onclick="startSetup('easy')">Créer un jeu Facile</button>
   <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé</button>
   <button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
-  <button onclick="showScreen('adminMenu')" class="btn-outline" style="margin-top: 15px;">Retour</button>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
 </div>
 
 <div id="manageAuth" class="card" style="display:none">
@@ -733,9 +742,11 @@ body.play-mode-active {
   <label>Entrez le code de la session (6 caractères)</label>
   <input id="manageCodeInput" placeholder="Ex: A1B2C3" style="text-transform: uppercase;">
   <button onclick="checkManageAccess()">Accéder à la gestion</button>
-  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour</button>
   <div id="manageAuthMsg" class="msg err"></div>
-  <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour à l'accueil</button>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
 </div>
 
 <div id="manageGame" class="card" style="display:none">
@@ -743,7 +754,10 @@ body.play-mode-active {
     <h2>Gestion en temps réel</h2>
     <div id="gameTimer" style="font-weight:800; color:#f97316; font-size:18px; font-family:monospace;">00:00:00</div>
   </div>
-<button onclick="confirmExitManage()" style="background:none; border:1px solid #4b5563; margin-top:10px; margin-bottom:15px; font-size:12px;">Quitter la gestion (Accueil)</button>
+<div style="display:flex; gap:10px; margin-top:10px; margin-bottom:15px;">
+    <button onclick="goBack()" style="margin:0; font-size:12px;">Retour</button>
+    <button onclick="confirmExitManage()" style="margin:0; font-size:12px;">Accueil</button>
+  </div>
       
       <div style="background:rgba(168,85,247,0.1); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(168,85,247,0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -809,7 +823,10 @@ body.play-mode-active {
     </div>
 
     <button onclick="generateSetupFields()">Suivant</button>
-    <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Retour à l'accueil</button>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
   </div>
 
   <div id="setupStepFields" class="hidden">
@@ -856,7 +873,10 @@ body.play-mode-active {
     </div>
     
     <button onclick="checkAccess()">Entrer dans le jeu</button>
-    <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Quitter et retourner au menu principal</button>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
   </div>
 
 <div id="gameContent" class="hidden">
@@ -934,12 +954,14 @@ body.play-mode-active {
 
   <div id="adminChallenges"></div>
 
-<button id="adminBtn" onclick="adminNext()">Suivant</button>
+  <button id="adminBtn" onclick="adminNext()">Suivant</button>
   <div class="msg" id="adminMsg"></div>
-  <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;">Abandonner et Accueil</button>
-</div>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
+</div> <div id="tutoContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10002; pointer-events:none;">
 
-<div id="tutoContainer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10002; pointer-events:none;">
   
   <button onclick="closeTuto()" style="position:absolute; top:calc(max(15px, env(safe-area-inset-top)) + 5px); right:16px; background:rgba(255,255,255,0.15) !important; border:1px solid rgba(255,255,255,0.3) !important; color:#fff !important; border-radius:999px; padding:10px 16px; font-size:13px; font-weight:bold; width:auto; pointer-events:auto; margin:0; backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); box-shadow:0 4px 15px rgba(0,0,0,0.3) !important; z-index:10010; transition:all 0.3s;">Passer le tuto⏭</button>
 
@@ -1007,7 +1029,10 @@ body.play-mode-active {
   <div id="leaderboard"></div>
   <div class="msg">Score calculé sur vos gains potentiels (100 - p) cumulés.</div>
   <div id="chartsContainer"></div>
-  <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px; box-shadow:none;">Retour au menu principal</button>
+  <div style="display:flex; gap:10px; margin-top:20px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="location.reload()" style="margin:0;">Accueil</button>
+  </div>
 </div>
 <div id="playerRecap" class="card" style="display:none; padding-bottom: 100px;">
   <h2>Vos Prédictions</h2>
@@ -1018,15 +1043,24 @@ body.play-mode-active {
   <h3>Évolution des probabilités globales</h3>
   <div id="recapChartsContainer"></div>
   
-  <button onclick="location.reload()" style="background:none; border:1px solid #4b5563; margin-top:20px;">Quitter et retourner à l'accueil</button>
+  <div style="display:flex; gap:10px; margin-top:20px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="location.reload()" style="margin:0;">Accueil</button>
+  </div>
 </div>
 
-<div id="bigScreenAuth" class="card" style="display:none">
+<div id="bigScreenAuth" class="card" style="display:none; text-align: center;">
   <h2>Accès Grand Écran</h2>
   <p class="subtitle">Saisissez le code de la session à projeter.</p>
-  <input id="bsCodeInput" placeholder="Code (Ex: A1B2C3)" style="text-transform: uppercase;">
-  <button onclick="checkBigScreenAccess()" style="background: linear-gradient(135deg,#a855f7,#d946ef);">Lancer l'affichage direct</button>
-  <button onclick="showScreen('adminMenu')" style="background:none; border:1px solid #4b5563; margin-top:8px;">Retour</button>
+  
+  <input id="bsCodeInput" placeholder="Code (Ex: A1B2C3)" style="text-transform: uppercase; text-align: center;">
+  
+  <button onclick="checkBigScreenAccess()" style="background: linear-gradient(135deg,#a855f7,#d946ef); color: white; box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3); border: none;">Lancer l'affichage direct</button>
+  
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0; flex: 1;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0; flex: 1;">Accueil</button>
+  </div>
   <div id="bsAuthMsg" class="msg"></div>
 </div>
 
@@ -1035,14 +1069,12 @@ body.play-mode-active {
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-shrink:0;">
        
-       <!-- Bloc Gauche : QR Code de la partie en cours -->
        <div style="width:320px; display:flex; justify-content:flex-start;">
            <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
        </div>
 
-       <!-- Bloc Central : Logo et Titre -->
        <div style="text-align:center; flex:1; cursor:pointer;" onclick="showScreen('home')">
-          <img src="Logo_Viva_Technology.svg" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
+          <img src="FDJ_Predinno.png" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
           <div style="font-size:34px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">LIVE PREDICTION GAME</div>
           <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:4px 18px; border-radius:999px;">
              <span style="font-size:11px; color:#f87171; font-weight:bold; text-transform:uppercase; margin-right:10px;">Fin de la session :</span>
@@ -1050,7 +1082,6 @@ body.play-mode-active {
           </div>
        </div>
 
-       <!-- NOUVEAU Bloc Droit : Espace pour le QR Code de la Prochaine Session -->
        <div style="width:320px; display:flex; justify-content:flex-end;">
           <div id="bsNextSessionHeaderContainer"></div>
        </div>
@@ -1103,111 +1134,119 @@ body.play-mode-active {
     alert("Mot de passe incorrect.");
   }
 }
-function showScreen(screenId) {
-  // NOUVEAU : Ajout de l'écran simulationSetup
-  const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup'];
+let screenHistory = [];
+let currentScreenId = 'home';
 
-  // On cache le canvas de confettis si on quitte l'écran de résultat personnel
-  if (screenId !== 'playerResult') {
-     const canvas = document.getElementById("confettiCanvas");
-     if (canvas) canvas.style.display = "none";
-  }
-
-  // CORRECTION : On cache visuellement le tutoriel si on quitte l'écran de jeu,
-  // MAIS on ne le marque pas comme "terminé" pour éviter de le désactiver définitivement !
-  if (screenId !== 'play') {
-     const tutoContainer = document.getElementById("tutoContainer");
-     if (tutoContainer) tutoContainer.style.display = "none";
-     if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
-  }
-
-  // CORRECTION : Anti-rebond mobile, on fige complètement l'écran sur l'accueil ET en jeu
-  if (screenId === 'play' || screenId === 'home') {
-     document.body.classList.add('play-mode-active');
+// NOUVEAU : Fonction de retour en arrière
+function goBack() {
+  if (screenHistory.length > 0) {
+    const prevScreen = screenHistory.pop();
+    showScreen(prevScreen, true); // true indique qu'on fait un retour
   } else {
-     document.body.classList.remove('play-mode-active');
+    showScreen('home');
   }
+}
 
-  // 1. Actions de nettoyage et sécurité
-  if (screenId === 'home') {
-    window.sessionTutoDone = false; // Réinitialisation automatique du tuto si on revient à l'accueil
-    
-    // Nettoyage spécifique au Grand Écran
-    if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
-    if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
-    if (typeof isBigScreenActive !== 'undefined') isBigScreenActive = false;
-    
-    // On arrête les écoutes Firebase actives pour le joueur
-    if (sessionConfig.code) {
-      db.ref('sessions/' + sessionConfig.code).off();
+function showScreen(screenId, isBack = false) {
+  try {
+    // Ajout de l'écran actuel à l'historique si on avance
+    if (!isBack && currentScreenId && currentScreenId !== screenId) {
+      screenHistory.push(currentScreenId);
     }
-    // Arrêter le scanner QR s'il est actif
-    if (typeof stopQRScanner === 'function') {
-      stopQRScanner();
+    // Réinitialisation de l'historique si on revient volontairement à l'accueil
+    if (screenId === 'home') {
+      screenHistory = []; 
     }
-    
-    // Si on quitte l'écran setup pendant une saisie, on sauvegarde les données
-    const setupEl = document.getElementById('setup');
-    if (setupEl && setupEl.style.display !== 'none') {
-      captureSetupData();
-    }
-    
-    // Réinitialiser l'affichage par défaut des étapes du setup
-    const stepQty = document.getElementById("setupStepQty");
-    const stepFields = document.getElementById("setupStepFields");
-    if (stepQty) stepQty.classList.remove("hidden");
-    if (stepFields) stepFields.classList.add("hidden");
-    
-    // Nettoyer les messages d'erreur éventuels
-// Nettoyer les messages d'erreur éventuels
-        const setupMsg = document.getElementById("setupMsg");
-        if (setupMsg) setupMsg.textContent = "";
+    currentScreenId = screenId;
 
-        // NOUVEAU : Réafficher le champ de code et le vider si l'utilisateur revient à l'accueil
-        const codeContainer = document.getElementById("accessCodeContainer");
-        if (codeContainer) codeContainer.style.display = "block";
-        const accessCodeInput = document.getElementById("accessCode");
-        if (accessCodeInput) accessCodeInput.value = "";
+    // Liste des écrans gérés
+    const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup'];
+
+    // On cache le canvas de confettis si on quitte l'écran de résultat personnel
+    if (screenId !== 'playerResult') {
+       const canvas = document.getElementById("confettiCanvas");
+       if (canvas) canvas.style.display = "none";
+    }
+
+    // On cache visuellement le tutoriel si on quitte l'écran de jeu
+    if (screenId !== 'play') {
+       const tutoContainer = document.getElementById("tutoContainer");
+       if (tutoContainer) tutoContainer.style.display = "none";
+       if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
+    }
+
+    // Anti-rebond mobile, on fige complètement l'écran sur l'accueil ET en jeu
+    if (screenId === 'play' || screenId === 'home') {
+       document.body.classList.add('play-mode-active');
+    } else {
+       document.body.classList.remove('play-mode-active');
+    }
+
+    // 1. Actions de nettoyage et sécurité
+    if (screenId === 'home') {
+      window.sessionTutoDone = false; 
+      
+      if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
+      if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
+      if (typeof isBigScreenActive !== 'undefined') isBigScreenActive = false;
+      
+      if (typeof sessionConfig !== 'undefined' && sessionConfig && sessionConfig.code) {
+        db.ref('sessions/' + sessionConfig.code).off();
       }
-
-  // 2. Boucle principale pour afficher l'écran demandé et masquer les autres
-
-  screens.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      if (id === screenId) {
-        el.style.display = 'block';
-      } else {
-        el.style.display = 'none';
+      if (typeof stopQRScanner === 'function') {
+        stopQRScanner();
       }
-    }
-  });
+      
+      const setupEl = document.getElementById('setup');
+      if (setupEl && setupEl.style.display !== 'none') {
+        if (typeof captureSetupData === 'function') captureSetupData();
+      }
+      
+      const stepQty = document.getElementById("setupStepQty");
+      const stepFields = document.getElementById("setupStepFields");
+      if (stepQty) stepQty.classList.remove("hidden");
+      if (stepFields) stepFields.classList.add("hidden");
+      
+      const setupMsg = document.getElementById("setupMsg");
+      if (setupMsg) setupMsg.textContent = "";
 
-  // 3. Logiques spécifiques selon l'écran affiché
-  
-  // NOUVEAU : On cache le logo et le titre sur l'écran de jeu pour un rendu 100% plein écran
-  const mainLogo = document.getElementById('mainLogo');
-  const mainTitle = document.getElementById('mainTitle');
-  if (mainLogo) mainLogo.style.display = (screenId === 'play') ? 'none' : 'flex';
-  if (mainTitle) mainTitle.style.display = (screenId === 'play') ? 'none' : 'block';
-
-  if (screenId === 'play') {
-    // Initialiser la vue QR si on est sur mobile
-    if (typeof initAccessView === 'function') {
-      initAccessView();
+      const codeContainer = document.getElementById("accessCodeContainer");
+      if (codeContainer) codeContainer.style.display = "block";
+      const accessCodeInput = document.getElementById("accessCode");
+      if (accessCodeInput) accessCodeInput.value = "";
     }
-    
-    // On s'assure juste que la zone de message est bien vide au démarrage
-    const playMsg = document.getElementById("playMsg");
-    if (playMsg) {
-      playMsg.textContent = "";
-    }
-  }
 
-  // Focus automatique sur le champ pseudo si on entre dans 'play'
-  if (screenId === 'play') {
-    const pseudoInput = document.getElementById("pseudo");
-    if (pseudoInput) setTimeout(() => pseudoInput.focus(), 100);
+    // 2. Boucle principale pour afficher l'écran demandé et masquer les autres
+    screens.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (id === screenId) {
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      }
+    });
+
+    // 3. CORRECTION MAJEURE : On cache le logo et le titre sur l'écran de jeu ET sur le Grand Écran !
+    const mainLogo = document.getElementById('mainLogo');
+    const mainTitle = document.getElementById('mainTitle');
+    if (mainLogo) mainLogo.style.display = (screenId === 'play' || screenId === 'bigScreen') ? 'none' : 'flex';
+    if (mainTitle) mainTitle.style.display = (screenId === 'play' || screenId === 'bigScreen') ? 'none' : 'block';
+
+    if (screenId === 'play') {
+      if (typeof initAccessView === 'function') {
+        initAccessView();
+      }
+      const playMsg = document.getElementById("playMsg");
+      if (playMsg) {
+        playMsg.textContent = "";
+      }
+      const pseudoInput = document.getElementById("pseudo");
+      if (pseudoInput) setTimeout(() => pseudoInput.focus(), 100);
+    }
+  } catch(e) {
+    console.error("Erreur critique dans showScreen :", e);
   }
 }
 
@@ -1543,12 +1582,14 @@ function generateSetupFields() {
     container.appendChild(div);
   }
 
-  // Ajout du bouton retour à la fin du formulaire dynamique
-  const backBtn = document.createElement("button");
-  backBtn.textContent = "Retour à l'accueil";
-  backBtn.style.cssText = "background:none; border:1px solid #4b5563; margin-top:12px; box-shadow:none;";
-  backBtn.onclick = () => showScreen('home');
-  container.appendChild(backBtn);
+  // Ajout des boutons Retour / Accueil à la fin du formulaire dynamique
+  const backContainer = document.createElement("div");
+  backContainer.style.cssText = "display: flex; gap: 10px; margin-top: 15px;";
+  backContainer.innerHTML = `
+    <button type="button" onclick="goBack()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Retour</button>
+    <button type="button" onclick="showScreen('home')" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Accueil</button>
+  `;
+  container.appendChild(backContainer);
 
   document.getElementById("setupStepQty").classList.add("hidden");
   document.getElementById("setupStepFields").classList.remove("hidden");
@@ -1931,13 +1972,23 @@ function showSessionInfo() {
       </div>`;
   }
 
-html += `
-    <button onclick="directManage()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:20px;">
-      Accéder directement à la gestion
-    </button>
-    <button onclick="showScreen('home')" style="background:none; border:1px solid #4b5563; margin-top:10px;">
-      Retour au menu principal
-    </button>
+// CORRECTION : On remplace le gros bouton par une rangée (flexbox) de 3 petits boutons
+  html += `
+    <div style="display: flex; gap: 8px; margin-top: 20px;">
+      <button onclick="directManage()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
+        ⚙️ Gestion
+      </button>
+      <button onclick="directBigScreen()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
+        📺 Grand Écran
+      </button>
+      <button onclick="directSimulation()" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:12px 2px; font-size:clamp(11px, 3vw, 13px); flex:1; border-radius:12px;">
+        🤖 Simulation
+      </button>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button onclick="goBack()" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Retour</button>
+      <button onclick="showScreen('home')" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9ca3af; margin:0; flex:1; box-shadow:none;">Accueil</button>
+    </div>
   `;
   container.innerHTML = html;
   
@@ -4864,6 +4915,71 @@ function directManage() {
   // On lance la fonction de vérification d'accès existante
   checkManageAccess();
 }
+
+function directManage() {
+  // On récupère le code de la session facile (ou unique)
+  const code = sessionConfig.code;
+  if (!code) return;
+
+  // On remplit automatiquement le champ de l'écran d'authentification gestion
+  const input = document.getElementById("manageCodeInput");
+  if (input) input.value = code;
+
+  // On lance la fonction de vérification d'accès existante
+  checkManageAccess();
+}
+
+// --- NOUVELLES FONCTIONS DE RACCOURCIS ---
+
+function directBigScreen() {
+  const code = sessionConfig.code;
+  if (!code) return;
+
+  // On remplit le champ au cas où
+  const input = document.getElementById("bsCodeInput");
+  if (input) input.value = code;
+
+  // ACCÈS DIRECT : On contourne l'écran d'authentification après une création !
+  isBigScreenActive = true;
+  window.currentActiveSessionCode = code;
+  
+  showScreen('bigScreen');
+  
+  db.ref('sessions/' + code).once('value').then((snapshot) => {
+      if (snapshot.exists()) {
+          const data = snapshot.val();
+          game = data.gameData;
+          sessionConfig = data.sessionConfig;
+          if (!game.players) game.players = [];
+          
+          startBigScreenEngine();
+          
+          // On écoute les mises en temps réel
+          db.ref('sessions/' + code).on('value', (liveSnap) => {
+              if (liveSnap.exists()) {
+                  game = liveSnap.val().gameData;
+                  if (!game.players) game.players = [];
+                  if (isBigScreenActive) renderBigScreen();
+              }
+          });
+      }
+  }).catch(err => {
+      console.error("Erreur Firebase:", err);
+  });
+}
+
+function directSimulation() {
+  const code = sessionConfig.code;
+  if (!code) return;
+
+  // On remplit automatiquement le champ du simulateur
+  const input = document.getElementById("simCodeInput");
+  if (input) input.value = code;
+
+  // On affiche le menu du simulateur (l'admin doit quand même cliquer sur Démarrer)
+  showScreen('simulationSetup');
+}
+
 function forceTime(index, type) {
   const now = Date.now();
   if (type === 'start') {
@@ -5476,8 +5592,8 @@ function checkBigScreenAccess() {
   msg.textContent = "Connexion au serveur..."; 
   msg.className = "msg ok";
 
-  // Ecoute en temps réel pour synchroniser le grand écran instantanément avec les smartphones
-  db.ref('sessions/' + input).on('value', (snapshot) => {
+  // CORRECTION SÉCURITÉ : On charge la donnée UNE SEULE FOIS pour éviter les conflits d'affichage
+  db.ref('sessions/' + input).once('value').then((snapshot) => {
     if (!snapshot.exists()) {
       msg.textContent = "Code invalide ou session inexistante."; 
       msg.className = "msg err";
@@ -5487,21 +5603,26 @@ function checkBigScreenAccess() {
     const data = snapshot.val();
     game = data.gameData;
     sessionConfig = data.sessionConfig;
-
     window.currentActiveSessionCode = input;
-
 
     if (!game.players) game.players = [];
 
-    if (!isBigScreenActive) {
-      isBigScreenActive = true;
-      msg.textContent = "";
-      showScreen('bigScreen');
-      startBigScreenEngine();
-    } else {
-      // Met à jour les pourcentages instantanément lors d'un pari
-      renderBigScreen();
-    }
+    isBigScreenActive = true;
+    msg.textContent = "";
+    showScreen('bigScreen'); // Affichage uniquement quand tout est prêt !
+    startBigScreenEngine();
+
+    // On relance l'écoute continue pour la mise à jour des jauges
+    db.ref('sessions/' + input).on('value', (liveSnap) => {
+      if (liveSnap.exists()) {
+          game = liveSnap.val().gameData;
+          if (!game.players) game.players = [];
+          if (isBigScreenActive) renderBigScreen();
+      }
+    });
+  }).catch((error) => {
+      msg.textContent = "Erreur de connexion : " + error.message;
+      msg.className = "msg err";
   });
 }
 
@@ -5569,27 +5690,29 @@ function updateBsIndices(isInit) {
      return st === 'open';
   });
   
-  if (bsActiveIndices.length === 0) {
+if (bsActiveIndices.length === 0) {
      bsActiveIndices = game.challenges.map((c, i) => i).filter(i => {
          return getEffectiveStatus(game.challenges[i]) !== 'pending';
      });
   }
 
+  // CORRECTION DIRECTE : Si aucune question n'est ouverte ou close (jeu neuf), 
+  // on prend absolument TOUTES les questions pour éviter d'avoir un écran blanc !
+  if (bsActiveIndices.length === 0) {
+     bsActiveIndices = game.challenges.map((c, i) => i);
+  }
+
   if (isInit) {
-    bsLeftIndex = bsActiveIndices.length > 0 ? bsActiveIndices[0] : undefined;
+    bsLeftIndex = bsActiveIndices.length > 0 ? bsActiveIndices[0] : 0;
     bsRightIndex = bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsLeftIndex;
     bsToggle = 'left'; 
   } else {
-    // CORRECTION : On vérifie si les cartes actuellement affichées sont toujours valides (toujours dans bsActiveIndices)
     const leftStillValid = bsActiveIndices.includes(bsLeftIndex);
     const rightStillValid = bsActiveIndices.includes(bsRightIndex);
     
     let targetToReplace = null;
-    
-    // Priorité 1 : Remplacer une carte qui vient de se fermer
     if (!leftStillValid && bsLeftIndex !== undefined) targetToReplace = 'left';
     else if (!rightStillValid && bsRightIndex !== undefined) targetToReplace = 'right';
-    // Priorité 2 : S'il y a plus de 2 questions actives, on fait la rotation normale
     else if (bsActiveIndices.length > 2) targetToReplace = bsToggle; 
 
     if (targetToReplace) {
@@ -5604,7 +5727,6 @@ function updateBsIndices(isInit) {
       
       if (targetToReplace === 'left') {
          bsLeftIndex = next !== undefined ? next : bsActiveIndices[0];
-         // On n'inverse le toggle que s'il s'agissait d'une rotation normale
          if (leftStillValid && rightStillValid) bsToggle = 'right'; 
       } else {
          bsRightIndex = next !== undefined ? next : (bsActiveIndices.length > 1 ? bsActiveIndices[1] : bsActiveIndices[0]);
@@ -5615,7 +5737,13 @@ function updateBsIndices(isInit) {
 }
 
 function renderBigScreen() {
-  if (!isBigScreenActive || !game || !game.challenges) return;
+  if (!game || !game.challenges) return;
+  
+  // CORRECTION SÉCURITÉ : On s'assure que le conteneur du Grand Écran est bien visible au cas où
+  const bsScreen = document.getElementById('bigScreen');
+  if (bsScreen && bsScreen.style.display === 'none') {
+      bsScreen.style.display = 'block';
+  }
 
   // GÉNÉRATION DU QR CODE DE REJOINDRE
   const currentUrl = window.location.href.split('?')[0];
