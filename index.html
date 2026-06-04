@@ -5922,24 +5922,26 @@ function renderBigScreen() {
       bsScreen.style.display = 'block';
   }
 
-  // GÉNÉRATION DU QR CODE DE REJOINDRE
-  const currentUrl = window.location.href.split('?')[0];
-  const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
-  
-  // CORRECTION : On change dynamiquement le texte si la session est terminée ou en attente de résultats
-  const checkNow = Date.now();
-  const checkLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
-  const isFinished = game.isResolved || (checkNow >= checkLimit);
-  const scanText = isFinished ? "Scannez pour voir<br>votre classement" : "Scannez pour jouer";
-  
-  document.getElementById("bsQrContainer").innerHTML = `
-        <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
-        <div>
-          <div style="font-size:11px; color:#9ca3af; text-transform:uppercase; font-weight:bold; line-height:1.2; margin-bottom:4px;">${scanText}</div>
-          <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px; line-height:1;">${sessionConfig.code}</div>
-        </div>
-      `;
+ // GÉNÉRATION DU QR CODE DE REJOINDRE
+      const currentUrl = window.location.href.split('?')[0];
+      // CORRECTION : On force l'utilisation du code de la session actuellement projetée (Gère le mode Avancé)
+      const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+      const joinUrl = `${currentUrl}?session=${activeCode}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
+      
+      // CORRECTION : On change dynamiquement le texte si la session est terminée ou en attente de résultats
+      const checkNow = Date.now();
+      const checkLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
+      const isFinished = game.isResolved || (checkNow >= checkLimit);
+      const scanText = isFinished ? "Scannez pour voir<br>votre classement" : "Scannez pour jouer";
+      
+      document.getElementById("bsQrContainer").innerHTML = `
+            <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+            <div>
+              <div style="font-size:11px; color:#9ca3af; text-transform:uppercase; font-weight:bold; line-height:1.2; margin-bottom:4px;">${scanText}</div>
+              <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px; line-height:1;">${activeCode}</div>
+            </div>
+          `;
 
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
