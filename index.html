@@ -1068,22 +1068,24 @@ body.play-mode-active {
   <div id="bsAuthMsg" class="msg"></div>
 </div>
 
-<div id="bigScreen" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at center, #2e1065, #0f172a); z-index:3000; color:white; overflow:hidden; padding:25px 40px; box-sizing:border-box; font-family: system-ui, sans-serif;">
+<div id="bigScreen" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at center, #2e1065, #0f172a); z-index:3000; color:white; overflow:hidden; padding:5px 40px 15px 40px; box-sizing:border-box; font-family: system-ui, sans-serif;">
   <div style="display:flex; flex-direction:column; height:100%;">
     
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-shrink:0;">
+   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
        
        <div style="width:320px; display:flex; justify-content:flex-start;">
            <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
        </div>
 
-       <div style="text-align:center; flex:1; cursor:pointer;" onclick="showScreen('home')">
-          <img src="FDJ_Predinno.png" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
-          <div style="font-size:34px; font-weight:900; letter-spacing:1px; margin-bottom:5px;">LIVE PREDICTION GAME</div>
-          <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:4px 18px; border-radius:999px;">
-             <span style="font-size:11px; color:#f87171; font-weight:bold; text-transform:uppercase; margin-right:10px;">Fin de la session :</span>
-             <span id="bsGlobalTimer" style="font-size:22px; font-weight:800; font-family:monospace; color:#f87171;">00:00:00</span>
-          </div>
+       <div style="text-align:center; flex:1; cursor:pointer; margin-top:-35px;" onclick="showScreen('home')">
+              <img src="FDJ_Predinno.png" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
+              
+              <div style="font-size:34px; font-weight:900; letter-spacing:1px; margin-bottom:12px; line-height:1.2;">LIVE PREDICTION GAME</div>
+              
+              <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:6px 18px; border-radius:999px;">
+                 <span style="font-size:11px; color:#f87171; font-weight:bold; text-transform:uppercase; margin-right:10px;">Fin de la session :</span>
+                 <span id="bsGlobalTimer" style="font-size:22px; font-weight:800; font-family:monospace; color:#f87171;">00:00:00</span>
+              </div>
        </div>
 
        <div style="width:320px; display:flex; justify-content:flex-end;">
@@ -2265,7 +2267,7 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
            if (isCompact && ansText.length > 18) ansText = ansText.substring(0, 15) + "..."; 
 
            betInfoHtml += `<div style="color:#fde047; font-size:${isCompact ? '11px' : '12px'}; margin-top:${isCompact ? '4px' : '6px'}; font-weight:bold; background:rgba(255,255,255,0.05); padding:${isCompact ? '6px 8px' : '8px'}; border-radius:8px; border:1px solid rgba(253,224,71,0.2); display:flex; justify-content:space-between; align-items:center; gap:8px;">
-             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✅ ${snap.bet}u sur "${ansText}"</div>
+             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✅ ${snap.bet} sur "${ansText}"</div>
              ${cashOutBtn}
            </div>`;
        });
@@ -2722,13 +2724,10 @@ function renderAnswersForChallenge(cIndex){
   const ch = game.challenges[cIndex];
   const box = document.getElementById("answers-ch"+cIndex);
   if (!box) return;
-  box.innerHTML = "";
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
   
-  // --- NOUVEAU : MOTEUR DE COMPRESSION DYNAMIQUE ---
-  // Adapte les marges et les polices si la carte est surchargée
   const hasBets = snaps.length > 0;
   const ansCount = ch.answers.length;
 
@@ -2749,34 +2748,100 @@ function renderAnswersForChallenge(cIndex){
   } else {
       box.style.gap = "clamp(6px, 1.2vh, 10px)";
   }
-  // --------------------------------------------------
 
   const probs = getLMSRProbs(ch.votes);
+  const hasSelection = hasBets || (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined);
+  
+  // Couleurs identiques au Grand Écran
+  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
 
-  ch.answers.forEach((a,i)=>{
+  // --- NOUVEAU : MOTEUR DE MISE À JOUR SANS DESTRUCTION ---
+  // On vérifie si les boutons existent déjà. Si oui, on les met à jour au lieu de les recréer.
+  // Cela permet à l'animation CSS de s'exécuter et aux clics de ne jamais sauter !
+  const existingBtns = box.querySelectorAll('.answer-btn');
+  const needsFullRender = existingBtns.length !== ansCount;
+
+  if (needsFullRender) {
+      box.innerHTML = "";
+  }
+
+  ch.answers.forEach((a, i) => {
     const pct = probs[i];
     const safePct = pct <= 0 ? 0.001 : pct;
     const pts = +(1 / safePct).toFixed(2); 
+    const c = colors[i % colors.length];
 
-    const div = document.createElement("div");
-    div.className = "answer-btn";
-    div.style.padding = btnPadding; // On applique le padding compressé
-    
     const snapForThisAns = snaps.find(b => b.ansIndex === i);
+    const isThisSelected = snapForThisAns || selectedAnswers[cIndex] === i;
 
-    if (snapForThisAns) {
-       div.classList.add("selected");
-    } else if (selectedAnswers[cIndex] === i) {
-       div.classList.add("selected");
+    let div, gauge, label, ptsSpan;
+
+    if (needsFullRender) {
+        // 1. CRÉATION INITIALE DU BOUTON
+        div = document.createElement("div");
+        div.className = "answer-btn";
+        div.style.position = "relative"; // Obligatoire pour contenir la jauge
+        div.style.overflow = "hidden"; // Empêche la jauge de déborder des coins arrondis
+        div.style.transition = "all 0.2s ease-in-out";
+        
+        // La Jauge de pourcentage en arrière-plan
+        gauge = document.createElement("div");
+        gauge.className = "answer-gauge";
+        gauge.style.cssText = `position:absolute; top:0; left:0; height:100%; width:0%; background:${c}; opacity:0.25; transition:width 0.5s ease-out; z-index:0;`;
+
+        // Le Texte
+        label = document.createElement("div");
+        label.className = "answer-label-text";
+        label.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; color: #ffffff; flex:1; padding-right:10px; line-height: 1.2; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
+
+        // Le Score
+        ptsSpan = document.createElement("div");
+        ptsSpan.className = "answer-pts-text";
+        ptsSpan.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
+
+        div.appendChild(gauge);
+        div.appendChild(label);
+        div.appendChild(ptsSpan);
+        box.appendChild(div);
+    } else {
+        // 2. RÉCUPÉRATION DES ÉLÉMENTS EXISTANTS
+        div = existingBtns[i];
+        gauge = div.querySelector('.answer-gauge');
+        label = div.querySelector('.answer-label-text');
+        ptsSpan = div.querySelector('.answer-pts-text');
     }
 
+    // --- MISE À JOUR DES VALEURS ET DU DESIGN (S'exécute toutes les 0.5s) ---
+    div.style.padding = btnPadding;
+    label.style.fontSize = labelFontSize;
+    ptsSpan.style.fontSize = ptsFontSize;
+    label.textContent = a;
+
+    // L'animation de remplissage de la jauge (Exactement comme l'écran TV)
+    if (gauge) {
+        gauge.style.width = `${(pct * 100).toFixed(1)}%`;
+    }
+
+    // Le Style visuel (Flou et Sélection)
+    if (isThisSelected) {
+       div.classList.add("selected");
+       div.style.border = "1px solid #60a5fa"; 
+       div.style.backgroundColor = "rgba(96, 165, 250, 0.15)"; 
+       div.style.opacity = "1";
+    } else {
+       div.classList.remove("selected");
+       div.style.border = "1px solid rgba(255,255,255,0.2)";
+       div.style.backgroundColor = "rgba(255,255,255,0.05)";
+       if (hasSelection) {
+           div.style.opacity = "0.4"; // Flou des autres réponses
+       } else {
+           div.style.opacity = "1";
+       }
+    }
+
+    // Les événements de clic (Attachés dynamiquement)
     if (currentPlayerMode === 'easy') {
-        if (snapForThisAns || selectedAnswers[cIndex] === i) {
-            div.style.cursor = "pointer";
-        } else if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
-            div.style.opacity = "0.4"; 
-        }
-        
+        div.style.cursor = "pointer";
         div.onclick = (e) => {
             e.stopPropagation(); 
             if (selectedAnswers[cIndex] === i) {
@@ -2789,6 +2854,7 @@ function renderAnswersForChallenge(cIndex){
             window.saveLocalProgress(); 
             renderAnswersForChallenge(cIndex); 
             
+            // CORRECTION : On informe le tutoriel que le joueur a choisi une réponse
             if (window.currentTutoStep === 3 && selectedAnswers[cIndex] !== null) {
                 nextTuto(5); 
             }
@@ -2796,9 +2862,13 @@ function renderAnswersForChallenge(cIndex){
     } else {
         div.onclick = (e) => {
             e.stopPropagation(); 
+            selectedAnswers[cIndex] = i; 
+            renderAnswersForChallenge(cIndex); 
             openBetPanel(cIndex, i, 'YES');
+            
+            // CORRECTION : On fait avancer le tutoriel vers le panneau de mise
             if (window.currentTutoStep === 3) {
-                clearTutoHighlights();
+                if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
                 const step3El = document.getElementById("tutoStep3");
                 if (step3El) step3El.classList.add("hidden");
                 setTimeout(() => nextTuto(4), 500); 
@@ -2806,13 +2876,7 @@ function renderAnswersForChallenge(cIndex){
         };
     }
 
-    const label = document.createElement("div");
-    label.style.cssText = `font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; font-size: ${labelFontSize}; color: #ffffff; flex:1; padding-right:10px; line-height: 1.2; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
-    label.textContent = a;
-
-    const ptsSpan = document.createElement("div");
-    ptsSpan.style.cssText = `font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; font-size: ${ptsFontSize}; color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
-    
+    // Mise à jour des textes de cotes
     if (currentPlayerMode === 'easy') {
         ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100).toFixed(1)}%</span></div>`;
     } else {
@@ -2822,10 +2886,6 @@ function renderAnswersForChallenge(cIndex){
             ptsSpan.innerHTML = `${(pct*100).toFixed(0)} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
         }
     }
-
-    div.appendChild(label);
-    div.appendChild(ptsSpan);
-    box.appendChild(div);
   });
 }
 
@@ -6505,22 +6565,23 @@ function renderBigScreen() {
       if (leftEl.dataset.chIndex !== String(bsLeftIndex)) {
           leftEl.dataset.chIndex = String(bsLeftIndex);
           leftEl.innerHTML = `
-            <div id="bsLeftCat" style="font-size:clamp(16px, 2vh, 22px); font-weight:800; letter-spacing:1.5px; margin-bottom:1vh; flex-shrink:0; color:#e2e8f0; text-transform:uppercase;"></div>
-            <div id="bsLeftImg" style="flex:1 1 0; min-height:0; width:100%; border-radius:16px; margin-bottom:2vh; box-shadow:0 10px 30px rgba(0,0,0,0.5); display:none;"></div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
-               <div id="bsLeftQ" style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;"></div>
-               <div id="bsTimer-${bsLeftIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+            <div id="bsLeftCat" style="font-size:clamp(12px, 1.5vh, 16px); font-weight:800; letter-spacing:1px; margin-bottom:1vh; flex-shrink:0; color:#9ca3af; text-transform:uppercase;"></div>
+            
+            <img id="bsLeftImg" style="flex:0 1 auto; max-height:28vh; width:100%; object-fit:contain; border-radius:12px; margin-bottom:2vh; display:none;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0; gap:20px;">
+               <div id="bsLeftQ" style="flex:1; font-size:clamp(14px, 2vh, 18px); font-weight:600; line-height:1.3; color:#f8fafc;"></div>
+               <div id="bsTimer-${bsLeftIndex}" style="flex-shrink:0; font-size:clamp(16px, 2.5vh, 22px); font-family:monospace; font-weight:800; color:#60a5fa; text-align:right;">--:--</div>
             </div>
-            <div id="bsLeftProg" style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;"></div>
+            
+            <div id="bsLeftProg" style="flex:1 1 0; display:flex; flex-direction:column; justify-content:center; min-height:0; gap:clamp(2px, 0.8vh, 8px);"></div>
           `;
       }
-      
-      // Mise à jour fluide des textes sans toucher à l'image
+      // Mise à jour fluide des textes et de l'image
       document.getElementById("bsLeftCat").textContent = leftCh ? leftCh.category : '';
       const lImg = document.getElementById("bsLeftImg");
       if (leftCh && leftCh.imageUrl) {
-          // CORRECTION : On remplace "center/cover" par "top/cover" pour prioriser le haut de l'image
-          lImg.style.background = `url('${leftCh.imageUrl}') top/cover`;
+          lImg.src = leftCh.imageUrl; // NOUVEAU : Application sur balise img
           lImg.style.display = "block";
       } else {
           lImg.style.display = "none";
@@ -6535,19 +6596,24 @@ function renderBigScreen() {
       if (middleEl.dataset.chIndex !== String(bsRightIndex)) {
           middleEl.dataset.chIndex = String(bsRightIndex);
           middleEl.innerHTML = `
-            <div style="flex:1 1 0; min-height:0; width:100%; margin-bottom:2vh; display:flex;">
+            <div id="bsMiddleCat" style="font-size:clamp(12px, 1.5vh, 16px); font-weight:800; letter-spacing:1px; margin-bottom:1vh; flex-shrink:0; color:#9ca3af; text-transform:uppercase;"></div>
+
+            <div style="flex:0 1 auto; height:28vh; width:100%; margin-bottom:2vh; display:flex;">
                 <canvas id="bsChart" style="width:100%; height:100%; background:rgba(0,0,0,0.2); border-radius:16px; box-shadow:inset 0 4px 10px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.05);"></canvas>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0;">
-               <div id="bsRightQ" style="font-size:clamp(18px, 3vh, 26px); font-weight:600; line-height:1.3; max-width:75%;"></div>
-               <div id="bsTimer-${bsRightIndex}" style="font-size:clamp(22px, 3.5vh, 32px); font-family:monospace; font-weight:800; color:#e2e8f0;">--:--</div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2vh; flex-shrink:0; gap:20px;">
+               <div id="bsRightQ" style="flex:1; font-size:clamp(14px, 2vh, 18px); font-weight:600; line-height:1.3; color:#f8fafc;"></div>
+               <div id="bsTimer-${bsRightIndex}" style="flex-shrink:0; font-size:clamp(16px, 2.5vh, 22px); font-family:monospace; font-weight:800; color:#60a5fa; text-align:right;">--:--</div>
             </div>
-            <div id="bsRightProg" style="flex-shrink:0; display:flex; flex-direction:column; justify-content:flex-end;"></div>
+            <div id="bsRightProg" style="flex:1 1 0; display:flex; flex-direction:column; justify-content:center; min-height:0; gap:clamp(2px, 0.8vh, 8px);"></div>
           `;
       }
+      
+      // NOUVEAU : On met à jour dynamiquement le texte de la catégorie Centrale
+      const midCatEl = document.getElementById("bsMiddleCat");
+      if (midCatEl) midCatEl.textContent = rightCh ? rightCh.category : '';
 
-      // Mise à jour fluide des textes
-      document.getElementById("bsRightQ").textContent = rightCh ? rightCh.question : 'Bientôt disponible...';
+      document.getElementById("bsRightQ").textContent = rightCh ? rightCh.question : 'En attente de la prochaine question...';
       document.getElementById("bsRightProg").innerHTML = rightCh ? renderBsProgress(rightCh) : '';
 
       // On dessine la courbe quasi-immédiatement sans détruire le conteneur visuel
@@ -6622,14 +6688,15 @@ let html = '';
          const c = colors[i % colors.length];
          
          html += `
-            <div style="display:flex; align-items:center; flex:1; min-height:30px; max-height:48px; margin-bottom:8px;">
-               <div style="width:100%; background:rgba(255,255,255,0.05); border-radius:12px; height:100%; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
+            <div style="display:flex; align-items:center; width:100%; flex:1 1 0; min-height:0;">
+               <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:8px; height:100%; min-height:0; max-height:45px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
                   <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.6; transition:width 1s ease-in-out;"></div>
-                  <div style="position:absolute; top:0; left:15px; height:100%; display:flex; align-items:center; font-size:16px; font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); white-space:nowrap;">
-                     <span style="margin-right:10px; color:${c}; font-weight:900;">${letters[i]} •</span> ${ans}
+                  <div style="position:absolute; top:0; left:15px; right:10px; height:100%; display:flex; align-items:center; font-size:clamp(11px, 1.6vh, 16px); font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); white-space:nowrap; overflow:hidden;">
+                     <span style="margin-right:10px; color:${c}; font-weight:900; flex-shrink:0;">${letters[i]} •</span> 
+                     <span style="overflow:hidden; text-overflow:ellipsis;">${ans}</span>
                   </div>
                </div>
-               <div style="width:60px; text-align:right; font-size:20px; font-weight:900; color:${c};">${pct}%</div>
+               <div style="width:70px; text-align:right; font-size:clamp(14px, 2vh, 22px); font-weight:900; color:${c}; flex-shrink:0;">${pct}%</div>
             </div>
          `;
       });
