@@ -757,7 +757,297 @@ button {
    box-sizing: border-box;
    overflow-y: auto; 
  }
- .side-panel.open { bottom: 0; }
+.side-panel.open { bottom: 0; }
+
+/* --- PANNEAU DE MISE MOBILE PREMIUM / LÉGER --- */
+#betPanelOverlay.open {
+  background: rgba(0,0,0,0.44);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+#betPanel.bet-sheet {
+  bottom: 0;
+  transform: translateY(108%);
+  max-height: min(74svh, 560px);
+  min-height: auto;
+  padding: 10px 16px calc(env(safe-area-inset-bottom) + 14px);
+  border-radius: 30px 30px 0 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(168,85,247,0.20), transparent 42%),
+    rgba(14, 8, 32, 0.96);
+  border-top: 1px solid rgba(168,85,247,0.45);
+  box-shadow:
+    0 -18px 45px rgba(0,0,0,0.72),
+    inset 0 1px 18px rgba(168,85,247,0.12);
+  transition: transform 0.34s cubic-bezier(0.18, 0.9, 0.22, 1);
+  overflow-y: auto;
+}
+
+#betPanel.bet-sheet.open {
+  transform: translateY(0);
+}
+
+.bet-sheet-handle {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.24);
+  margin: 0 auto 12px;
+}
+
+.bet-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bet-sheet-kicker {
+  font-size: 11px;
+  color: #a78bfa;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.bet-sheet-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.bet-close-mini {
+  width: 38px !important;
+  height: 38px;
+  min-width: 38px;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  color: #e5e7eb !important;
+  box-shadow: none !important;
+  font-size: 18px !important;
+}
+
+.bet-answer-card {
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(168,85,247,0.26);
+  border-radius: 18px;
+  padding: 12px 13px;
+  margin-bottom: 12px;
+}
+
+.bet-answer-name {
+  margin: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.bet-answer-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.bet-answer-meta strong {
+  color: #fde047;
+  font-weight: 950;
+}
+
+.bet-balance-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.bet-balance-label {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 750;
+}
+
+.bet-balance-value {
+  font-size: 15px;
+  color: #ffffff;
+  font-weight: 950;
+}
+
+.bet-balance-bar {
+  height: 5px;
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.bet-balance-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #a855f7, #f97316);
+  transition: width 0.2s ease;
+}
+
+.bet-input-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+#betPanel #betInput {
+  height: 64px;
+  margin: 0;
+  padding: 12px 56px 12px 18px;
+  border-radius: 20px;
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ffffff;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 950;
+  text-align: left;
+  box-shadow: inset 0 0 18px rgba(168,85,247,0.10);
+}
+
+#betPanel #betInput:focus {
+  border-color: rgba(168,85,247,0.85);
+  box-shadow:
+    0 0 0 1px rgba(168,85,247,0.55),
+    inset 0 0 18px rgba(168,85,247,0.14);
+}
+
+.bet-input-currency {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 21px;
+  font-weight: 900;
+  color: #fde047;
+  pointer-events: none;
+}
+
+.bet-quick-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bet-chip-btn {
+  margin: 0 !important;
+  padding: 10px 8px !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  color: #e5e7eb !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.bet-chip-btn.is-max {
+  background: rgba(168,85,247,0.17) !important;
+  border-color: rgba(168,85,247,0.55) !important;
+  color: #d8b4fe !important;
+}
+
+.bet-result-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(34,197,94,0.10);
+  border: 1px solid rgba(34,197,94,0.30);
+  border-radius: 18px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.bet-result-label {
+  font-size: 11px;
+  color: #a7f3d0;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.bet-result-hint {
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(209,250,229,0.72);
+}
+
+#betPotential {
+  font-size: 24px;
+  font-weight: 950;
+  color: #34d399;
+  white-space: nowrap;
+}
+
+#betError {
+  min-height: 16px;
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.bet-actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.bet-actions .bet-cancel-btn {
+  width: 38% !important;
+  margin: 0 !important;
+  padding: 13px 10px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  color: #9ca3af !important;
+  box-shadow: none !important;
+}
+
+.bet-actions .bet-confirm-btn {
+  flex: 1;
+  margin: 0 !important;
+  padding: 14px 16px !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #05010d !important;
+  border: none !important;
+  font-weight: 950 !important;
+  box-shadow: 0 8px 26px rgba(255,255,255,0.20) !important;
+}
+
+.bet-actions .bet-confirm-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+@supports not (height: 100svh) {
+  #betPanel.bet-sheet {
+    max-height: min(74vh, 560px);
+  }
+}
  
  /* NOUVEAU : Barre d'action fixe en bas d'écran */
  .sticky-action-bar {
@@ -1217,39 +1507,72 @@ body.play-mode-active {
 </div>
 
 <div id="betPanelOverlay" class="side-panel-overlay" onclick="closeBetPanel()"></div>
-<div id="betPanel" class="side-panel">
-  <div style="width: 40px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 10px; margin: 0 auto 15px auto;"></div>
-  
-  <h2 style="margin-bottom:5px; font-size:24px; text-align:center;">Miser</h2>
-  <p class="subtitle" id="betAnswerName" style="margin-bottom:20px; font-size:14px; color:#a855f7; text-align:center;">Réponse</p>
-  
+<div id="betPanel" class="side-panel bet-sheet">
+  <div class="bet-sheet-handle"></div>
+
+  <div class="bet-sheet-header">
+    <div>
+      <div class="bet-sheet-kicker">Mode avancé</div>
+      <h2 class="bet-sheet-title">Placer une mise</h2>
+    </div>
+
+    <button class="bet-close-mini" onclick="closeBetPanel()" aria-label="Fermer">×</button>
+  </div>
+
+  <div class="bet-answer-card">
+    <p id="betAnswerName" class="bet-answer-name">Réponse</p>
+    <div class="bet-answer-meta">
+      <span>Cote actuelle</span>
+      <strong id="betOdds">--%</strong>
+    </div>
+  </div>
+
   <div id="tutoBetZone" style="border-radius:20px; transition:all 0.3s;">
-      <div id="betAvailableContainer" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 15px; border-radius:16px; margin-bottom:15px; border:1px solid rgba(255,255,255,0.08);">
-        <div style="font-size:13px; color:#9ca3af;">Solde disponible</div>
-        <div id="betAvailable" style="font-size:18px; font-weight:900; color:#ffffff;">0 💰</div>
+    <div class="bet-balance-strip">
+      <div style="flex:1;">
+        <div class="bet-balance-label">Solde disponible</div>
+        <div class="bet-balance-bar">
+          <div id="betBalanceFill" class="bet-balance-fill"></div>
+        </div>
       </div>
-      
-      <div style="position:relative; margin-bottom:15px;">
-        <input type="number" id="betInput" placeholder="0" min="1" oninput="updatePotentialGain()" style="font-size:36px; font-weight:900; text-align:center; padding:15px; background:rgba(0,0,0,0.4); border:1px solid rgba(168,85,247,0.4); border-radius:20px; color:#ffffff; height:80px; box-shadow:inset 0 0 20px rgba(168,85,247,0.1); margin-bottom:0;">
-      </div>
+      <div id="betAvailable" class="bet-balance-value">0 💰</div>
+    </div>
+
+    <div class="bet-input-wrap">
+      <input
+        type="number"
+        inputmode="numeric"
+        enterkeyhint="done"
+        id="betInput"
+        placeholder="0"
+        min="1"
+        step="1"
+        oninput="updatePotentialGain()"
+      >
+      <span class="bet-input-currency">💰</span>
+    </div>
   </div>
-  
-  <div style="display:flex; gap:10px; margin-bottom:25px;">
-     <button onclick="addBetAmount(10)" style="margin:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; font-size:15px; box-shadow:none;">+ 10</button>
-     <button onclick="addBetAmount(50)" style="margin:0; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); color:#fff; border-radius:12px; font-size:15px; box-shadow:none;">+ 50</button>
-     <button onclick="setBetMax()" style="margin:0; background:rgba(168,85,247,0.2); border:1px solid #a855f7; color:#d946ef; border-radius:12px; font-size:15px; font-weight:900; box-shadow:none;">MAX</button>
+
+  <div class="bet-quick-row">
+    <button class="bet-chip-btn" onclick="addBetAmount(10)">+10</button>
+    <button class="bet-chip-btn" onclick="addBetAmount(25)">+25</button>
+    <button class="bet-chip-btn" onclick="addBetAmount(50)">+50</button>
+    <button class="bet-chip-btn is-max" onclick="setBetMax()">MAX</button>
   </div>
-  
-  <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1)); border:1px solid rgba(16,185,129,0.4); padding:15px; border-radius:16px; margin-bottom:20px; box-shadow:0 0 20px rgba(16,185,129,0.15); text-align:center;">
-     <div style="font-size:11px; color:#a7f3d0; text-transform:uppercase; font-weight:bold; margin-bottom:5px; letter-spacing:1px;">Gain potentiel estimé</div>
-     <div id="betPotential" style="font-size:32px; font-weight:900; color:#34d399;">0 💰</div>
+
+  <div class="bet-result-card">
+    <div>
+      <div class="bet-result-label">Gain potentiel</div>
+      <div id="betPotentialHint" class="bet-result-hint">Saisis une mise</div>
+    </div>
+    <div id="betPotential">—</div>
   </div>
-  
-  <div id="betError" class="msg err" style="margin-bottom:15px; text-align:center;"></div>
-  
-  <div style="margin-top:auto;">
-    <button onclick="confirmBet()" style="background:#ffffff !important; color:#000000 !important; border-radius:999px; font-weight:900; font-size:16px; padding:16px; box-shadow:0 10px 30px rgba(255,255,255,0.25) !important; border:none; width:100%; margin-bottom:8px;">Valider la mise</button>
-    <button onclick="closeBetPanel()" style="background:none !important; border:none !important; color:#9ca3af !important; box-shadow:none !important; width:100%;">Annuler</button>
+
+  <div id="betError" class="msg err"></div>
+
+  <div class="bet-actions">
+    <button class="bet-cancel-btn" onclick="closeBetPanel()">Annuler</button>
+    <button id="betConfirmBtn" class="bet-confirm-btn" onclick="confirmBet()" disabled>Valider</button>
   </div>
 </div>
 
@@ -4169,16 +4492,42 @@ function openBetPanel(cIndex, ansIndex, betType) {
     updateGlobalBalance(); 
   }
 
-  document.getElementById("betAvailable").textContent = currentPlayerBalance + " 💰";
-  
+  const betAvailableEl = document.getElementById("betAvailable");
+  if (betAvailableEl) betAvailableEl.textContent = currentPlayerBalance + " 💰";
+
+  const betAnswerNameEl = document.getElementById("betAnswerName");
+  if (betAnswerNameEl) betAnswerNameEl.textContent = ch.answers[ansIndex];
+
+  const betOddsEl = document.getElementById("betOdds");
+  if (betOddsEl) betOddsEl.textContent = (pStart * 100).toFixed(1) + "%";
+
   const betInputEl = document.getElementById("betInput");
   betInputEl.value = "";
   betInputEl.blur();
-  document.getElementById("betPotential").textContent = "0 💰";
+
+  const betPotentialEl = document.getElementById("betPotential");
+  if (betPotentialEl) betPotentialEl.textContent = "—";
+
+  const betPotentialHintEl = document.getElementById("betPotentialHint");
+  if (betPotentialHintEl) betPotentialHintEl.textContent = "Saisis une mise";
+
+  const betBalanceFillEl = document.getElementById("betBalanceFill");
+  if (betBalanceFillEl) betBalanceFillEl.style.width = "0%";
+
+  const betConfirmBtn = document.getElementById("betConfirmBtn");
+  if (betConfirmBtn) betConfirmBtn.disabled = true;
+
   document.getElementById("betError").textContent = "";
 
-  document.getElementById("betPanelOverlay").classList.add("open");
-  document.getElementById("betPanel").classList.add("open");
+  const overlay = document.getElementById("betPanelOverlay");
+  const panel = document.getElementById("betPanel");
+
+  panel.style.transform = "";
+  overlay.classList.add("open");
+
+  requestAnimationFrame(() => {
+    panel.classList.add("open");
+  });
 }
 
 function closeBetPanel() {
@@ -4227,7 +4576,7 @@ if (betPanelEl) {
         isBetPanelDragging = false;
         
         // On réactive le lissage CSS pour que l'animation de fin (ou le rebond) soit fluide
-        betPanelEl.style.transition = 'bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        betPanelEl.style.transition = 'transform 0.28s cubic-bezier(0.18, 0.9, 0.22, 1)';
         
         const deltaY = e.changedTouches[0].clientY - betPanelStartY;
         
@@ -4243,31 +4592,57 @@ if (betPanelEl) {
 // ---------------------------------------------------------------------------
 
 function updatePotentialGain() {
-  const val = parseInt(document.getElementById("betInput").value) || 0;
+  const input = document.getElementById("betInput");
+  const val = parseInt(input.value) || 0;
+
   const err = document.getElementById("betError");
-  
-  if (val > currentPlayerBalance) {
-    err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital.";
-  } else {
-    err.textContent = "";
+  const potentialEl = document.getElementById("betPotential");
+  const hintEl = document.getElementById("betPotentialHint");
+  const confirmBtn = document.getElementById("betConfirmBtn");
+  const fillEl = document.getElementById("betBalanceFill");
+
+  if (fillEl) {
+    const pct = currentPlayerBalance > 0
+      ? Math.min(100, Math.max(0, (val / currentPlayerBalance) * 100))
+      : 0;
+
+    fillEl.style.width = pct + "%";
   }
-  
+
   if (val <= 0) {
-    document.getElementById("betPotential").textContent = "0 💰";
+    if (err) err.textContent = "";
+    if (potentialEl) potentialEl.textContent = "—";
+    if (hintEl) hintEl.textContent = "Saisis une mise";
+    if (confirmBtn) confirmBtn.disabled = true;
     return;
   }
 
-const ch = game.challenges[tempBetCIndex];
-  
-  // Dans un marché prédictif (LMSR), le nombre de parts (shares) achetées = le gain potentiel final !
-  
-const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
-  
-  document.getElementById("betPotential").textContent = shares.toFixed(2) + " 💰";
+  if (val > currentPlayerBalance) {
+    if (err) err.textContent = "Solde insuffisant.";
+    if (potentialEl) potentialEl.textContent = "—";
+    if (hintEl) hintEl.textContent = "Réduis le montant";
+    if (confirmBtn) confirmBtn.disabled = true;
+    return;
+  }
+
+  if (err) err.textContent = "";
+  if (confirmBtn) confirmBtn.disabled = false;
+
+  const ch = game.challenges[tempBetCIndex];
+  const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
+
+  if (potentialEl) potentialEl.textContent = shares.toFixed(2) + " 💰";
+  if (hintEl) hintEl.textContent = "Pour " + val + " 💰 misés";
 }
 
 function setBetMax() {
   document.getElementById("betInput").value = currentPlayerBalance;
+  updatePotentialGain();
+}
+
+function setBetPercent(percent) {
+  const amount = Math.max(1, Math.floor(currentPlayerBalance * percent));
+  document.getElementById("betInput").value = amount;
   updatePotentialGain();
 }
 
@@ -9177,8 +9552,14 @@ const maxScoreEl = document.getElementById("recap-max-score");
         
         const betAnswerNameEl = document.getElementById("betAnswerName");
         if (betAnswerNameEl) {
-            betAnswerNameEl.innerHTML = `${ch.answers[tempBetAnsIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(2)}%)</span>`;
+            betAnswerNameEl.textContent = ch.answers[tempBetAnsIndex];
         }
+
+        const betOddsEl = document.getElementById("betOdds");
+        if (betOddsEl) {
+            betOddsEl.textContent = (pStart * 100).toFixed(1) + "%";
+        }
+
         if (typeof updatePotentialGain === 'function') updatePotentialGain(); 
     }
 
