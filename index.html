@@ -651,7 +651,7 @@ body.play-mode-active {
   <p class="subtitle" id="sellAnswerName" style="margin-bottom:20px;">Réponse</p>
 
   <div style="background:rgba(15,23,42,0.5); padding:10px; border-radius:10px; margin-bottom:15px; border:1px solid #f97316;">
-    <div style="font-size:12px; color:#9ca3af;">Valeur actuelle totale (après frais de retrait)</div>
+    <div style="font-size:12px; color:#9ca3af;">Valeur actuelle totale du cash out</div>
     <div id="sellMaxBet" style="font-size:20px; font-weight:bold; color:#f97316;">0 💰</div>
   </div>
 
@@ -1032,7 +1032,7 @@ body.play-mode-active {
 <div id="results" class="card" style="display:none">
   <h2>Classement Final</h2>
   <div id="leaderboard"></div>
-  <div class="msg">Score calculé sur vos gains potentiels (100 - p) cumulés.</div>
+  <div class="msg">Score calculé sur la valeur actuelle de vos prédictions</div>
   <div id="chartsContainer"></div>
   <div style="display:flex; gap:10px; margin-top:20px;">
     <button onclick="goBack()" style="margin:0;">Retour</button>
@@ -1270,6 +1270,155 @@ let playerReadMessagesCount = 0; // NOUVEAU : Suit le nombre de messages déjà 
 
 let currentPlayerMode = "easy"; 
 let currentPlayerBalance = 0;
+window.localPlayerSnapshot = null;
+
+try {
+  window.easyValidationConfirmDisabled = localStorage.getItem("easyValidationConfirmDisabled") === "1";
+} catch(e) {
+  window.easyValidationConfirmDisabled = false;
+}
+window.easyValidationConfirmOpen = false;
+
+window.validateCurrentCardVote = window.validateCurrentCardVote || function(cIndex) {
+  if (currentPlayerMode !== 'easy') return true;
+  if (cIndex === null || cIndex === undefined) return false;
+  if (!game.players) game.players = [];
+
+  const ansIndex = selectedAnswers[cIndex];
+  if (ansIndex === null || ansIndex === undefined || ansIndex === -1) return false;
+
+  let player = game.players.find(p => p.name === game.currentPlayerName);
+  if (!player) {
+    player = { name: game.currentPlayerName, balance: currentPlayerBalance, portfolio: [] };
+    game.players.push(player);
+  } else {
+    player.balance = currentPlayerBalance;
+    if (!player.portfolio) player.portfolio = [];
+  }
+
+  const alreadyValidated = player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+  if (alreadyValidated) return true;
+
+  const ch = game.challenges[cIndex];
+  if (!ch || !ch.votes) return false;
+
+  const bet = selectedBets[cIndex] || 1;
+  const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
+
+  const probsBefore = window.PredictiveMath.getProbs(ch.votes);
+  const pctBefore = probsBefore[ansIndex] || 0;
+  const safePct = pctBefore <= 0 ? 0.001 : pctBefore;
+
+  const pointsPotentiels = +(1 / safePct).toFixed(2);
+  const pctAtBet = (pctBefore * 100).toFixed(1);
+
+  let simulatedVotes = [...ch.votes];
+  simulatedVotes[ansIndex] += bet;
+  ch.votes = simulatedVotes;
+
+  player.portfolio.push({
+    cIndex: cIndex,
+    ansIndex: ansIndex,
+    bet: bet,
+    pts: pointsPotentiels,
+    type: bType,
+    pctAtBet: pctAtBet,
+    validatedAt: Date.now()
+  });
+
+  player.lastLocalUpdate = Date.now();
+  window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
+
+  const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+    let updates = {};
+    updates['gameData/players/' + pIdx] = player;
+    updates['gameData/challenges/' + cIndex + '/votes'] = ch.votes;
+    db.ref('sessions/' + window.currentActiveSessionCode).update(updates);
+  }
+
+  return true;
+};
+
+window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
+  if (currentPlayerMode !== 'easy') {
+    onConfirm();
+    return;
+  }
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+
+  const confirmAndContinue = () => {
+    if (!alreadyValidated && typeof window.validateCurrentCardVote === 'function') {
+      const ok = window.validateCurrentCardVote(cIndex);
+      if (!ok) return;
+    }
+    onConfirm();
+  };
+
+  if (alreadyValidated || window.easyValidationConfirmDisabled) {
+    confirmAndContinue();
+    return;
+  }
+
+  if (window.easyValidationConfirmOpen) return;
+  window.easyValidationConfirmOpen = true;
+
+  const overlay = document.createElement("div");
+  overlay.id = "easyValidationConfirmOverlay";
+  overlay.style.cssText = `
+    position:fixed;
+    inset:0;
+    z-index:10030;
+    background:rgba(0,0,0,0.72);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    box-sizing:border-box;
+  `;
+
+  overlay.innerHTML = `
+    <div style="width:100%; max-width:420px; background:rgba(15,10,30,0.98); border:1px solid rgba(168,85,247,0.65); border-radius:24px; padding:24px 20px; box-shadow:0 25px 70px rgba(0,0,0,0.85), 0 0 35px rgba(168,85,247,0.25); text-align:center;">
+      <h2 style="margin:0 0 12px 0; font-size:20px; color:#ffffff;">Confirmer votre réponse</h2>
+      <p style="font-size:14px; line-height:1.45; color:#e5e7eb; margin:0 0 20px 0;">
+        Êtes-vous sûr de vouloir passer à la prochaine question ?<br>
+        Votre réponse sera validée définitivement et vous ne pourrez plus revenir dessus.
+      </p>
+      <button id="easyConfirmYes" style="background:#ffffff !important; color:#000000 !important; border:none !important; margin-top:8px;">Oui</button>
+      <button id="easyConfirmYesNever" style="background:linear-gradient(135deg,#a855f7,#6366f1) !important; color:#ffffff !important; border:none !important; margin-top:10px;">Oui et ne plus afficher ce message</button>
+      <button id="easyConfirmNo" style="background:transparent !important; border:1px solid rgba(255,255,255,0.2) !important; color:#9ca3af !important; box-shadow:none !important; margin-top:10px;">Non</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const closeOverlay = () => {
+    window.easyValidationConfirmOpen = false;
+    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  };
+
+  document.getElementById("easyConfirmYes").onclick = () => {
+    closeOverlay();
+    confirmAndContinue();
+  };
+
+  document.getElementById("easyConfirmYesNever").onclick = () => {
+    window.easyValidationConfirmDisabled = true;
+    try {
+      localStorage.setItem("easyValidationConfirmDisabled", "1");
+    } catch(e) {}
+    closeOverlay();
+    confirmAndContinue();
+  };
+
+  document.getElementById("easyConfirmNo").onclick = () => {
+    closeOverlay();
+  };
+};
 let timerInterval = null; 
 
 // --- CONFIGURATION FIREBASE ---
@@ -1333,102 +1482,78 @@ let game = {
   gameMode: "easy" 
 };
 
-// --- MOTEUR LMSR (Logarithmic Market Scoring Rule) ---
-// --- NOUVEAU : CALCUL DYNAMIQUE DE LA LIQUIDITÉ (B) ---
-function getB() {
-  if (!sessionConfig) return 50;
-  
-  // On identifie si on est sur la version "Easy" ou "Advanced" du jeu
-  let isEasy = (sessionConfig.mode === 'easy');
-  if (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code) {
-    isEasy = true;
-  }
-
-  // Application de vos règles de proportionnalité
-  if (isEasy) {
-    // Mode Facile : B = n / 2 (Réactivité maximale pour des mises de 1 unité)
-    return (sessionConfig.n || 1) / 2;
-  } else {
-    // Mode Avancé : B = Solde de départ / 2
-    return (sessionConfig.initialBalance || 100) / 2;
-  }
-}
-
-// --- VÉRITABLE MOTEUR PRÉDICTIF AMM (LMSR EXACT) ---
+// --- VÉRITABLE MOTEUR PRÉDICTIF PROPORTIONNEL (VIRTUAL LIQUIDITY POOL) ---
+// Ce modèle garantit que les probabilités correspondent EXACTEMENT à la proportion d'argent misé.
+// Plus il y a d'argent (liquidité) dans la question, plus les pourcentages deviennent stables.
+// Plus cette valeur est basse, plus les probabilités se rapprochent vite de la vraie répartition des mises.
+const PROBABILITY_RESISTANCE = 2;
 window.PredictiveMath = {
-    getCost: function(q) {
-        const B = getB();
-        const maxQ = Math.max(...q);
-        let sumExp = 0;
-        for (let i = 0; i < q.length; i++) {
-            sumExp += Math.exp((q[i] - maxQ) / B);
-        }
-        return B * Math.log(sumExp) + maxQ;
-    },
     getProbs: function(q) {
-        const B = getB();
-        const maxQ = Math.max(...q);
-        const exps = q.map(v => Math.exp((v - maxQ) / B));
-        const sumExp = exps.reduce((a, b) => a + b, 0);
-        let probs = exps.map(e => e / sumExp);
-        probs = probs.map(p => Math.max(0.001, Math.min(0.999, p))); // Bornes 0.1% / 99.9%
+        const total = q.reduce((a, b) => a + b, 0);
+        if (total === 0) return q.map(() => 1 / q.length); 
+        
+        let probs = q.map(v => v / total);
+        // Sécurité pour maintenir le marché en vie (bornes 0.1% / 99.9%)
+        probs = probs.map(p => Math.max(0.001, Math.min(0.999, p))); 
+        
         const newSum = probs.reduce((a, b) => a + b, 0);
         return probs.map(p => p / newSum);
     },
     calcSharesToBuy: function(q, ansIndex, investment) {
-        const B = getB();
-        const C = this.getCost(q);
-        const targetCost = C + investment;
-        const q_idx = q[ansIndex];
-        let sumOthers = 0;
-        for(let i=0; i<q.length; i++) {
-            if (i !== ansIndex) sumOthers += Math.exp((q[i] - q_idx) / B);
-        }
-        const term1 = Math.exp((targetCost - q_idx) / B);
-        const insideLn = term1 - sumOthers;
-        if (insideLn <= 0) return investment / this.getProbs(q)[ansIndex]; 
-        return B * Math.log(insideLn);
-    },
-    calcSellPayout: function(q, ansIndex, sharesToSell) {
-        const currentCost = this.getCost(q);
+        const pStart = this.getProbs(q)[ansIndex];
+        
+        // On simule l'ajout de l'argent pour trouver la probabilité d'arrivée
         let newQ = [...q];
-        newQ[ansIndex] = Math.max(0, newQ[ansIndex] - sharesToSell);
-        const newCost = this.getCost(newQ);
-        return Math.max(0, currentCost - newCost);
+        newQ[ansIndex] += investment;
+        const pEnd = this.getProbs(newQ)[ansIndex];
+        
+        // Le joueur obtient des parts au prix moyen du marché pendant sa transaction
+        let pAvg = (pStart + pEnd) / 2;
+        return investment / pAvg;
     },
-    // NOUVEAU : Calcule le nombre de parts à détruire pour libérer un montant précis (Reverse LMSR)
-    calcSharesToSellForMoney: function(q, ansIndex, desiredMoney) {
-        const B = getB();
-        const currentCost = this.getCost(q);
-        const targetCost = currentCost - desiredMoney;
-        const maxQ = Math.max(...q);
-        
-        let sumOthersExp = 0;
-        for(let i=0; i<q.length; i++) {
-            if (i !== ansIndex) sumOthersExp += Math.exp((q[i] - maxQ) / B);
+        calcSellPayout: function(q, ansIndex, sharesToSell) {
+        if (!q || !q.length || !sharesToSell || sharesToSell <= 0) return 0;
+
+        // Cash out exact : on cherche le montant qui correspond exactement au nombre de parts à vendre.
+        // Cela évite l'approximation qui pouvait transformer une mise immédiate de 100 en cashout à 90.
+        const maxMoney = Math.max(0, (q[ansIndex] || 0) - 0.001);
+        if (maxMoney <= 0) return 0;
+
+        let low = 0;
+        let high = maxMoney;
+
+        for (let i = 0; i < 40; i++) {
+            const mid = (low + high) / 2;
+            const sharesNeeded = this.calcSharesToSellForMoney(q, ansIndex, mid);
+
+            if (sharesNeeded > sharesToSell) {
+                high = mid;
+            } else {
+                low = mid;
+            }
         }
+
+        return Math.max(0, low);
+    },
+    calcSharesToSellForMoney: function(q, ansIndex, desiredMoney) {
+        const pStart = this.getProbs(q)[ansIndex];
         
-        const term1 = Math.exp((targetCost - maxQ) / B);
-        const insideLn = term1 - sumOthersExp;
+        let newQ = [...q];
+        newQ[ansIndex] = Math.max(0.001, newQ[ansIndex] - desiredMoney);
+        let pEnd = this.getProbs(newQ)[ansIndex];
         
-        if (insideLn <= 0) return q[ansIndex]; // Vendre tout si dépassement
-        
-        const newQAns = B * Math.log(insideLn) + maxQ;
-        return Math.max(0, q[ansIndex] - newQAns);
+        let pAvg = (pStart + pEnd) / 2;
+        return desiredMoney / pAvg;
     }
 };
 
 // Rétrocompatibilité
 function getLMSRProbs(votesArray) { return window.PredictiveMath.getProbs(votesArray); }
-function getLMSRCost(votesArray) { return window.PredictiveMath.getCost(votesArray); }
 
 window.getAMMValue = function(ch, snap) {
     if (!snap || !snap.pts || snap.pts <= 0) return 0;
     // On calcule la valeur de revente exacte selon le marché actuel
     let val = window.PredictiveMath.calcSellPayout(ch.votes, snap.ansIndex, snap.pts);
-    
-    // SÉCURITÉ : Anti-distorsion de marché vide (On évite l'argent magique !)
-    if (Math.abs(val - snap.bet) <= (snap.bet * 0.05) && val > snap.bet) val = snap.bet;
     return parseFloat(val.toFixed(2));
 };
 
@@ -1941,16 +2066,20 @@ if (!isValid) {
     }
   });
 
-  // 1. Anticipation des variables pour calculer la liquidité de base
+// 1. Anticipation des variables pour calculer la liquidité de base
   const n = parseInt(document.getElementById("questionsPerPlayer").value) || 1;
   sessionConfig.n = n;
   sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
-  
-  const bEasy = n / 2;
 
-  // 2. Initialisation des votes pour chaque challenge (avec le B du mode facile par défaut)
-  game.challenges.forEach(ch => initBaseVotes(ch, bEasy));
+  const bEasy = n / 2;
+  const bAdv = sessionConfig.initialBalance / 2;
   
+  // CORRECTION : On utilise le paramètre de liquidité (B) correspondant au VRAI mode choisi
+  const initialB = (sessionConfig.mode === 'advanced') ? bAdv : bEasy;
+
+  // 2. Initialisation des votes (parts) pour chaque challenge
+  game.challenges.forEach(ch => initBaseVotes(ch, initialB));
+
 // Reset des variables de jeu
   game.players = [];
   game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
@@ -2096,15 +2225,16 @@ function startSetup(mode) {
 function initBaseVotes(ch, customB) {
   const sumPcts = ch.initialPcts.reduce((a, b) => a + b, 0) || 1;
   const normPcts = ch.initialPcts.map(pct => pct / sumPcts);
-  const minPct = Math.min(...normPcts);
-  const B = customB || getB(); // Utilise le B fourni ou le B dynamique
-
-  let initialShares = normPcts.map(p => {
-    return B * Math.log(Math.max(p, 0.001) / Math.max(minPct, 0.001));
-  });
   
-  ch.baseVotes = initialShares.slice();
-  ch.votes = initialShares.slice();
+  // Le volume de liquidité initial définit la "résistance" du marché.
+  // Plus customB est grand, plus il faudra d'argent pour faire bouger les cotes initiales.
+const baseVolume = Math.max(1, (customB || 50) * PROBABILITY_RESISTANCE); 
+
+  // Dans le modèle proportionnel, les votes de base représentent l'argent virtuel initial
+  let initialMoney = normPcts.map(p => p * baseVolume);
+  
+  ch.baseVotes = initialMoney.slice();
+  ch.votes = initialMoney.slice();
 }
 
 function showSessionInfo() {
@@ -2303,18 +2433,26 @@ function startPlayScreenTimers() {
       }
     });
 
-// NOUVEAU : On bloque le rechargement complet si le joueur glisse la carte
+// NOUVEAU : On ne met à jour que les timers (légers) au lieu de tout reconstruire
+    game.challenges.forEach((ch, i) => {
+        const pTimer = document.getElementById(`pending-timer-${i}`);
+        const oTimer = document.getElementById(`open-timer-${i}`);
+        const effStatus = getEffectiveStatus(ch);
+
+        if (effStatus === "pending" && pTimer) pTimer.textContent = formatTimeDiff(ch.startTime - now);
+        if (effStatus === "open" && oTimer) oTimer.textContent = formatTimeDiff(ch.endTime - now);
+    });
+
+    // On ne reconstruit la structure complète QUE SI le statut change (ex: pending -> open)
     if (needsRefresh && !window.isCardDragging) {
         renderPlayChallenges();
-    } else if (!window.isCardDragging && typeof updatePlayChallengesLive === 'function') {
-        // CORRECTION : Actualisation silencieuse et continue chaque seconde !
-        updatePlayChallengesLive();
     }
   }, 1000);
 }
 
 // Fonction utilitaire pour le formatage
 function formatTimeDiff(diff) {
+  if (diff < 0) return "00:00:00"; // Sécurité : On bloque à 0 pour éviter le gel
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
@@ -2356,10 +2494,12 @@ function renderPlayChallenges(){
 
   // L'ancien bouton "quickRecap" a été supprimé au profit de la barre flottante mobile
   
-  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
-  // CORRECTION : On boucle sur myIndices (et non sur game.challenges) 
+  // SÉCURITÉ : Si on est en train de glisser une carte, on n'interrompt pas le rendu
+  if (window.isCardDragging) return; 
+
   // pour respecter l'ordre et assurer que la dernière carte soit bien la dernière affichée.
   myIndices.forEach((cIndex) => {
     const ch = game.challenges[cIndex];
@@ -2550,12 +2690,15 @@ const block = document.createElement("div");
 
 
       if (currentPlayerMode === 'easy') {
-          const ans = selectedAnswers[cIndex]; 
-          // En mode facile, la réponse reste obligatoire
-          if (ans === null || ans === undefined || ans === -1) {
+          // On vérifie que selectedAnswers contient bien une valeur numérique (index de réponse)
+          const ans = selectedAnswers[cIndex];
+          const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+          const hasAnswer = alreadyValidated || (ans !== null && ans !== undefined && ans !== -1);
+          
+          if (!hasAnswer) {
               const msgEl = document.getElementById("playMsg");
               if (msgEl) {
-                  msgEl.textContent = "Veuillez choisir une réponse";
+                  msgEl.textContent = "Veuillez choisir une réponse pour continuer";
                   msgEl.className = "msg err show";
                   setTimeout(() => msgEl.classList.remove("show"), 3000);
               }
@@ -2578,21 +2721,35 @@ window.swipeNextCard = function() {
     if (!window.canPassCurrentCard()) return false;
 
     const activeCard = cardsElements[window.currentCardIndex];
-    activeCard.classList.add('fly-away'); 
-    window.currentCardIndex++;
-    
-    // NOUVEAU : On verrouille cette nouvelle carte pour qu'elle ne change plus jamais en arrière-plan !
-    window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
-    
-    window.saveLocalProgress(); 
-    setTimeout(updateCardStack, 100);
+    activeCard.style.transform = '';
 
-    // CORRECTION TUTO : Dès qu'il réussit à passer à la carte suivante, on lance l'étape 6 (Balayage vers le bas)
-    if (window.currentTutoStep === 5) {
-        setTimeout(() => nextTuto(6), 400);
-    } else if (window.currentTutoStep === 7) {
-        // S'il glisse avec succès pendant l'étape 7, on ferme le tuto sans le bloquer
-        closeTuto();
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    const cIndex = myIndices[window.currentCardIndex];
+
+    const goNextForReal = () => {
+        activeCard.classList.add('fly-away'); 
+        window.currentCardIndex++;
+        
+        // NOUVEAU : On verrouille cette nouvelle carte pour qu'elle ne change plus jamais en arrière-plan !
+        window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
+        
+        window.saveLocalProgress(); 
+        setTimeout(updateCardStack, 100);
+
+        // CORRECTION TUTO : Dès qu'il réussit à passer à la carte suivante, on lance l'étape 6 (Balayage vers le bas)
+        if (window.currentTutoStep === 5) {
+            setTimeout(() => nextTuto(6), 400);
+        } else if (window.currentTutoStep === 7) {
+            // S'il glisse avec succès pendant l'étape 7, on ferme le tuto sans le bloquer
+            closeTuto();
+        }
+    };
+
+    if (typeof window.confirmEasyValidationBeforeNext === 'function') {
+        window.confirmEasyValidationBeforeNext(cIndex, goNextForReal);
+    } else {
+        goNextForReal();
     }
 
     return true;
@@ -2842,10 +2999,13 @@ function renderAnswersForChallenge(cIndex){
   ch.answers.forEach((a, i) => {
     const pct = probs[i];
     const safePct = pct <= 0 ? 0.001 : pct;
-    const pts = +(1 / safePct).toFixed(2); 
+    let pts = +(1 / safePct).toFixed(2); 
     const c = colors[i % colors.length];
 
     const snapForThisAns = snaps.find(b => b.ansIndex === i);
+    if (currentPlayerMode === 'easy' && snapForThisAns && snapForThisAns.pts) {
+        pts = +(Number(snapForThisAns.pts).toFixed(2));
+    }
     const isThisSelected = snapForThisAns || selectedAnswers[cIndex] === i;
 
     let div, gauge, label, ptsSpan;
@@ -2917,7 +3077,19 @@ function renderAnswersForChallenge(cIndex){
     if (currentPlayerMode === 'easy') {
         div.style.cursor = "pointer";
         div.onclick = (e) => {
-            e.stopPropagation(); 
+            e.stopPropagation();
+
+            const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+            if (alreadyValidated) {
+                const msgEl = document.getElementById("playMsg");
+                if (msgEl) {
+                    msgEl.textContent = "Vote déjà validé pour cette question";
+                    msgEl.className = "msg err show";
+                    setTimeout(() => msgEl.classList.remove("show"), 2200);
+                }
+                return;
+            }
+
             if (selectedAnswers[cIndex] === i) {
                 selectedAnswers[cIndex] = null; 
                 selectedBets[cIndex] = 0; 
@@ -2952,12 +3124,12 @@ function renderAnswersForChallenge(cIndex){
 
     // Mise à jour des textes de cotes
     if (currentPlayerMode === 'easy') {
-        ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100).toFixed(1)}%</span></div>`;
+        ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100) < 1 ? '&lt;1%' : (pct*100).toFixed(1) + '%'}</span></div>`;
     } else {
         if (snapForThisAns) {
             ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Mise: ${snapForThisAns.bet}u</span>`;
         } else {
-            ptsSpan.innerHTML = `${(pct*100).toFixed(0)} <span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
+            ptsSpan.innerHTML = `${(pct*100) < 1 ? '&lt;1' : (pct*100).toFixed(0)}<span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
         }
     }
   });
@@ -3207,7 +3379,8 @@ function playNext() {
     if (currentPlayerMode === 'easy' && !window.isRebetting) {
         for (let cardIdx = 0; cardIdx < myIndices.length; cardIdx++) {
             let cIndex = myIndices[cardIdx];
-            if (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1) {
+            const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+            if (!alreadyValidated && (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1)) {
                 missingCardIndex = cardIdx;
                 break;
             }
@@ -3242,6 +3415,68 @@ function playNext() {
 // On peut supprimer ou vider la fonction updatePlayButton() car on n'en a plus besoin
 function updatePlayButton() {}
 
+window.validateCurrentCardVote = function(cIndex) {
+  if (currentPlayerMode !== 'easy') return true;
+  if (cIndex === null || cIndex === undefined) return false;
+  if (!game.players) game.players = [];
+
+  const ansIndex = selectedAnswers[cIndex];
+  if (ansIndex === null || ansIndex === undefined || ansIndex === -1) return false;
+
+  let player = game.players.find(p => p.name === game.currentPlayerName);
+  if (!player) {
+    player = { name: game.currentPlayerName, balance: currentPlayerBalance, portfolio: [] };
+    game.players.push(player);
+  } else {
+    player.balance = currentPlayerBalance;
+    if (!player.portfolio) player.portfolio = [];
+  }
+
+  const alreadyValidated = player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+  if (alreadyValidated) return true;
+
+  const ch = game.challenges[cIndex];
+  if (!ch || !ch.votes) return false;
+
+  const bet = selectedBets[cIndex] || 1;
+  const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
+
+  const probsBefore = window.PredictiveMath.getProbs(ch.votes);
+  const pctBefore = probsBefore[ansIndex] || 0;
+  const safePct = pctBefore <= 0 ? 0.001 : pctBefore;
+
+  // On verrouille exactement le gain affiché sur la carte au moment où le joueur la valide.
+  const pointsPotentiels = +(1 / safePct).toFixed(2);
+  const pctAtBet = (pctBefore * 100).toFixed(1);
+
+  let simulatedVotes = [...ch.votes];
+  simulatedVotes[ansIndex] += bet;
+  ch.votes = simulatedVotes;
+
+  player.portfolio.push({
+    cIndex: cIndex,
+    ansIndex: ansIndex,
+    bet: bet,
+    pts: pointsPotentiels,
+    type: bType,
+    pctAtBet: pctAtBet,
+    validatedAt: Date.now()
+  });
+
+  player.lastLocalUpdate = Date.now();
+  window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
+
+  const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+    let updates = {};
+    updates['gameData/players/' + pIdx] = player;
+    updates['gameData/challenges/' + cIndex + '/votes'] = ch.votes;
+    db.ref('sessions/' + window.currentActiveSessionCode).update(updates);
+  }
+
+  return true;
+};
+
 // --- LOGIQUE DU PANEL DE MISE (MODE AVANCÉ) ---
 let tempBetAnsIndex = null;
 let tempBetCIndex = null;
@@ -3260,7 +3495,7 @@ function openBetPanel(cIndex, ansIndex, betType) {
   const pStart = betType === 'YES' ? pStartYes : (1 - pStartYes);
 
   // 3. Affichage dynamique avec la cote actuelle
-  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
+  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(2)}%)</span>`;
 
   // CORRECTION : En Mode Avancé, on NE REMBOURSE PLUS la mise précédente ! 
   // Le joueur a le droit d'ajouter de l'argent sur la même réponse ou de parier sur une nouvelle !
@@ -3363,7 +3598,8 @@ function updatePotentialGain() {
 const ch = game.challenges[tempBetCIndex];
   
   // Dans un marché prédictif (LMSR), le nombre de parts (shares) achetées = le gain potentiel final !
-  const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
+  
+const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
   
   document.getElementById("betPotential").textContent = shares.toFixed(2) + " 💰";
 }
@@ -3400,13 +3636,13 @@ function confirmBet() {
 
 const ch = game.challenges[tempBetCIndex];
 
-  // CALCUL EXACT AMM : L'investissement permet d'acheter un nombre exact de parts (shares)
+// CALCUL EXACT AMM : L'investissement permet d'acheter un nombre exact de parts (shares)
   const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
-  const pointsPotentiels = parseFloat(shares.toFixed(2));
-
+  const pointsPotentiels = shares; // On conserve la précision mathématique et on utilise le bon nom de variable
+          
   let simulatedVotes = [...ch.votes];
-  // On ajoute les PARTS (shares) à la piscine de votes, PAS la monnaie !
-  simulatedVotes[tempBetAnsIndex] += shares;
+  // CORRECTION: On ajoute l'argent à la piscine de votes
+  simulatedVotes[tempBetAnsIndex] += val;
 
   if (currentPlayerMode === 'advanced') {
       let player = game.players.find(p => p.name === game.currentPlayerName);
@@ -3419,22 +3655,29 @@ const ch = game.challenges[tempBetCIndex];
       }
 
       let existingBet = player.portfolio.find(b => b.cIndex === tempBetCIndex && b.ansIndex === tempBetAnsIndex && b.type === tempBetType);
+      // Capture du pourcentage AVANT la mise
+      const probsBefore = window.PredictiveMath.getProbs(ch.votes);
+      const pctAtBet = (probsBefore[tempBetAnsIndex] * 100).toFixed(1);
+
       if (existingBet) {
          existingBet.bet += val;
          existingBet.pts += pointsPotentiels;
+         existingBet.pctAtBet = pctAtBet; // Mise à jour de la mémoire
       } else {
-         player.portfolio.push({ cIndex: tempBetCIndex, ansIndex: tempBetAnsIndex, bet: val, pts: pointsPotentiels, type: tempBetType });
+         player.portfolio.push({ cIndex: tempBetCIndex, ansIndex: tempBetAnsIndex, bet: val, pts: pointsPotentiels, type: tempBetType, pctAtBet: pctAtBet });
       }
 
-      ch.votes = simulatedVotes;
+            ch.votes = simulatedVotes;
+      player.lastLocalUpdate = Date.now();
+      window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
       const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
       if (pIdx !== -1 && window.currentActiveSessionCode) {
-          db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx).set(player);
+          let updates = {};
           
-          // CORRECTION : Utilisation des bonnes variables "tempBet..." pour éviter le crash !
-          let voteUpdates = {};
-          voteUpdates[tempBetAnsIndex] = firebase.database.ServerValue.increment(shares);
-          db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/challenges/' + tempBetCIndex + '/votes').update(voteUpdates);
+          updates['gameData/players/' + pIdx] = player;
+          updates['gameData/challenges/' + tempBetCIndex + '/votes'] = ch.votes;
+          
+          db.ref('sessions/' + window.currentActiveSessionCode).update(updates);
       }
   } else {
       // Pour le mode Facile, on garde la mise temporaire classique
@@ -3478,42 +3721,37 @@ function validate(){
       game.challenges.forEach((ch, cIndex) => {
         const ansIndex = selectedAnswers[cIndex];
 
-        if (ansIndex !== null && ansIndex !== undefined) {
-          const bet = selectedBets[cIndex] || 1; 
-          const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES'; 
-
-          // CALCUL AMM : Achat de parts exactes
-          const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, ansIndex, bet);
-          const pointsPotentiels = parseFloat(shares.toFixed(2));
-
-          let simulatedVotes = [...ch.votes];
-          simulatedVotes[ansIndex] += shares;
-
-          let existingBet = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && b.type === bType);
-          if (existingBet) {
-             existingBet.bet += bet;
-             existingBet.pts += pointsPotentiels;
-          } else {
-             player.portfolio.push({ cIndex: cIndex, ansIndex: ansIndex, bet: bet, pts: pointsPotentiels, type: bType });
+        if (ansIndex !== null && ansIndex !== undefined && ansIndex !== -1) {
+          if (typeof window.validateCurrentCardVote === 'function') {
+              window.validateCurrentCardVote(cIndex);
           }
-
-          ch.votes = simulatedVotes; 
         }
       });
-  }
 
-  // CORRECTION : Sauvegarde ciblée des votes et du joueur
+      player = game.players.find(p => p.name === pseudo) || player;
+  }
+  player.lastLocalUpdate = Date.now();
+  window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
+
+// CORRECTION : Sauvegarde ciblée des votes et du joueur (Transaction Atomique)
   const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
   if (pIdx !== -1 && window.currentActiveSessionCode) {
-      db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx).set(player);
+      let updates = {};
       
+      // On prépare la mise à jour du joueur
+      updates['gameData/players/' + pIdx] = player;
+      
+      // On y ajoute la mise à jour de tous les marchés modifiés
       if (currentPlayerMode === 'easy') {
           game.challenges.forEach((ch, cIndex) => {
               if (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
-                  db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/challenges/' + cIndex + '/votes').set(ch.votes);
+                  updates['gameData/challenges/' + cIndex + '/votes'] = ch.votes;
               }
           });
       }
+      
+      // On envoie TOUT en une seule fraction de seconde
+      db.ref('sessions/' + window.currentActiveSessionCode).update(updates);
   }
   
   // On nettoie les sélections temporaires
@@ -4089,6 +4327,8 @@ const n = sessionConfig.n || 1;
       }
       
       me.assignedIndices = finalSelection.concat(additionalQuestions);
+me.lastLocalUpdate = Date.now();
+window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
       game.players.push(me);
       saveToCloud(); 
     } else {
@@ -4103,7 +4343,10 @@ const n = sessionConfig.n || 1;
     }
 
     currentPlayerMode = modeToPlay;
-    game.currentPlayerName = finalPseudo;
+game.currentPlayerName = finalPseudo;
+
+const initialLocalPlayer = (game.players || []).find(p => p.name === finalPseudo);
+if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(initialLocalPlayer));
 
     // CORRECTION : Flag pour savoir si c'est le chargement initial de la reconnexion
     let isFirstLoad = true;
@@ -4509,7 +4752,9 @@ function renderManageDashboard() {
             const pBets = p.portfolio.filter(b => b.cIndex === i);
             pBets.forEach(b => {
                 hasBets = true;
-                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet} 💰</strong> sur "${ch.answers[b.ansIndex]}"<br>`;
+                // Si la donnée existe, on l'affiche entre parenthèses
+                let pctInfo = (b.pctAtBet !== undefined && b.pctAtBet !== null) ? ` <span style="color:#a855f7; font-size:10px;">(à ${b.pctAtBet}%)</span>` : "";
+                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet} 💰</strong> sur "${ch.answers[b.ansIndex]}"${pctInfo}<br>`;
             });
         }
     });
@@ -4682,7 +4927,7 @@ function startRecapSessionTimer() {
 // Fonction interne pour mettre à jour les chiffres en temps réel
 // Fonction interne pour mettre à jour les chiffres en temps réel
 function updateRecapUI(pseudo) {
-  let player = (game.players || []).find(p => p.name === pseudo);
+  let player = (game.players || []).find(p => p.name === pseudo) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === pseudo ? window.localPlayerSnapshot : null);
   if (!player) {
     player = { name: pseudo, balance: currentPlayerBalance, portfolio: [] };
   }
@@ -4852,8 +5097,8 @@ function updateRecapUI(pseudo) {
         let answersHtml = '';
         ch.answers.forEach((ans, aIdx) => {
            const pct = probs[aIdx];
-           const pts = +(1 / Math.max(0.001, pct)).toFixed(2);
            const isSelected = snap.ansIndex === aIdx;
+           const pts = isSelected ? +(Number(snap.pts).toFixed(2)) : +(1 / Math.max(0.001, pct)).toFixed(2);
            const bg = isSelected ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
            
            answersHtml += `
@@ -5142,6 +5387,47 @@ let tempSellSnap = null;
 let tempSellType = 'YES'; 
 let tempSellMaxMoney = 0; // NOUVEAU : Sauvegarde de la valeur financière max
 
+function refreshOpenSellPanelValue() {
+  if (typeof tempSellCIndex === 'undefined' || tempSellCIndex === null) return;
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  if (!player || !player.portfolio) return;
+
+  const freshSnap = player.portfolio.find(b =>
+    b.cIndex === tempSellCIndex &&
+    b.ansIndex === tempSellAnsIndex &&
+    (b.type === tempSellType || (!b.type && tempSellType === 'YES'))
+  );
+
+  if (!freshSnap || freshSnap.cashedOut || freshSnap.pts <= 0) {
+    closeSellPanel();
+    return;
+  }
+
+  tempSellSnap = freshSnap;
+
+  const ch = game.challenges[tempSellCIndex];
+  if (!ch) return;
+
+  tempSellMaxMoney = window.getAMMValue(ch, tempSellSnap);
+
+  const maxBetEl = document.getElementById("sellMaxBet");
+  const sellInputEl = document.getElementById("sellInput");
+
+  if (maxBetEl) maxBetEl.textContent = tempSellMaxMoney + " 💰";
+
+  if (sellInputEl) {
+    sellInputEl.max = tempSellMaxMoney;
+
+    const currentInput = parseFloat(sellInputEl.value) || 0;
+    if (currentInput > tempSellMaxMoney) {
+      sellInputEl.value = tempSellMaxMoney;
+    }
+  }
+
+  if (typeof updateSellPotential === 'function') updateSellPotential();
+}
+
 function openSellPanel(cIndex, ansIndex, type) {
   const player = game.players.find(p => p.name === game.currentPlayerName);
   tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && (b.type === type || (!b.type && type === 'YES')));
@@ -5154,7 +5440,7 @@ function openSellPanel(cIndex, ansIndex, type) {
   const ch = game.challenges[cIndex];
   
   // 1. CALCUL IMMÉDIAT DE LA VALEUR DE REVENTE (MODÈLE AMM EXACT)
-  tempSellMaxMoney = window.getAMMValue(ch, tempSellSnap);
+  refreshOpenSellPanelValue();
 
   // 2. AFFICHAGE DES INFORMATIONS
   document.getElementById("sellAnswerName").innerHTML = `${ch.answers[ansIndex]}`;
@@ -5204,14 +5490,14 @@ function confirmSell() {
 
   const ch = game.challenges[tempSellCIndex];
 
-  // 1. CORRECTION AMM : On calcule le nombre EXACT de parts à détruire pour libérer cette somme
+// 1. CORRECTION AMM : On calcule le nombre EXACT de parts à détruire
   const quantiteAVendre = window.PredictiveMath.calcSharesToSellForMoney(ch.votes, tempSellAnsIndex, desiredMoney);
   const fraction = quantiteAVendre / tempSellSnap.pts;
   const betToSell = tempSellSnap.bet * fraction;
 
-  // 2. Retrait des parts du marché public
+  // 2. Retrait de l'ARGENT du marché public (Proportionnel)
   let simulatedVotes = [...ch.votes];
-  simulatedVotes[tempSellAnsIndex] = Math.max(0, simulatedVotes[tempSellAnsIndex] - quantiteAVendre);
+  simulatedVotes[tempSellAnsIndex] = Math.max(0.001, simulatedVotes[tempSellAnsIndex] - desiredMoney);
   ch.votes[tempSellAnsIndex] = simulatedVotes[tempSellAnsIndex];
 
   // 3. Le joueur récupère EXACTEMENT l'argent qu'il a demandé
@@ -5259,7 +5545,7 @@ function goToPlayScreen() {
 }
 
 window.goToSpecificCard = function(cIndex) {
-    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+    const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const cardPos = myIndices.indexOf(cIndex);
     
@@ -6564,22 +6850,29 @@ function renderBigScreen() {
      return { name: p.name, score: window.calculatePlayerScore(p, game) };
   }).sort((a,b) => b.score - a.score).slice(0, 10);
 
-  let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:30px; color:#e2e8f0; text-transform:uppercase;">LEADERBOARD</div>`;
+// CORRECTION : On réduit la marge du titre et on l'empêche de s'écraser (flex-shrink:0)
+  let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:15px; color:#e2e8f0; text-transform:uppercase; flex-shrink:0;">LEADERBOARD</div>`;
   
+  // NOUVEAU : Conteneur flexible qui prend tout l'espace vertical restant et répartit les lignes
+  lbHtml += `<div style="display:flex; flex-direction:column; flex:1; justify-content:space-between; min-height:0;">`;
+
   leaderboard.forEach((p, idx) => {
      // Affichage à 2 décimales pour le mode Facile
      const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
 
+     // NOUVEAU : On utilise flex:1 pour s'adapter, on supprime les marges fixes et on rend la police adaptative (clamp)
      lbHtml += `
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:22px; margin-bottom:18px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="display:flex; flex:1; justify-content:space-between; align-items:center; font-size:clamp(14px, 2vh, 22px); border-bottom:1px solid rgba(255,255,255,0.05); min-height:0;">
            <div style="display:flex; gap:20px; align-items:center;">
-              <span style="color:#a855f7; font-weight:900; width:30px; font-size:20px;">${idx+1}</span>
+              <span style="color:#a855f7; font-weight:900; width:30px; font-size:clamp(14px, 2vh, 20px);">${idx+1}</span>
               <span style="font-weight:500; text-transform:capitalize;">${p.name}</span>
            </div>
            <div style="font-weight:800;">${scoreDisplay}</div>
         </div>
      `;
   });
+
+  lbHtml += `</div>`; // Fin du conteneur flexible
   document.getElementById("bsRight").innerHTML = lbHtml;
 
   updateBsTimers(); // Met à l'heure immédiatement lors du changement
@@ -6775,7 +7068,8 @@ function startSimulation() {
         game: simGame,
         config: simConfig,
         pendingBots: pendingBots,
-        interval: setInterval(() => simulationTick(code), 3000)
+        // On passe à 1 seconde pour être très réactif face au délai de 5 secondes max
+        interval: setInterval(() => simulationTick(code), 1000)
     };
     
     // Changement d'interface
@@ -6826,24 +7120,47 @@ function simulationTick(code) {
           email: `bot${b.num}@sim.com`, 
           balance: startBal, 
           portfolio: [], 
-          assignedIndices: [] 
+          assignedIndices: [],
+          joinedAt: now,
+          betDelays: {} 
         };
 
-        let poolIndices = simGame.challenges.map((ch, idx) => ({idx, ch}))
-                                         .filter(item => getEffectiveStatus(item.ch) !== "resolved");
-        
-        const golden = poolIndices.find(item => item.ch.isGolden === true);
+const marginMs = 60 * 1000;
+
+        let poolOpenSafe = simGame.challenges.map((ch, idx) => ({idx, ch}))
+          .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) >= marginMs);
+
+        let poolPendingSoon = simGame.challenges.map((ch, idx) => ({idx, ch}))
+          .filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) < marginMs);
+
+        let poolOpenUrgent = simGame.challenges.map((ch, idx) => ({idx, ch}))
+          .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
+
+        const golden = poolOpenSafe.find(item => item.ch.isGolden) || poolPendingSoon.find(item => item.ch.isGolden) || poolOpenUrgent.find(item => item.ch.isGolden);
+
         let finalSelection = [];
         if (golden) {
           finalSelection.push(golden.idx);
-          poolIndices = poolIndices.filter(item => item.idx !== golden.idx);
+          poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
+          poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
+          poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
         }
-        poolIndices.sort(() => 0.5 - Math.random());
-        while (finalSelection.length < n && poolIndices.length > 0) {
-          finalSelection.push(poolIndices.shift().idx);
+
+        poolOpenSafe.sort(() => 0.5 - Math.random());
+        poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime);
+        poolOpenUrgent.sort(() => 0.5 - Math.random());
+
+        let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent];
+
+        while (finalSelection.length < n && prioritizedIndices.length > 0) {
+          finalSelection.push(prioritizedIndices.shift().idx);
         }
         
         newBot.assignedIndices = finalSelection;
+        // On attribue un délai de réaction aléatoire (entre 0 et 5 secondes) pour chaque question
+        finalSelection.forEach(idx => {
+            newBot.betDelays[idx] = isEasy ? 0 : Math.floor(Math.random() * 5000);
+        });
         simGame.players.push(newBot);
         logSim(`🚀 [${code}] <strong>${botName}</strong> est entré en jeu.`);
       });
@@ -6855,67 +7172,96 @@ function simulationTick(code) {
 
   // --- 2. LOGIQUE DE JEU ---
   const botsInGame = simGame.players.filter(p => p.name.startsWith("Bot_"));
-  const activeBots = botsInGame.filter(() => Math.random() < 0.20); // 20% de chances de miser
   
-  activeBots.forEach(bot => {
+  botsInGame.forEach(bot => {
     if (!bot.assignedIndices) return;
-    const availableToBet = bot.assignedIndices.filter(idx => {
-      const ch = simGame.challenges[idx];
-      const hasNotBet = !bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx);
-      return ch && getEffectiveStatus(ch) === "open" && hasNotBet;
-    });
     
-    if (availableToBet.length > 0) {
-      const cIndex = availableToBet[Math.floor(Math.random() * availableToBet.length)];
+    // On évalue TOUTES les questions assignées au bot
+    bot.assignedIndices.forEach(cIndex => {
       const ch = simGame.challenges[cIndex];
-      const ansIndex = Math.floor(Math.random() * ch.answers.length);
+      const hasNotBet = !bot.portfolio || !bot.portfolio.some(b => b.cIndex === cIndex);
       
-      let betAmount = 1; 
-      if (simConfig.mode === 'advanced' || simConfig.mode === 'both') {
-        if (availableToBet.length === 1) {
-            betAmount = bot.balance; // Tapis sur la dernière
-        } else {
-            const safeMax = bot.balance - (availableToBet.length - 1);
-            betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
+      if (ch && getEffectiveStatus(ch) === "open" && hasNotBet) {
+        // Temps de référence (pour ne pas crasher les bots créés avant la mise à jour)
+        const joinedAt = bot.joinedAt || now;
+        const delay = (bot.betDelays && bot.betDelays[cIndex] !== undefined) ? bot.betDelays[cIndex] : Math.floor(Math.random() * 5000);
+        
+        // Le bot joue au plus tard (délai 0-5s) après son arrivée OU (délai 0-5s) après l'ouverture de la question
+        const triggerTime = Math.max(joinedAt, ch.startTime) + delay;
+        
+        if (now >= triggerTime) {
+          const ansIndex = Math.floor(Math.random() * ch.answers.length);
+          
+          let betAmount = 1; 
+          if (simConfig.mode === 'advanced' || simConfig.mode === 'both') {
+            const availableCount = bot.assignedIndices.filter(idx => {
+                const chTemp = simGame.challenges[idx];
+                return chTemp && getEffectiveStatus(chTemp) === "open" && (!bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx));
+            }).length;
+            
+            if (availableCount <= 1) {
+                betAmount = bot.balance; // Tapis si c'est la dernière
+            } else {
+                const safeMax = bot.balance - (availableCount - 1);
+                betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
+            }
+          }
+          
+          if (betAmount <= 0) return;
+          const probsStart = getLMSRProbs(ch.votes);
+          const pStart = probsStart[ansIndex];
+          let simulatedVotes = [...ch.votes];
+          simulatedVotes[ansIndex] += betAmount;
+          const probsEnd = getLMSRProbs(simulatedVotes);
+          const pEnd = probsEnd[ansIndex];
+          let pAvg = (pStart + pEnd) / 2;
+          if (pAvg <= 0.01) pAvg = 0.01;
+          const pts = +(betAmount / pAvg).toFixed(2);
+          
+          if (!bot.portfolio) bot.portfolio = [];
+          const pctAtBet = (pStart * 100).toFixed(1);
+bot.portfolio.push({ cIndex, ansIndex, bet: betAmount, pts, type: 'YES', pctAtBet: pctAtBet });
+          
+          let isEasySim = (simConfig.mode === 'easy') || (simConfig.mode === 'both' && code === simConfig.code);
+          if (!isEasySim) {
+              bot.balance -= betAmount;
+          }
+          
+          ch.votes = simulatedVotes;
+          
+          logSim(`🎯 [${code}] <strong>${bot.name}</strong> a misé sur le Challenge ${cIndex + 1}.`);
+          madeChanges = true;
         }
       }
-      
-      if (betAmount <= 0) return;
-      const probsStart = getLMSRProbs(ch.votes);
-      const pStart = probsStart[ansIndex];
-      let simulatedVotes = [...ch.votes];
-      simulatedVotes[ansIndex] += betAmount;
-      const probsEnd = getLMSRProbs(simulatedVotes);
-      const pEnd = probsEnd[ansIndex];
-      let pAvg = (pStart + pEnd) / 2;
-      if (pAvg <= 0.01) pAvg = 0.01;
-      const pts = +(betAmount / pAvg).toFixed(2);
-      
-      if (!bot.portfolio) bot.portfolio = [];
-      bot.portfolio.push({ cIndex, ansIndex, bet: betAmount, pts, type: 'YES' });
-      bot.balance -= betAmount;
-      ch.votes = simulatedVotes;
-      
-      logSim(`🎯 [${code}] <strong>${bot.name}</strong> a misé.`);
-      madeChanges = true;
-    }
+    });
   });
   
 // CORRECTION : Sauvegarde ULTRA-CIBLÉE (Seulement les bots et les votes) pour ne jamais écraser l'Admin !
   if (madeChanges) {
-      let updates = {};
-      
-      simGame.players.forEach((p, idx) => {
-          if (p.name.startsWith("Bot_")) {
-              updates['gameData/players/' + idx] = p;
-          }
-      });
-      
-      simGame.challenges.forEach((ch, idx) => {
-          updates['gameData/challenges/' + idx + '/votes'] = ch.votes;
-      });
-      
-      db.ref('sessions/' + code).update(updates).catch(err => console.error(err));
+      const botsToSave = simGame.players.filter(p => p && p.name && p.name.startsWith("Bot_"));
+
+      db.ref('sessions/' + code + '/gameData/players').once('value').then(playersSnap => {
+          const liveRaw = playersSnap.exists() ? playersSnap.val() : [];
+          const livePlayers = Array.isArray(liveRaw) ? liveRaw.slice() : Object.values(liveRaw || {});
+          let updates = {};
+
+          botsToSave.forEach(bot => {
+              let idx = livePlayers.findIndex(p => p && p.name === bot.name);
+
+              if (idx === -1) {
+                  idx = livePlayers.length;
+                  livePlayers.push(bot);
+              }
+
+              updates['gameData/players/' + idx] = bot;
+          });
+
+          simGame.challenges.forEach((ch, idx) => {
+              updates['gameData/challenges/' + idx + '/votes'] = ch.votes;
+          });
+
+          db.ref('sessions/' + code).update(updates).catch(err => console.error(err));
+      }).catch(err => console.error(err));
   }
 }
 
@@ -7200,25 +7546,14 @@ function updatePlayChallengesLive() {
         
         const betAnswerNameEl = document.getElementById("betAnswerName");
         if (betAnswerNameEl) {
-            betAnswerNameEl.innerHTML = `${ch.answers[tempBetAnsIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(1)}%)</span>`;
+            betAnswerNameEl.innerHTML = `${ch.answers[tempBetAnsIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(2)}%)</span>`;
         }
         if (typeof updatePotentialGain === 'function') updatePotentialGain(); 
     }
 
     const sellPanel = document.getElementById("sellPanel");
-    if (sellPanel && sellPanel.classList.contains("open") && typeof tempSellCIndex !== 'undefined' && tempSellCIndex !== null) {
-        const ch = game.challenges[tempSellCIndex];
-        
-        const newMaxMoney = window.getAMMValue(ch, tempSellSnap);
-        
-        const maxBetEl = document.getElementById("sellMaxBet");
-        const sellInputEl = document.getElementById("sellInput");
-        if (maxBetEl && sellInputEl && tempSellMaxMoney !== newMaxMoney) {
-            tempSellMaxMoney = newMaxMoney;
-            maxBetEl.textContent = tempSellMaxMoney + " 💰";
-            sellInputEl.max = tempSellMaxMoney;
-            if (typeof updateSellPotential === 'function') updateSellPotential();
-        }
+    if (sellPanel && sellPanel.classList.contains("open") && typeof refreshOpenSellPanelValue === 'function') {
+        refreshOpenSellPanelValue();
     }
 
     // 3. MISE À JOUR DES CARTES DE JEU (Écran de jeu)
