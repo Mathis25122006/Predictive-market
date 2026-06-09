@@ -3678,12 +3678,29 @@ let tempBetAnsIndex = null;
 let tempBetCIndex = null;
 let tempBetType = 'YES'; // OUI ou NON
 
+function showPlayerTradeClosedMessage(message) {
+  const msgEl = document.getElementById("playMsg");
+
+  if (msgEl) {
+    msgEl.textContent = message;
+    msgEl.className = "msg err show";
+    setTimeout(() => msgEl.classList.remove("show"), 2600);
+  } else {
+    alert(message);
+  }
+}
+
 function openBetPanel(cIndex, ansIndex, betType) {
+  const ch = game.challenges[cIndex];
+
+  if (!ch || getEffectiveStatus(ch) !== "open") {
+    showPlayerTradeClosedMessage("Les mises sont closes pour cette question : vous ne pouvez plus parier.");
+    return;
+  }
+
   tempBetCIndex = cIndex;
   tempBetAnsIndex = ansIndex;
   tempBetType = betType;
-
-  const ch = game.challenges[cIndex];
   
   // 1. Calcul des probabilités avec LMSR
   const probs = getLMSRProbs(ch.votes);
@@ -6233,45 +6250,94 @@ const selectedValueColor = isResolvedQuestion
           </div>
         `;
       }
-   } else {
+} else {
+        const canTradeQuestion = effStatus === "open";
+
+        const lockTitle =
+          effStatus === "pending"
+            ? "Question pas encore ouverte"
+            : effStatus === "resolved"
+              ? "Résultat promulgué"
+              : "Mises closes";
+
+        const lockText =
+          effStatus === "pending"
+            ? "Vous pourrez parier et faire un cash out quand cette question sera ouverte."
+            : "Vous ne pouvez plus parier ni faire de cash out sur cette question.";
+
+        const activeCardAttrs = canTradeQuestion
+          ? `style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})"`
+          : `style="border-left: 3px solid #64748b; cursor:default; opacity:0.85;"`;
+
         if (snaps.length > 0) {
           let betsListHtml = '';
+
           snaps.forEach(snap => {
              betsListHtml += `
              <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
                 <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
                 <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
              </div>
-             ${effStatus === "open" ? `
-             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:6px 10px; border-radius:8px;">
-                <div style="font-size:12px; color:#fdba74; font-weight:600;">Revente : <strong id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="color:#f97316; font-size:14px;">${window.getAMMValue(ch, snap)} 💰</strong></div>
-                <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; margin:0; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
-             </div>
-             ` : ''}
+
+             ${
+               canTradeQuestion
+                 ? `
+                   <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:6px 10px; border-radius:8px;">
+                      <div style="font-size:12px; color:#fdba74; font-weight:600;">Revente : <strong id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="color:#f97316; font-size:14px;">${window.getAMMValue(ch, snap)} 💰</strong></div>
+                      <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; margin:0; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
+                   </div>
+                 `
+                 : `
+                   <div style="margin-top:4px; margin-bottom:8px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
+                      <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
+                      <div style="font-size:11px; color:#94a3b8; margin-top:3px;">${lockText}</div>
+                   </div>
+                 `
+             }
              `;
           });
 
           finalHtml += `
-            <div class="challenge-block" style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
+            <div class="challenge-block" ${activeCardAttrs}>
               <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
               <div class="challenge-title">${ch.question}</div>
+
               <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
                   ${betsListHtml}
               </div>
+
               <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                  <div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>
+                  ${
+                    canTradeQuestion
+                      ? `<div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>`
+                      : `<div style="font-size:11px; color:#94a3b8; font-weight:bold;">🔒 Mises closes : re-mise et cash out indisponibles</div>`
+                  }
               </div>
             </div>
           `;
         } else {
-        finalHtml += `
-          <div class="challenge-block" style="border-left: 3px solid #64748b; opacity:0.7; cursor:pointer;" onclick="goToSpecificCard(${cIndex})">
-            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-            <div class="challenge-title">${ch.question}</div>
-            <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
-            <div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>
-          </div>
-        `;
+          const emptyCardAttrs = canTradeQuestion
+            ? `style="border-left: 3px solid #64748b; opacity:0.85; cursor:pointer;" onclick="goToSpecificCard(${cIndex})"`
+            : `style="border-left: 3px solid #64748b; opacity:0.65; cursor:default;"`;
+
+          finalHtml += `
+            <div class="challenge-block" ${emptyCardAttrs}>
+              <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+              <div class="challenge-title">${ch.question}</div>
+              <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
+
+              ${
+                canTradeQuestion
+                  ? `<div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>`
+                  : `
+                    <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
+                      <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
+                      <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Vous ne pouvez plus parier sur cette question.</div>
+                    </div>
+                  `
+              }
+            </div>
+          `;
       }
     }
   });
@@ -6525,6 +6591,13 @@ function refreshOpenSellPanelValue() {
 }
 
 function openSellPanel(cIndex, ansIndex, type) {
+  const ch = game.challenges[cIndex];
+
+  if (!ch || getEffectiveStatus(ch) !== "open") {
+    showPlayerTradeClosedMessage("Les mises sont closes pour cette question : le cash out n'est plus disponible.");
+    return;
+  }
+
   const player = game.players.find(p => p.name === game.currentPlayerName);
   tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && (b.type === type || (!b.type && type === 'YES')));
   if(!tempSellSnap) return;
@@ -6532,8 +6605,6 @@ function openSellPanel(cIndex, ansIndex, type) {
   tempSellCIndex = cIndex;
   tempSellAnsIndex = ansIndex;
   tempSellType = type;
-
-  const ch = game.challenges[cIndex];
   
   // 1. CALCUL IMMÉDIAT DE LA VALEUR DE REVENTE (MODÈLE AMM EXACT)
   refreshOpenSellPanelValue();
@@ -6643,6 +6714,12 @@ function goToPlayScreen() {
 window.goToSpecificCard = function(cIndex) {
     // En mode Facile, une réponse validée est définitive : aucun retour possible.
     if (currentPlayerMode === 'easy') return;
+
+    const ch = game.challenges[cIndex];
+    if (!ch || getEffectiveStatus(ch) !== "open") {
+        showPlayerTradeClosedMessage("Les mises sont closes pour cette question : vous ne pouvez plus parier ni faire de cash out.");
+        return;
+    }
 
     const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
