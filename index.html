@@ -824,7 +824,7 @@ body.play-mode-active {
   <div id="finalValidationZone" class="hidden" style="margin-top:20px; padding-top:20px; border-top:2px solid #f97316;">
     <h3>Fin de la session</h3>
     <p class="subtitle">Le temps global est écoulé. Assurez-vous d'avoir publié les résultats de toutes les questions ci-dessus avant de clôturer.</p>
-    <button onclick="finish()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:15px;">Clôturer le jeu et afficher le classement final</button>
+    <button onclick="finish()" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin-top:15px;">Clôturer le jeu et afficher les résultats finaux</button>
   </div>
 </div>
 
@@ -4159,9 +4159,8 @@ function finish() {
     db.ref('sessions/' + sessionConfig.code).off();
   }
 
-  // On passe à l'écran de classement
-  displayLeaderboard();
-  showScreen('results');
+  // On passe à l'écran final : résultats + classement
+  showAdminFinalResults();
 }
 
 function displayLeaderboard(highlightPseudo = null, playerView = false) {
@@ -4234,6 +4233,252 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
       renderRow(leaderboard[myRankIndex], myRankIndex, "margin-top:8px;")
     );
   }
+}
+
+
+function getPlayerVoteStatsForChallenge(cIndex) {
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+  const answerCount = ch && Array.isArray(ch.answers) ? ch.answers.length : 0;
+  const counts = new Array(answerCount).fill(0);
+  let totalPlayersWhoPlayedQuestion = 0;
+
+  (game.players || []).forEach(p => {
+    const portfolio = p.portfolio || [];
+    const playedSnaps = portfolio.filter(b =>
+      Number(b.cIndex) === Number(cIndex) &&
+      Number(b.bet || 0) > 0 &&
+      !b.cashedOut
+    );
+
+    if (playedSnaps.length > 0) {
+      totalPlayersWhoPlayedQuestion++;
+      const alreadyCountedAnswers = new Set();
+
+      playedSnaps.forEach(snap => {
+        const ansIdx = Number(snap.ansIndex);
+        const isDirectVote = snap.type === "YES" || !snap.type;
+
+        if (
+          isDirectVote &&
+          ansIdx >= 0 &&
+          ansIdx < answerCount &&
+          !alreadyCountedAnswers.has(ansIdx)
+        ) {
+          counts[ansIdx]++;
+          alreadyCountedAnswers.add(ansIdx);
+        }
+      });
+    }
+  });
+
+  return {
+    counts,
+    total: totalPlayersWhoPlayedQuestion
+  };
+}
+
+function renderAdminNeutralQuestionResult(cIndex) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+
+  if (!ch) return `<div class="msg">Question introuvable.</div>`;
+
+  const correctIdx = ch.correct !== null && ch.correct !== undefined ? Number(ch.correct) : null;
+  const isResolvedQuestion = getEffectiveStatus(ch) === "resolved";
+  const finalAnswer = isResolvedQuestion && correctIdx !== null && ch.answers && ch.answers[correctIdx] !== undefined
+    ? ch.answers[correctIdx]
+    : "Résultat non promulgué";
+
+  const stats = getPlayerVoteStatsForChallenge(cIndex);
+  const total = stats.total || 0;
+  const statusColor = isResolvedQuestion ? "#3b82f6" : "#9ca3af";
+  const statusLabel = isResolvedQuestion ? "Résultat publié" : "En attente";
+
+  const answersDetailHtml = (ch.answers || []).map((ans, aIdx) => {
+    const isCorrect = isResolvedQuestion && correctIdx === aIdx;
+    const playerVotes = stats.counts[aIdx] || 0;
+    const playerVotePct = total > 0 ? (playerVotes / total) * 100 : 0;
+    const lineBorder = isCorrect ? "#22c55e" : "rgba(255,255,255,0.08)";
+    const lineBg = isCorrect ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)";
+    const badge = isCorrect
+      ? `<span style="font-size:10px; font-weight:900; color:#4ade80; border:1px solid #4ade80; border-radius:999px; padding:2px 6px; white-space:nowrap;">Bonne réponse</span>`
+      : "";
+
+    return `
+      <div style="background:${lineBg}; border:1px solid ${lineBorder}; border-radius:12px; padding:10px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="font-size:13px; font-weight:800; color:#ffffff; line-height:1.3;">
+            ${safe(ans)}
+          </div>
+          <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+            ${badge}
+          </div>
+        </div>
+
+        <div style="margin-top:9px;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-bottom:4px;">
+            <span>Votes joueurs</span>
+            <span>${playerVotes} joueur(s) • ${playerVotePct.toFixed(1)}%</span>
+          </div>
+          <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
+            <div style="height:100%; width:${playerVotePct}%; background:#a855f7;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <details class="admin-neutral-result" style="border-left:3px solid ${statusColor}; margin:10px 0 12px; padding:0; overflow:hidden; border-radius:14px; background:rgba(15,23,42,0.72); border-top:1px solid rgba(255,255,255,0.08); border-right:1px solid rgba(255,255,255,0.08); border-bottom:1px solid rgba(255,255,255,0.08);">
+      <summary style="cursor:pointer; list-style:none; padding:12px; display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+        <div>
+          <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">
+            Question ${cIndex + 1} • ${safe(ch.category || "")}
+          </div>
+          <div class="challenge-title" style="margin-top:5px;">
+            ${safe(ch.question)}
+          </div>
+          <div style="font-size:11px; color:#9ca3af; margin-top:5px;">
+            Voir toutes les réponses et les votes
+          </div>
+        </div>
+
+        <div style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; white-space:nowrap;">
+          ${statusLabel}
+        </div>
+      </summary>
+
+      <div style="padding:0 12px 12px 12px;">
+        <div style="margin-top:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px; border-radius:10px;">
+          <div style="font-size:11px; color:#9ca3af;">Bonne réponse</div>
+          <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(finalAnswer)}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:12px; color:#e5e7eb; font-weight:900; margin-bottom:6px;">
+            Toutes les réponses
+          </div>
+          ${answersDetailHtml || `<div class="msg">Aucune réponse disponible.</div>`}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderAdminNeutralQuestionResults() {
+  if (!game.challenges || game.challenges.length === 0) {
+    return `<div class="msg">Aucune question disponible.</div>`;
+  }
+
+  return game.challenges.map((ch, cIndex) => renderAdminNeutralQuestionResult(cIndex)).join("");
+}
+
+function getAdminVoteStatsForChallenge(cIndex) {
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+  const answerCount = ch && Array.isArray(ch.answers) ? ch.answers.length : 0;
+  const counts = new Array(answerCount).fill(0);
+  let totalPlayersWhoVoted = 0;
+
+  (game.players || []).forEach(p => {
+    const portfolio = p.portfolio || [];
+    const betsForQuestion = portfolio.filter(b =>
+      Number(b.cIndex) === Number(cIndex) &&
+      Number(b.bet || 0) > 0 &&
+      !b.cashedOut
+    );
+
+    if (betsForQuestion.length > 0) {
+      const countedAnswersForThisPlayer = new Set();
+
+      betsForQuestion.forEach(b => {
+        const ansIdx = Number(b.ansIndex);
+        const isPositiveVote = b.type === "YES" || !b.type;
+
+        if (
+          isPositiveVote &&
+          ansIdx >= 0 &&
+          ansIdx < answerCount &&
+          !countedAnswersForThisPlayer.has(ansIdx)
+        ) {
+          counts[ansIdx]++;
+          countedAnswersForThisPlayer.add(ansIdx);
+        }
+      });
+
+      if (countedAnswersForThisPlayer.size > 0) {
+        totalPlayersWhoVoted++;
+      }
+    }
+  });
+
+  return {
+    counts,
+    total: totalPlayersWhoVoted
+  };
+}
+
+function renderAdminNeutralResultForChallenge(cIndex) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+
+  if (!ch) return "";
+
+  const correctIdx = ch.correct !== null && ch.correct !== undefined ? Number(ch.correct) : null;
+  const stats = getAdminVoteStatsForChallenge(cIndex);
+  const total = stats.total || 0;
+
+  const correctAnswer = correctIdx !== null && ch.answers && ch.answers[correctIdx] !== undefined
+    ? ch.answers[correctIdx]
+    : "Résultat non promulgué";
+
+  const answersHtml = (ch.answers || []).map((answer, aIdx) => {
+    const votes = stats.counts[aIdx] || 0;
+    const pct = total > 0 ? (votes / total) * 100 : 0;
+    const isCorrect = correctIdx === aIdx;
+
+    return `
+      <div style="background:${isCorrect ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)"}; border:1px solid ${isCorrect ? "#22c55e" : "rgba(255,255,255,0.08)"}; border-radius:12px; padding:10px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="font-size:13px; font-weight:800; color:#ffffff; line-height:1.3;">
+            ${safe(answer)}
+          </div>
+          ${isCorrect ? `<span style="font-size:10px; font-weight:900; color:#4ade80; border:1px solid #4ade80; border-radius:999px; padding:2px 6px; white-space:nowrap;">Bonne réponse</span>` : ""}
+        </div>
+
+        <div style="margin-top:9px;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-bottom:4px;">
+            <span>Votes joueurs</span>
+            <span>${votes} joueur(s) • ${pct.toFixed(1)}%</span>
+          </div>
+          <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:#a855f7;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <details style="margin:10px 0 12px; text-align:left; background:rgba(15,23,42,0.72); border:1px solid rgba(168,85,247,0.35); border-radius:14px; overflow:hidden;">
+      <summary style="cursor:pointer; list-style:none; padding:12px; font-weight:900; color:#ffffff;">
+        Résultats
+      </summary>
+
+      <div style="padding:0 12px 12px 12px;">
+        <div style="background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.45); padding:10px; border-radius:10px;">
+          <div style="font-size:11px; color:#9ca3af;">Bonne réponse</div>
+          <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(correctAnswer)}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:12px; color:#e5e7eb; font-weight:900; margin-bottom:6px;">
+            Toutes les réponses
+          </div>
+          ${answersHtml || `<div class="msg">Aucune réponse disponible.</div>`}
+        </div>
+      </div>
+    </details>
+  `;
 }
 
 function renderFinalQuestionResults(pseudo) {
@@ -4413,6 +4658,131 @@ function renderFinalQuestionResults(pseudo) {
       </details>
     `;
   }).join("");
+}
+
+function renderAdminFinalQuestionResults() {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+
+  if (!game.challenges || game.challenges.length === 0) {
+    return `<div class="msg">Aucune question disponible.</div>`;
+  }
+
+  return game.challenges.map((ch, cIndex) => {
+    const correctIdx = ch.correct !== null && ch.correct !== undefined ? Number(ch.correct) : null;
+    const isResolvedQuestion = getEffectiveStatus(ch) === "resolved";
+
+    const finalAnswer = isResolvedQuestion && correctIdx !== null && ch.answers && ch.answers[correctIdx] !== undefined
+      ? ch.answers[correctIdx]
+      : "Résultat non promulgué";
+
+    const playerVoteCounts = new Array(ch.answers.length).fill(0);
+    let totalPlayersWhoPlayedQuestion = 0;
+
+    (game.players || []).forEach(p => {
+      const portfolio = p.portfolio || [];
+
+      const playedSnaps = portfolio.filter(b =>
+        Number(b.cIndex) === Number(cIndex) &&
+        Number(b.bet || 0) > 0 &&
+        !b.cashedOut
+      );
+
+      if (playedSnaps.length > 0) {
+        const alreadyCountedAnswers = new Set();
+
+        playedSnaps.forEach(snap => {
+          const ansIdx = Number(snap.ansIndex);
+          const isDirectVote = snap.type === "YES" || !snap.type;
+
+          if (
+            isDirectVote &&
+            ansIdx >= 0 &&
+            ansIdx < ch.answers.length &&
+            !alreadyCountedAnswers.has(ansIdx)
+          ) {
+            playerVoteCounts[ansIdx]++;
+            alreadyCountedAnswers.add(ansIdx);
+          }
+        });
+
+        if (alreadyCountedAnswers.size > 0) {
+          totalPlayersWhoPlayedQuestion++;
+        }
+      }
+    });
+
+    const answersDetailHtml = ch.answers.map((ans, aIdx) => {
+      const isCorrect = isResolvedQuestion && correctIdx === aIdx;
+      const playerVotes = playerVoteCounts[aIdx] || 0;
+      const playerVotePct = totalPlayersWhoPlayedQuestion > 0
+        ? (playerVotes / totalPlayersWhoPlayedQuestion) * 100
+        : 0;
+
+      return `
+        <div style="background:${isCorrect ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)"}; border:1px solid ${isCorrect ? "#22c55e" : "rgba(255,255,255,0.08)"}; border-radius:12px; padding:10px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+            <div style="font-size:13px; font-weight:800; color:#ffffff; line-height:1.3;">
+              ${safe(ans)}
+            </div>
+
+            ${
+              isCorrect
+                ? `<span style="font-size:10px; font-weight:900; color:#4ade80; border:1px solid #4ade80; border-radius:999px; padding:2px 6px; white-space:nowrap;">Bonne réponse</span>`
+                : ""
+            }
+          </div>
+
+          <div style="margin-top:9px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-bottom:4px;">
+              <span>Votes joueurs</span>
+              <span>${playerVotes} joueur(s) • ${playerVotePct.toFixed(1)}%</span>
+            </div>
+
+            <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
+              <div style="height:100%; width:${playerVotePct}%; background:#a855f7;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="challenge-block" style="border-left:3px solid #a855f7; margin-bottom:12px;">
+        <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">
+          Question ${cIndex + 1} • ${safe(ch.category || "")}
+        </div>
+
+        <div class="challenge-title" style="margin-top:5px;">
+          ${safe(ch.question)}
+        </div>
+
+        <div style="margin-top:10px; background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.45); padding:10px; border-radius:10px;">
+          <div style="font-size:11px; color:#9ca3af;">Bonne réponse</div>
+          <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(finalAnswer)}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:12px; color:#e5e7eb; font-weight:900; margin-bottom:6px;">
+            Toutes les réponses
+          </div>
+          ${answersDetailHtml}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function showAdminFinalResults() {
+  const title = document.querySelector("#results h2");
+  const subtitle = document.getElementById("finalResultsSubtitle");
+  const questionsContainer = document.getElementById("finalQuestionsResults");
+
+  if (title) title.textContent = "Tous les résultats";
+  if (subtitle) subtitle.textContent = "Récapitulatif neutre des résultats et classement final.";
+  if (questionsContainer) questionsContainer.innerHTML = renderAdminFinalQuestionResults();
+
+  displayLeaderboard(null, false);
+  showScreen("results");
 }
 
 function showFullResultsForPlayer(pseudo) {
@@ -5132,13 +5502,12 @@ function checkManageAccess() {
     // Réparation Firebase si la liste des joueurs est vide
     if (!game.players) game.players = [];
 
-    // 2. REDIRECTION : Si déjà promulgué -> Classement
-    if (game.isResolved) {
-      msg.textContent = "";
-      displayLeaderboard(null, false);
-      showScreen('results');
-      return;
-    }
+// 2. REDIRECTION : Si déjà clôturé -> écran final admin : Résultats + Classement
+if (game.isResolved) {
+  msg.textContent = "";
+  showAdminFinalResults();
+  return;
+}
 
     // 3. ACCÈS GESTION : Si pas encore promulgué
     const now = Date.now();
@@ -5214,6 +5583,126 @@ function startManageTimer() {
   }, 1000);
 }
 
+function getAdminVoteStatsForChallenge(cIndex) {
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+  const answerCount = ch && Array.isArray(ch.answers) ? ch.answers.length : 0;
+  const counts = new Array(answerCount).fill(0);
+  let totalPlayersWhoVoted = 0;
+
+  (game.players || []).forEach(player => {
+    const portfolio = player.portfolio || [];
+
+    const betsForQuestion = portfolio.filter(b =>
+      Number(b.cIndex) === Number(cIndex) &&
+      Number(b.bet || 0) > 0 &&
+      !b.cashedOut
+    );
+
+    const votedAnswersForPlayer = new Set();
+
+    betsForQuestion.forEach(b => {
+      const ansIdx = Number(b.ansIndex);
+      const isPositiveVote = b.type === "YES" || !b.type;
+
+      if (
+        isPositiveVote &&
+        ansIdx >= 0 &&
+        ansIdx < answerCount
+      ) {
+        votedAnswersForPlayer.add(ansIdx);
+      }
+    });
+
+    if (votedAnswersForPlayer.size > 0) {
+      totalPlayersWhoVoted++;
+
+      votedAnswersForPlayer.forEach(ansIdx => {
+        counts[ansIdx]++;
+      });
+    }
+  });
+
+  return {
+    counts,
+    total: totalPlayersWhoVoted
+  };
+}
+
+function renderAdminResultsDropdown(cIndex) {
+  const ch = game.challenges && game.challenges[cIndex] ? game.challenges[cIndex] : null;
+  if (!ch) {
+    return `<div class="msg err">Résultats indisponibles pour cette question.</div>`;
+  }
+
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const correctIdx = ch.correct !== null && ch.correct !== undefined ? Number(ch.correct) : null;
+  const stats = getAdminVoteStatsForChallenge(cIndex);
+  const total = stats.total || 0;
+
+  const correctAnswer =
+    correctIdx !== null &&
+    ch.answers &&
+    ch.answers[correctIdx] !== undefined
+      ? ch.answers[correctIdx]
+      : "Résultat non promulgué";
+
+  const answersHtml = (ch.answers || []).map((answer, aIdx) => {
+    const votes = stats.counts[aIdx] || 0;
+    const pct = total > 0 ? (votes / total) * 100 : 0;
+    const isCorrect = correctIdx === aIdx;
+
+    return `
+      <div style="background:${isCorrect ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.04)"}; border:1px solid ${isCorrect ? "#22c55e" : "rgba(255,255,255,0.08)"}; border-radius:12px; padding:10px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="font-size:13px; font-weight:800; color:#ffffff; line-height:1.3; text-align:left;">
+            ${safe(answer)}
+          </div>
+
+          ${
+            isCorrect
+              ? `<span style="font-size:10px; font-weight:900; color:#4ade80; border:1px solid #4ade80; border-radius:999px; padding:2px 6px; white-space:nowrap;">Bonne réponse</span>`
+              : ""
+          }
+        </div>
+
+        <div style="margin-top:9px;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-bottom:4px;">
+            <span>Votes joueurs</span>
+            <span>${votes} joueur(s) • ${pct.toFixed(1)}%</span>
+          </div>
+
+          <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:#a855f7;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <details style="margin:10px 0 12px; text-align:left; background:rgba(15,23,42,0.72); border:1px solid rgba(168,85,247,0.35); border-radius:14px; overflow:hidden;">
+      <summary style="cursor:pointer; padding:12px; font-weight:900; color:#ffffff;">
+        Résultats
+      </summary>
+
+      <div style="padding:0 12px 12px 12px;">
+        <div style="background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.45); padding:10px; border-radius:10px;">
+          <div style="font-size:11px; color:#9ca3af;">Bonne réponse</div>
+          <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(correctAnswer)}</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div style="font-size:12px; color:#e5e7eb; font-weight:900; margin-bottom:6px;">
+            Toutes les réponses
+          </div>
+
+          ${answersHtml || `<div class="msg">Aucune réponse disponible.</div>`}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
   
@@ -5286,14 +5775,14 @@ function renderManageDashboard() {
             <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px; font-size:12px; width:100%;">Publier & Créditer les gains</button>
           </div>
         `;
-      } else if (effStatus === "resolved") {
-        controlsHtml = `
-          <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
-            <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
-            <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
-          </div>
-        `;
-      }
+} else if (effStatus === "resolved") {
+  controlsHtml = `
+    <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
+      <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
+      <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
+    </div>
+  `;
+}
       document.getElementById(`manage-controls-${i}`).innerHTML = controlsHtml;
     }
 
