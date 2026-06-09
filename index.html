@@ -333,6 +333,43 @@ button {
    border:1px solid rgba(148,163,184,0.7);
    color:#9ca3af;
  }
+
+
+ .final-leader-entry {
+   padding: 12px 14px;
+   border-radius: 16px;
+   background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,10,60,0.92));
+   border: 1px solid rgba(168,85,247,0.35);
+   box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+
+.final-leader-entry.highlight {
+   border: 1px solid #fbbf24;
+   background: linear-gradient(135deg, rgba(251,191,36,0.16), rgba(168,85,247,0.18));
+   box-shadow: 0 0 22px rgba(251,191,36,0.25);
+}
+
+.final-leader-entry.outside-top10 {
+   margin-top: 10px;
+}
+
+.leader-separator {
+   text-align: center;
+   color: #9ca3af;
+   font-size: 12px;
+   margin: 12px 0 6px;
+   letter-spacing: 2px;
+}
+
+.final-result-card {
+   background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(88,28,135,0.55));
+   border: 1px solid rgba(251,191,36,0.45);
+   border-radius: 24px;
+   padding: 22px 18px;
+   box-shadow: 0 18px 45px rgba(0,0,0,0.55), inset 0 0 20px rgba(251,191,36,0.08);
+}
+
+
  .msg {
    font-size: 12px;
    margin-top: 6px;
@@ -1026,14 +1063,30 @@ body.play-mode-active {
   <div id="medalDisplay" style="font-size:80px; margin:25px 0; text-shadow:0 10px 30px rgba(0,0,0,0.8);">👏</div>
   <div id="rankDisplay" style="font-size:16px; color:#e2e8f0; margin-bottom:30px; line-height:1.5;">Vous avez fini à la place...</div>
   
-  <button onclick="showScreen('results')" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); box-shadow:0 10px 20px rgba(59,130,246,0.3); font-size:16px;">Consulter le classement global</button>
+  <button onclick="showFullResultsForPlayer(window.lastFinalPseudo || game.currentPlayerName)" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); box-shadow:0 10px 20px rgba(59,130,246,0.3); font-size:16px;">Voir tous les résultats</button>
 </div>
 
 <div id="results" class="card" style="display:none">
-  <h2>Classement Final</h2>
-  <div id="leaderboard"></div>
-  <div class="msg">Score calculé sur la valeur actuelle de vos prédictions</div>
+  <h2>Tous les résultats</h2>
+  <p class="subtitle" id="finalResultsSubtitle">Consultez le récapitulatif des questions et le classement final.</p>
+
+  <details class="final-dropdown" style="margin-bottom:14px;">
+    <summary style="cursor:pointer; font-weight:900; font-size:16px; padding:14px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.35);">
+      Résultats
+    </summary>
+    <div id="finalQuestionsResults" style="margin-top:12px;"></div>
+  </details>
+
+  <details class="final-dropdown" style="margin-bottom:14px;">
+    <summary style="cursor:pointer; font-weight:900; font-size:16px; padding:14px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.35);">
+      Classement
+    </summary>
+    <div id="leaderboard" style="margin-top:12px;"></div>
+    <div class="msg">Score calculé sur la valeur actuelle de vos prédictions.</div>
+  </details>
+
   <div id="chartsContainer"></div>
+
   <div style="display:flex; gap:10px; margin-top:20px;">
     <button onclick="goBack()" style="margin:0;">Retour</button>
     <button onclick="location.reload()" style="margin:0;">Accueil</button>
@@ -1190,7 +1243,7 @@ function showScreen(screenId, isBack = false) {
 
     // 1. Actions de nettoyage et sécurité
     if (screenId === 'home') {
-      window.sessionTutoDone = false; 
+window.currentTutoStep = 0;
       
       if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
       if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
@@ -1272,12 +1325,33 @@ let currentPlayerMode = "easy";
 let currentPlayerBalance = 0;
 window.localPlayerSnapshot = null;
 
-try {
-  window.easyValidationConfirmDisabled = localStorage.getItem("easyValidationConfirmDisabled") === "1";
-} catch(e) {
-  window.easyValidationConfirmDisabled = false;
-}
+window.easyValidationConfirmDisabled = false;
 window.easyValidationConfirmOpen = false;
+
+window.getEasyConfirmStorageKey = function() {
+  const code = window.currentActiveSessionCode || (sessionConfig && sessionConfig.code) || "no-session";
+  const mode = currentPlayerMode || "easy";
+  const name = (game && game.currentPlayerName) ? game.currentPlayerName : "no-pseudo";
+  const player = game && game.players ? game.players.find(p => p.name === name) : null;
+  const email = player && player.email ? player.email : (localStorage.getItem("monPredictionEmail") || "no-email");
+
+  return `easyValidationConfirmDisabled_${code}_${mode}_${name}_${email}`.toLowerCase();
+};
+
+window.refreshEasyConfirmPreference = function() {
+  try {
+    window.easyValidationConfirmDisabled = localStorage.getItem(window.getEasyConfirmStorageKey()) === "1";
+  } catch(e) {
+    window.easyValidationConfirmDisabled = false;
+  }
+};
+
+window.saveEasyConfirmPreference = function() {
+  window.easyValidationConfirmDisabled = true;
+  try {
+    localStorage.setItem(window.getEasyConfirmStorageKey(), "1");
+  } catch(e) {}
+};
 
 window.validateCurrentCardVote = window.validateCurrentCardVote || function(cIndex) {
   if (currentPlayerMode !== 'easy') return true;
@@ -1305,12 +1379,13 @@ window.validateCurrentCardVote = window.validateCurrentCardVote || function(cInd
   const bet = selectedBets[cIndex] || 1;
   const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
 
-  const probsBefore = window.PredictiveMath.getProbs(ch.votes);
-  const pctBefore = probsBefore[ansIndex] || 0;
-  const safePct = pctBefore <= 0 ? 0.001 : pctBefore;
+const probsBefore = window.PredictiveMath.getProbs(ch.votes);
+const pctBefore = probsBefore[ansIndex] || 0;
 
-  const pointsPotentiels = +(1 / safePct).toFixed(2);
-  const pctAtBet = (pctBefore * 100).toFixed(1);
+// IMPORTANT : en mode facile, on prend en compte la hausse du prix pendant l'achat.
+// Avant, 1 / pctBefore ignorait l'impact de la mise du joueur sur le marché.
+const pointsPotentiels = +window.PredictiveMath.calcSharesToBuy(ch.votes, ansIndex, bet).toFixed(2);
+const pctAtBet = (pctBefore * 100).toFixed(1);
 
   let simulatedVotes = [...ch.votes];
   simulatedVotes[ansIndex] += bet;
@@ -1357,10 +1432,14 @@ window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
     onConfirm();
   };
 
-  if (alreadyValidated || window.easyValidationConfirmDisabled) {
-    confirmAndContinue();
-    return;
-  }
+if (typeof window.refreshEasyConfirmPreference === 'function') {
+  window.refreshEasyConfirmPreference();
+}
+
+if (alreadyValidated || window.easyValidationConfirmDisabled) {
+  confirmAndContinue();
+  return;
+}
 
   if (window.easyValidationConfirmOpen) return;
   window.easyValidationConfirmOpen = true;
@@ -1406,14 +1485,16 @@ window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
     confirmAndContinue();
   };
 
-  document.getElementById("easyConfirmYesNever").onclick = () => {
+document.getElementById("easyConfirmYesNever").onclick = () => {
+  if (typeof window.saveEasyConfirmPreference === 'function') {
+    window.saveEasyConfirmPreference();
+  } else {
     window.easyValidationConfirmDisabled = true;
-    try {
-      localStorage.setItem("easyValidationConfirmDisabled", "1");
-    } catch(e) {}
-    closeOverlay();
-    confirmAndContinue();
-  };
+  }
+
+  closeOverlay();
+  confirmAndContinue();
+};
 
   document.getElementById("easyConfirmNo").onclick = () => {
     closeOverlay();
@@ -1549,6 +1630,63 @@ window.PredictiveMath = {
 
 // Rétrocompatibilité
 function getLMSRProbs(votesArray) { return window.PredictiveMath.getProbs(votesArray); }
+
+window.escapeHtml = function(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[m]));
+};
+
+window.normalizePlayerKey = function(value) {
+  return String(value || "").trim().toLowerCase();
+};
+
+window.findFinalPlayer = function(identity = null) {
+  const players = (game && game.players) ? game.players : [];
+  if (!players.length) return null;
+
+  const inputEmail = document.getElementById("playerEmail")?.value?.trim() || "";
+  const inputPseudo = document.getElementById("pseudo")?.value?.trim() || "";
+
+  const emailCandidates = [
+    identity,
+    inputEmail,
+    localStorage.getItem("monPredictionEmail"),
+    window.localPlayerSnapshot && window.localPlayerSnapshot.email
+  ].map(window.normalizePlayerKey).filter(Boolean);
+
+  const nameCandidates = [
+    identity,
+    window.lastFinalPseudo,
+    game && game.currentPlayerName,
+    inputPseudo,
+    localStorage.getItem("monPredictionPseudo"),
+    window.localPlayerSnapshot && window.localPlayerSnapshot.name
+  ].map(window.normalizePlayerKey).filter(Boolean);
+
+  return (
+    players.find(p => p.email && emailCandidates.includes(window.normalizePlayerKey(p.email))) ||
+    players.find(p => p.name && nameCandidates.includes(window.normalizePlayerKey(p.name))) ||
+    null
+  );
+};
+
+// Probabilités à AFFICHER côté joueur.
+// Si le résultat est promulgué : bonne réponse = 100%, autres = 0%.
+function getChallengeDisplayProbs(ch) {
+  if (!ch || !Array.isArray(ch.answers)) return [];
+
+  if (getEffectiveStatus(ch) === "resolved" && ch.correct !== null && ch.correct !== undefined) {
+    const correctIdx = Number(ch.correct);
+    return ch.answers.map((_, idx) => idx === correctIdx ? 1 : 0);
+  }
+
+  return getLMSRProbs(ch.votes || ch.answers.map(() => 0));
+}
 
 window.getAMMValue = function(ch, snap) {
     if (!snap || !snap.pts || snap.pts <= 0) return 0;
@@ -2605,9 +2743,13 @@ const block = document.createElement("div");
     const footer = document.createElement("div");
     footer.style.cssText = "flex-shrink: 0; margin-top: auto; padding-top: clamp(4px, 1vh, 12px); padding-bottom: 0;";
     
-    const hintText = cIndex > 0 
+const hintText = currentPlayerMode === 'easy'
+   ? `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`
+   : (
+       cIndex > 0 
        ? `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4; letter-spacing:8px;">↕</div>` 
-       : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`;
+       : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`
+     );
 
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
@@ -2737,13 +2879,18 @@ window.swipeNextCard = function() {
         window.saveLocalProgress(); 
         setTimeout(updateCardStack, 100);
 
-        // CORRECTION TUTO : Dès qu'il réussit à passer à la carte suivante, on lance l'étape 6 (Balayage vers le bas)
-        if (window.currentTutoStep === 5) {
-            setTimeout(() => nextTuto(6), 400);
-        } else if (window.currentTutoStep === 7) {
-            // S'il glisse avec succès pendant l'étape 7, on ferme le tuto sans le bloquer
-            closeTuto();
-        }
+// CORRECTION TUTO : En mode Facile, le tuto s'arrête dès le premier swipe vers le haut.
+// En mode Avancé, on garde l'étape de retour arrière.
+if (window.currentTutoStep === 5) {
+    if (currentPlayerMode === 'easy') {
+        setTimeout(() => closeTuto(), 400);
+    } else {
+        setTimeout(() => nextTuto(6), 400);
+    }
+} else if (window.currentTutoStep === 7) {
+    // S'il glisse avec succès pendant l'étape 7, on ferme le tuto sans le bloquer
+    closeTuto();
+}
     };
 
     if (typeof window.confirmEasyValidationBeforeNext === 'function') {
@@ -2755,8 +2902,11 @@ window.swipeNextCard = function() {
     return true;
   };
 
-  window.swipePrevCard = function() {
-    if(window.currentCardIndex <= 0) return;
+window.swipePrevCard = function() {
+    // En mode Facile, aucun retour en arrière possible.
+    if (currentPlayerMode === 'easy') return false;
+
+    if(window.currentCardIndex <= 0) return false;
 
     // CORRECTION : Si on attendait un swipe vers le haut (étape 5) mais qu'il fait un swipe vers le bas, on ferme le tuto et on autorise.
     if (window.currentTutoStep === 5) {
@@ -2774,6 +2924,8 @@ window.swipeNextCard = function() {
         // S'il revient en arrière pendant l'étape 7, on ferme le tuto sans le bloquer
         closeTuto();
     }
+
+    return true;
   };
 
 // --- Moteur Tactile (Touch Events) ---
@@ -2870,10 +3022,11 @@ window.swipeNextCard = function() {
               activeCard.style.transform = ''; 
           }
       } else {
-          // NOUVEAU : Si c'est la dernière carte et qu'il y a un tuto en cours, on le force à se fermer.
-          if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
-              closeTuto();
-          }
+// Si c'est la dernière carte et qu'il y a un tuto en cours, on le force à se fermer.
+// En mode Facile, cela correspond aussi à la fin du tuto après le premier swipe vers le haut.
+if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
+    closeTuto();
+}
 
           if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
               activeCard.style.transform = ''; 
@@ -2885,12 +3038,17 @@ window.swipeNextCard = function() {
               activeCard.style.transform = ''; 
           }
       }
-    } else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
-      // CORRECTION : Pareil ici, on laisse swipePrevCard gérer la logique
-      swipePrevCard(); 
-    } else {
-      activeCard.style.transform = ''; 
-    }
+} else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
+  if (currentPlayerMode === 'easy') {
+      activeCard.style.transform = '';
+      return;
+  }
+
+  // CORRECTION : Pareil ici, on laisse swipePrevCard gérer la logique
+  swipePrevCard(); 
+} else {
+  activeCard.style.transform = ''; 
+}
   });
 
   // CORRECTION : Écouteur de clics permissif
@@ -2933,11 +3091,13 @@ window.swipeNextCard = function() {
                           }, 400);
                       }
                   }
-              } else if (e.key === 'ArrowDown') {
-                  if (window.currentCardIndex > 0) {
-                      if (typeof window.swipePrevCard === 'function') window.swipePrevCard();
-                  }
-              }
+} else if (e.key === 'ArrowDown') {
+    if (currentPlayerMode === 'easy') return;
+
+    if (window.currentCardIndex > 0) {
+        if (typeof window.swipePrevCard === 'function') window.swipePrevCard();
+    }
+}
           }
       });
       window.keyboardNavAttached = true; 
@@ -2997,10 +3157,10 @@ function renderAnswersForChallenge(cIndex){
   }
 
   ch.answers.forEach((a, i) => {
-    const pct = probs[i];
-    const safePct = pct <= 0 ? 0.001 : pct;
-    let pts = +(1 / safePct).toFixed(2); 
-    const c = colors[i % colors.length];
+const pct = probs[i];
+const previewBet = selectedBets[cIndex] || 1;
+let pts = +window.PredictiveMath.calcSharesToBuy(ch.votes, i, previewBet).toFixed(2);
+const c = colors[i % colors.length];
 
     const snapForThisAns = snaps.find(b => b.ansIndex === i);
     if (currentPlayerMode === 'easy' && snapForThisAns && snapForThisAns.pts) {
@@ -3205,10 +3365,40 @@ function updateAdminButton(){
 // ==========================================
 window.sessionTutoDone = false; // Se réinitialise si on quitte et relance l'application
 window.currentTutoStep = 0;
+window.currentTutoWasForced = false;
+
+window.getTutoStorageKey = function() {
+  const code = window.currentActiveSessionCode || (sessionConfig && sessionConfig.code) || "no-session";
+  const mode = currentPlayerMode || "unknown";
+  const name = (game && game.currentPlayerName) ? game.currentPlayerName : "no-pseudo";
+  const player = game && game.players ? game.players.find(p => p.name === name) : null;
+  const email = player && player.email ? player.email : (localStorage.getItem("monPredictionEmail") || "no-email");
+
+  return `predictionGameAutoTutoSeen_${code}_${mode}_${name}_${email}`.toLowerCase();
+};
+
+window.hasSeenAutoTuto = function() {
+  try {
+    return localStorage.getItem(window.getTutoStorageKey()) === "1";
+  } catch(e) {
+    return false;
+  }
+};
+
+window.markAutoTutoSeen = function() {
+  try {
+    localStorage.setItem(window.getTutoStorageKey(), "1");
+  } catch(e) {}
+};
 
 // CORRECTION : On ajoute le paramètre "force" pour permettre de relancer le tutoriel
 function startTuto(force = false) {
+  if (window.currentTutoStep > 0 && !force) return;
   if (window.sessionTutoDone && !force) return;
+  if (!force && typeof window.hasSeenAutoTuto === 'function' && window.hasSeenAutoTuto()) return;
+
+  window.currentTutoWasForced = force;
+
   const containerEl = document.getElementById("challengesPlay");
   if (!containerEl) return;
   const cardsElements = Array.from(containerEl.querySelectorAll('.challenge-block'));
@@ -3347,6 +3537,12 @@ function closeTuto() {
   clearTutoHighlights();
   window.sessionTutoDone = true;
   window.currentTutoStep = 0;
+
+  if (!window.currentTutoWasForced && typeof window.markAutoTutoSeen === 'function') {
+      window.markAutoTutoSeen();
+  }
+
+  window.currentTutoWasForced = false;
   
   // NOUVEAU : Affiche le bouton "Revoir le tutoriel" une fois qu'il est terminé ou passé
   const replayBtn = document.getElementById("replayTutoBtn");
@@ -3441,13 +3637,13 @@ window.validateCurrentCardVote = function(cIndex) {
   const bet = selectedBets[cIndex] || 1;
   const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
 
-  const probsBefore = window.PredictiveMath.getProbs(ch.votes);
-  const pctBefore = probsBefore[ansIndex] || 0;
-  const safePct = pctBefore <= 0 ? 0.001 : pctBefore;
+const probsBefore = window.PredictiveMath.getProbs(ch.votes);
+const pctBefore = probsBefore[ansIndex] || 0;
 
-  // On verrouille exactement le gain affiché sur la carte au moment où le joueur la valide.
-  const pointsPotentiels = +(1 / safePct).toFixed(2);
-  const pctAtBet = (pctBefore * 100).toFixed(1);
+// On verrouille les parts réellement achetées en tenant compte du mouvement du marché.
+// Cela corrige la valeur provisoire trop haute en mode facile.
+const pointsPotentiels = +window.PredictiveMath.calcSharesToBuy(ch.votes, ansIndex, bet).toFixed(2);
+const pctAtBet = (pctBefore * 100).toFixed(1);
 
   let simulatedVotes = [...ch.votes];
   simulatedVotes[ansIndex] += bet;
@@ -3968,34 +4164,303 @@ function finish() {
   showScreen('results');
 }
 
-function displayLeaderboard() {
+function displayLeaderboard(highlightPseudo = null, playerView = false) {
   const playersList = game.players || [];
-  const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
+  const normalizedHighlight = playerView && highlightPseudo
+    ? String(highlightPseudo).trim().toLowerCase()
+    : null;
 
-// NOUVEAU : Calcul dynamique du score MTM
   const leaderboard = playersList.map(p => {
-    return { name: p.name, pts: window.calculatePlayerScore(p, game).toFixed(2) }; 
-  });
-
-  leaderboard.sort((a, b) => b.pts - a.pts);
+    return {
+      name: p.name,
+      pts: window.calculatePlayerScore(p, game)
+    };
+  }).sort((a, b) => b.pts - a.pts);
 
   const leaderContainer = document.getElementById("leaderboard");
-  if (leaderContainer) {
-    leaderContainer.innerHTML = "";
-    leaderboard.slice(0, 10).forEach((p, idx) => {
-      const row = document.createElement("div");
-      row.className = "leader-entry";
-      row.innerHTML = `<div class="leader-left"><span class="rank-pill">#${idx+1}</span><span>${p.name}</span></div><div>${p.pts} 💰</div>`;
-      leaderContainer.appendChild(row);
-    });
+  if (!leaderContainer) return;
+
+  leaderContainer.innerHTML = "";
+
+  const renderRow = (p, idx, extraStyle = "") => {
+    const isMe = playerView && normalizedHighlight && p.name && p.name.trim().toLowerCase() === normalizedHighlight;
+    const safeName = window.escapeHtml ? window.escapeHtml(p.name) : p.name;
+
+    // IMPORTANT :
+    // Le pseudo est en gras uniquement dans la page récapitulative du joueur.
+    // Côté admin, playerView vaut false, donc aucun pseudo n'est mis en gras.
+    const displayName = isMe
+      ? `<strong style="font-weight:900; color:#ffffff;">${safeName}</strong>`
+      : safeName;
+
+    const row = document.createElement("div");
+    row.className = `leader-entry final-leader-entry ${isMe ? "highlight" : ""}`;
+    row.style.cssText = `
+      padding:12px 14px;
+      border-radius:16px;
+      background:${isMe ? "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(168,85,247,0.18))" : "rgba(15,23,42,0.98)"};
+      border:${isMe ? "1px solid #fbbf24" : "1px solid rgba(55,65,81,0.9)"};
+      box-shadow:${isMe ? "0 0 22px rgba(251,191,36,0.22)" : "none"};
+      ${extraStyle}
+    `;
+
+    row.innerHTML = `
+      <div class="leader-left">
+        <span class="rank-pill">#${idx + 1}</span>
+        <span>${displayName}</span>
+      </div>
+      <div style="font-weight:900;">${Number(p.pts).toFixed(2)} 💰</div>
+    `;
+
+    return row;
+  };
+
+  leaderboard.slice(0, 10).forEach((p, idx) => {
+    leaderContainer.appendChild(renderRow(p, idx));
+  });
+
+  // On ajoute la ligne du joueur hors Top 10 uniquement dans la vue joueur.
+  const myRankIndex = normalizedHighlight
+    ? leaderboard.findIndex(p => p.name && p.name.trim().toLowerCase() === normalizedHighlight)
+    : -1;
+
+  if (playerView && myRankIndex >= 10) {
+    const separator = document.createElement("div");
+    separator.className = "leader-separator";
+    separator.textContent = "•••";
+    leaderContainer.appendChild(separator);
+
+    leaderContainer.appendChild(
+      renderRow(leaderboard[myRankIndex], myRankIndex, "margin-top:8px;")
+    );
   }
 }
 
+function renderFinalQuestionResults(pseudo) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const cleanPseudo = String(pseudo || "").trim().toLowerCase();
+
+  const player = (game.players || []).find(p =>
+    p.name && p.name.trim().toLowerCase() === cleanPseudo
+  );
+
+  if (!game.challenges || game.challenges.length === 0) {
+    return `<div class="msg">Aucune question disponible.</div>`;
+  }
+
+  return game.challenges.map((ch, cIndex) => {
+    const correctIdx = ch.correct !== null && ch.correct !== undefined ? Number(ch.correct) : null;
+    const isResolvedQuestion = getEffectiveStatus(ch) === "resolved";
+
+    const finalAnswer = isResolvedQuestion && correctIdx !== null && ch.answers && ch.answers[correctIdx] !== undefined
+      ? ch.answers[correctIdx]
+      : "Résultat non promulgué";
+
+    const snaps = player && player.portfolio
+      ? player.portfolio.filter(b => Number(b.cIndex) === Number(cIndex) && Number(b.bet || 0) > 0 && !b.cashedOut)
+      : [];
+
+    let statusLabel = "Pas jouée";
+    let statusColor = "#9ca3af";
+    let playerAnswer = "—";
+
+    if (snaps.length > 0) {
+      playerAnswer = snaps.map(snap => {
+        const label = ch.answers && ch.answers[snap.ansIndex] !== undefined ? ch.answers[snap.ansIndex] : "Réponse inconnue";
+        return snap.type === "NO" ? `Non : ${label}` : label;
+      }).join(", ");
+
+      if (!isResolvedQuestion || correctIdx === null) {
+        statusLabel = "En attente";
+        statusColor = "#fbbf24";
+      } else {
+        const hasWinningBet = snaps.some(snap => {
+          if (snap.type === "NO") return Number(snap.ansIndex) !== correctIdx;
+          return Number(snap.ansIndex) === correctIdx;
+        });
+
+        statusLabel = hasWinningBet ? "Gagné" : "Perdu";
+        statusColor = hasWinningBet ? "#4ade80" : "#f87171";
+      }
+    }
+
+    // Pourcentages marché : si le résultat est promulgué, bonne réponse = 100%, autres = 0%.
+    const marketProbs = typeof getChallengeDisplayProbs === "function"
+      ? getChallengeDisplayProbs(ch)
+      : getLMSRProbs(ch.votes || ch.answers.map(() => 0));
+
+    // Pourcentages de vote joueurs : on compte les joueurs ayant choisi chaque réponse.
+    const playerVoteCounts = new Array(ch.answers.length).fill(0);
+    let totalPlayersWhoPlayedQuestion = 0;
+
+    (game.players || []).forEach(p => {
+      const portfolio = p.portfolio || [];
+      const playedSnaps = portfolio.filter(b =>
+        Number(b.cIndex) === Number(cIndex) &&
+        Number(b.bet || 0) > 0 &&
+        !b.cashedOut
+      );
+
+      if (playedSnaps.length > 0) {
+        totalPlayersWhoPlayedQuestion++;
+
+        // En mode facile : un seul choix.
+        // En mode avancé : on compte les positions OUI comme votes directs.
+        const alreadyCountedAnswers = new Set();
+
+        playedSnaps.forEach(snap => {
+          const ansIdx = Number(snap.ansIndex);
+          const isDirectVote = snap.type === "YES" || !snap.type;
+
+          if (isDirectVote && ansIdx >= 0 && ansIdx < ch.answers.length && !alreadyCountedAnswers.has(ansIdx)) {
+            playerVoteCounts[ansIdx]++;
+            alreadyCountedAnswers.add(ansIdx);
+          }
+        });
+      }
+    });
+
+    const answersDetailHtml = ch.answers.map((ans, aIdx) => {
+      const isCorrect = isResolvedQuestion && correctIdx === aIdx;
+      const isPlayerChoice = snaps.some(snap => Number(snap.ansIndex) === aIdx && (snap.type === "YES" || !snap.type));
+      const playerVotes = playerVoteCounts[aIdx] || 0;
+      const playerVotePct = totalPlayersWhoPlayedQuestion > 0
+        ? (playerVotes / totalPlayersWhoPlayedQuestion) * 100
+        : 0;
+      const marketPct = (marketProbs[aIdx] || 0) * 100;
+
+      let lineBorder = "rgba(255,255,255,0.08)";
+      let lineBg = "rgba(255,255,255,0.04)";
+      let badges = "";
+
+      if (isCorrect) {
+        lineBorder = "#22c55e";
+        lineBg = "rgba(34,197,94,0.12)";
+        badges += `<span style="font-size:10px; font-weight:900; color:#4ade80; border:1px solid #4ade80; border-radius:999px; padding:2px 6px;">Résultat</span>`;
+      }
+
+      if (isPlayerChoice) {
+        badges += `<span style="font-size:10px; font-weight:900; color:#fbbf24; border:1px solid #fbbf24; border-radius:999px; padding:2px 6px;">Votre choix</span>`;
+      }
+
+      return `
+        <div style="background:${lineBg}; border:1px solid ${lineBorder}; border-radius:12px; padding:10px; margin-top:8px;">
+          <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+            <div style="font-size:13px; font-weight:800; color:#ffffff; line-height:1.3;">
+              ${safe(ans)}
+            </div>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
+              ${badges}
+            </div>
+          </div>
+
+          <div style="margin-top:9px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; margin-bottom:4px;">
+              <span>Votes joueurs</span>
+              <span>${playerVotes} joueur(s) • ${playerVotePct.toFixed(1)}%</span>
+            </div>
+            <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
+              <div style="height:100%; width:${playerVotePct}%; background:#a855f7;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1;">
+            <span>Pourcentage marché</span>
+            <strong>${marketPct.toFixed(1)}%</strong>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <details class="challenge-block" style="border-left:3px solid ${statusColor}; margin-bottom:12px; padding:0; overflow:hidden;">
+        <summary style="cursor:pointer; list-style:none; padding:12px; display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div>
+            <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">
+              Question ${cIndex + 1} • ${safe(ch.category || "")}
+            </div>
+            <div class="challenge-title" style="margin-top:5px;">
+              ${safe(ch.question)}
+            </div>
+            <div style="font-size:11px; color:#9ca3af; margin-top:5px;">
+              Cliquez pour voir le détail des réponses
+            </div>
+          </div>
+
+          <div style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; white-space:nowrap;">
+            ${statusLabel}
+          </div>
+        </summary>
+
+        <div style="padding:0 12px 12px 12px;">
+          <div style="margin-top:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px; border-radius:10px;">
+            <div style="font-size:11px; color:#9ca3af;">Résultat final</div>
+            <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(finalAnswer)}</div>
+          </div>
+
+          <div style="margin-top:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px; border-radius:10px;">
+            <div style="font-size:11px; color:#9ca3af;">Votre réponse</div>
+            <div style="font-size:14px; font-weight:900; color:#ffffff;">${safe(playerAnswer)}</div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="font-size:12px; color:#e5e7eb; font-weight:900; margin-bottom:6px;">
+              Toutes les réponses
+            </div>
+            ${answersDetailHtml}
+          </div>
+        </div>
+      </details>
+    `;
+  }).join("");
+}
+
+function showFullResultsForPlayer(pseudo) {
+  const finalPlayer = window.findFinalPlayer ? window.findFinalPlayer(pseudo) : null;
+  const finalPseudo = finalPlayer
+    ? finalPlayer.name
+    : String(pseudo || game.currentPlayerName || window.lastFinalPseudo || "").trim();
+
+  window.lastFinalPseudo = finalPseudo;
+
+  if (finalPlayer) {
+    game.currentPlayerName = finalPlayer.name;
+    currentPlayerBalance = finalPlayer.balance || 0;
+    window.localPlayerSnapshot = JSON.parse(JSON.stringify(finalPlayer));
+  }
+
+  const title = document.querySelector("#results h2");
+  const subtitle = document.getElementById("finalResultsSubtitle");
+  const questionsContainer = document.getElementById("finalQuestionsResults");
+
+  if (title) title.textContent = "Tous les résultats";
+  if (subtitle) subtitle.textContent = "Consultez le récapitulatif de toutes les questions et le classement final.";
+  if (questionsContainer) questionsContainer.innerHTML = renderFinalQuestionResults(finalPseudo);
+
+  // Vue joueur uniquement :
+  // pseudo en gras + ligne du joueur hors Top 10 autorisés ici.
+  displayLeaderboard(finalPseudo, true);
+
+  showScreen("results");
+}
 // ==============================================
 // GESTION DE LA CÉLÉBRATION ET DES CONFETTIS
 // ==============================================
 
 function showPlayerResult(pseudo) {
+  const finalPlayer = window.findFinalPlayer ? window.findFinalPlayer(pseudo) : null;
+
+  if (finalPlayer) {
+    pseudo = finalPlayer.name;
+    game.currentPlayerName = finalPlayer.name;
+    window.lastFinalPseudo = finalPlayer.name;
+    currentPlayerBalance = finalPlayer.balance || 0;
+    window.localPlayerSnapshot = JSON.parse(JSON.stringify(finalPlayer));
+  } else {
+    window.lastFinalPseudo = pseudo;
+    game.currentPlayerName = pseudo;
+  }
+
   const playersList = game.players || [];
   const totalPlayers = playersList.length;
 
@@ -4004,7 +4469,8 @@ function showPlayerResult(pseudo) {
     return { name: p.name, pts: window.calculatePlayerScore(p, game) };
   }).sort((a, b) => b.pts - a.pts);
 
-const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
+const normalizedPseudo = window.normalizePlayerKey ? window.normalizePlayerKey(pseudo) : String(pseudo || "").toLowerCase();
+const myRankIndex = leaderboard.findIndex(p => window.normalizePlayerKey ? window.normalizePlayerKey(p.name) === normalizedPseudo : p.name === pseudo);
       
       // S'il n'est pas classé (ex: Admin ou erreur), on l'envoie direct au classement global
       if (myRankIndex === -1) {
@@ -4014,8 +4480,10 @@ const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
         if (resultsTitle) resultsTitle.innerHTML = "Le jeu a déjà été clôturé 🔒";
         if (resultsMsg) resultsMsg.innerHTML = "Vous n'avez pas de compte actif pour cette session. Voici le Top 10 final :";
         
-        displayLeaderboard();
-        showScreen('results');
+// On mémorise le joueur pour le bouton "Voir tous les résultats"
+window.lastFinalPseudo = pseudo;
+displayLeaderboard(pseudo, true); 
+showScreen('playerResult');
         return;
       }
 
@@ -4044,12 +4512,52 @@ const myRankIndex = leaderboard.findIndex(p => p.name === pseudo);
     confettiColors = ['#d97706', '#b45309', '#78350f', '#fcd34d']; // Palette BRONZE
   }
 
-  medalEl.innerHTML = medalHtml;
-  rankEl.innerHTML = `Félicitations, vous avez fini à la place<br><strong style="font-size:32px; color:#3b82f6; display:block; margin-top:10px;">${myRank} / ${totalPlayers}</strong>`;
+const myFinalScore = leaderboard[myRankIndex].pts;
+const safePseudo = String(pseudo || "").replace(/[&<>"']/g, (m) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#039;"
+}[m]));
 
-  // On pré-calcule le classement global pour le bouton "Consulter"
-  displayLeaderboard(); 
-  showScreen('playerResult');
+medalEl.innerHTML = medalHtml;
+
+rankEl.innerHTML = `
+  <div class="final-result-card">
+    <div style="font-size:12px; color:#fbbf24; text-transform:uppercase; font-weight:900; letter-spacing:1.5px; margin-bottom:8px;">
+      Classement final
+    </div>
+
+    <div style="font-size:18px; color:#e5e7eb; margin-bottom:8px;">
+      Bravo <strong style="color:#ffffff;">${safePseudo}</strong>
+    </div>
+
+    <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin:14px 0;">
+      <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:12px 16px; min-width:95px;">
+        <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">Rang</div>
+        <div style="font-size:30px; font-weight:900; color:#fbbf24;">#${myRank}</div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:16px; padding:12px 16px; min-width:120px;">
+        <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">Capital</div>
+        <div style="font-size:26px; font-weight:900; color:#4ade80;">${Number(myFinalScore).toFixed(2)} 💰</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px; color:#9ca3af; line-height:1.4;">
+      ${myRank <= 10
+        ? "Votre pseudo apparaît en gras dans le Top 10."
+        : "Vous n’êtes pas dans le Top 10 : votre ligne apparaîtra sous le classement avec votre pseudo en gras."}
+    </div>
+  </div>
+`;
+
+// On pré-calcule le classement global avec le joueur en surbrillance
+window.lastFinalPseudo = pseudo;
+game.currentPlayerName = pseudo;
+displayLeaderboard(pseudo); 
+showScreen('playerResult');
 
   // On lance la pluie de confettis si le joueur est dans le top 3 !
   if (confettiColors) {
@@ -4260,17 +4768,73 @@ function checkAccess() {
       const existingPlayer = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
       
       if (game.isResolved === true) {
-        showPlayerResult(existingPlayer ? existingPlayer.name : pseudoInput); 
-      } else {
-        if (existingPlayer) {
-            currentPlayerMode = modeToPlay; 
-            game.currentPlayerName = existingPlayer.name;
-            currentPlayerBalance = existingPlayer.balance || 0;
-            updateGlobalBalance(); renderPlayerRecap(existingPlayer.name);
+  currentPlayerMode = modeToPlay;
+
+  const finalPlayer = existingPlayer || game.players.find(p =>
+    p.name && p.name.toLowerCase() === pseudoInput.toLowerCase()
+  );
+
+  if (finalPlayer) {
+    game.currentPlayerName = finalPlayer.name;
+    window.lastFinalPseudo = finalPlayer.name;
+    currentPlayerBalance = finalPlayer.balance || 0;
+    window.localPlayerSnapshot = JSON.parse(JSON.stringify(finalPlayer));
+
+    localStorage.setItem("monPredictionPseudo", finalPlayer.name);
+    if (finalPlayer.email) localStorage.setItem("monPredictionEmail", finalPlayer.email);
+
+    showPlayerResult(finalPlayer.name);
+  } else {
+    game.currentPlayerName = pseudoInput;
+    window.lastFinalPseudo = pseudoInput;
+    showPlayerResult(pseudoInput);
+  }
+} else {
+       if (existingPlayer) {
+    currentPlayerMode = modeToPlay; 
+    game.currentPlayerName = existingPlayer.name;
+    currentPlayerBalance = existingPlayer.balance || 0;
+    updateGlobalBalance();
+    renderPlayerRecap(existingPlayer.name);
+
+    // IMPORTANT : même après la fin de session, le joueur reste connecté
+    // aux changements de résultats promulgués par l'admin.
+    db.ref('sessions/' + inputCode).on('value', (liveSnap) => {
+      if (!liveSnap.exists()) return;
+
+      const liveData = liveSnap.val();
+      game = liveData.gameData;
+      sessionConfig = liveData.sessionConfig;
+
+      if (!game.players) game.players = [];
+      if (!game.messages) game.messages = [];
+
+      game.currentPlayerName = existingPlayer.name;
+
+      const livePlayer = game.players.find(p => p.name === existingPlayer.name);
+      if (livePlayer) {
+        currentPlayerBalance = livePlayer.balance || 0;
+        updateGlobalBalance();
+      }
+
+      if (game.isResolved === true) {
+        const playerResultVisible = document.getElementById("playerResult")?.style.display === "block";
+        const resultsVisible = document.getElementById("results")?.style.display === "block";
+
+        if (!playerResultVisible && !resultsVisible) {
+          showPlayerResult(existingPlayer.name);
         } else {
-            msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
-            msg.className = "msg ok";
+          displayLeaderboard(existingPlayer.name);
         }
+      } else {
+        updateRecapUI(existingPlayer.name);
+      }
+    });
+
+} else {
+    msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
+    msg.className = "msg ok";
+}
       }
       return; 
     }
@@ -4342,8 +4906,14 @@ window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
       finalPseudo = me.name; 
     }
 
-    currentPlayerMode = modeToPlay;
+currentPlayerMode = modeToPlay;
 game.currentPlayerName = finalPseudo;
+
+if (currentPlayerMode === 'easy' && typeof window.refreshEasyConfirmPreference === 'function') {
+  window.refreshEasyConfirmPreference();
+} else {
+  window.easyValidationConfirmDisabled = false;
+}
 
 const initialLocalPlayer = (game.players || []).find(p => p.name === finalPseudo);
 if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(initialLocalPlayer));
@@ -4565,7 +5135,7 @@ function checkManageAccess() {
     // 2. REDIRECTION : Si déjà promulgué -> Classement
     if (game.isResolved) {
       msg.textContent = "";
-      displayLeaderboard();
+      displayLeaderboard(null, false);
       showScreen('results');
       return;
     }
@@ -4963,21 +5533,9 @@ function updateRecapUI(pseudo) {
     if (chartsContainer) chartsContainer.style.display = "block";
   }
 
-  // CALCUL DU GAIN POTENTIEL MAXIMUM
-  let totalPotentialPoints = 0;
-  if (player.portfolio) {
-    player.portfolio.forEach(snap => {
-      const ch = game.challenges[snap.cIndex];
-      const isWin = (snap.type === 'YES' && snap.ansIndex === ch.correct) ||
-                    (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
-                    (!snap.type && snap.ansIndex === ch.correct);
-
-      if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
-        totalPotentialPoints += snap.pts;
-      }
-    });
-  }
-  const maxScorePossible = (player.balance + totalPotentialPoints).toFixed(2);
+// CALCUL DE LA VALEUR DE MARCHÉ ACTUELLE
+// C'est exactement cette valeur qui sert au classement provisoire.
+const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
 
 // GÉNÉRATION DU CLASSEMENT PROVISOIRE MTM
   const provLeaderboard = (game.players || []).map(p => {
@@ -5061,7 +5619,7 @@ function updateRecapUI(pseudo) {
     
     <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #3b82f6; border-radius:15px; padding:20px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.5); text-align:center;">
       <div style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px;">
-        <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Gain Max Potentiel</div>
+        <div style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Valeur de marché actuelle</div>
         <div id="recap-max-score" style="font-size:34px; font-weight:900; color:#3b82f6;">${maxScorePossible} <span style="font-size:18px;">💰</span></div>
       </div>
       
@@ -5088,34 +5646,83 @@ function updateRecapUI(pseudo) {
   myIndices.forEach(cIndex => {
     const ch = game.challenges[cIndex];
     const snaps = (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0);
-    const probs = getLMSRProbs(ch.votes);
     const effStatus = getEffectiveStatus(ch);
+const isResolvedQuestion = effStatus === "resolved";
+const correctIdx = (ch.correct !== null && ch.correct !== undefined) ? Number(ch.correct) : null;
+const probs = getChallengeDisplayProbs(ch);
 
     if (currentPlayerMode === 'easy') {
       const snap = snaps.length > 0 ? snaps[0] : null;
       if (snap) {
         let answersHtml = '';
         ch.answers.forEach((ans, aIdx) => {
-           const pct = probs[aIdx];
-           const isSelected = snap.ansIndex === aIdx;
-           const pts = isSelected ? +(Number(snap.pts).toFixed(2)) : +(1 / Math.max(0.001, pct)).toFixed(2);
-           const bg = isSelected ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
-           
-           answersHtml += `
-             <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-               <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${isSelected ? '✅ ' : ''}${ans}</div>
-               <div style="text-align:right;">
-                 <div id="recap-pts-val-${cIndex}-${aIdx}" style="font-size:12px; font-weight:bold; color:#fde047;">${pts} 💰</div>
-                 <div id="recap-pct-val-${cIndex}-${aIdx}" style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
-               </div>
-             </div>
-           `;
+const pct = probs[aIdx] || 0;
+const isSelected = snap.ansIndex === aIdx;
+const isCorrectAnswer = isResolvedQuestion && correctIdx === aIdx;
+
+const icon = isResolvedQuestion
+  ? (isCorrectAnswer ? '🏁 ' : (isSelected ? '❌ ' : ''))
+  : (isSelected ? '✅ ' : '');
+
+// Valeur affichée dans le détail du mode facile.
+// Question ouverte :
+// - réponse jouée = valeur AMM actuelle de la position
+// - autres réponses = valeur estimée si on misait 1 maintenant
+// Question résolue :
+// - bonne réponse jouée = gain final
+// - mauvaise réponse jouée = perdu
+const liveMarketValue = isSelected
+  ? window.getAMMValue(ch, snap)
+  : +window.PredictiveMath.calcSharesToBuy(ch.votes, aIdx, 1).toFixed(2);
+
+const ptsLabel = isResolvedQuestion
+  ? (
+      isSelected && isCorrectAnswer
+        ? `${Number(snap.pts).toFixed(2)} 💰 gagné`
+        : isSelected
+          ? `0 💰 perdu`
+          : isCorrectAnswer
+            ? `Réponse validée`
+            : `0 💰`
+    )
+  : `${Number(liveMarketValue).toFixed(2)} 💰`;
+
+const bg = isCorrectAnswer
+  ? 'background:rgba(34,197,94,0.18); border:1px solid #22c55e;'
+  : isSelected
+    ? 'background:rgba(168,85,247,0.15); border:1px solid #a855f7;'
+    : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
+
+answersHtml += `
+  <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${icon}${ans}</div>
+    <div style="text-align:right;">
+      <div id="recap-pts-val-${cIndex}-${aIdx}" style="font-size:12px; font-weight:bold; color:#fde047;">${ptsLabel}</div>
+      <div id="recap-pct-val-${cIndex}-${aIdx}" style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
+    </div>
+  </div>
+`;
         });
 
         // CORRECTION : On applique l'état ouvert/fermé mémorisé juste avant !
         const isDetailsOpen = openDetails.includes(cIndex.toString());
         const detailsClass = isDetailsOpen ? "" : "hidden";
         const summaryClass = isDetailsOpen ? "hidden" : "";
+
+
+        const selectedIsWinning = isResolvedQuestion && correctIdx === snap.ansIndex;
+
+const selectedAnswerIcon = isResolvedQuestion
+  ? (selectedIsWinning ? '✅ ' : '❌ ')
+  : '';
+
+const selectedValueLabel = isResolvedQuestion
+  ? (selectedIsWinning ? `+${Number(snap.pts).toFixed(2)} 💰 gagné` : `0 💰 perdu`)
+  : `+${Number(snap.pts).toFixed(2)} 💰 pot.`;
+
+const selectedValueColor = isResolvedQuestion
+  ? (selectedIsWinning ? "#4ade80" : "#f87171")
+  : "#3b82f6";
 
         finalHtml += `
           <div class="challenge-block" style="border-left: 3px solid #3b82f6; padding-bottom:10px;">
@@ -5126,8 +5733,8 @@ function updateRecapUI(pseudo) {
             <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
             
             <div id="summary-ch-${cIndex}" class="${summaryClass}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-              <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
-              <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+              <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedAnswerIcon}${ch.answers[snap.ansIndex]}</div>
+              <div style="color:${selectedValueColor}; font-size:13px; font-weight:bold;">${selectedValueLabel}</div>
             </div>
 
             <div id="details-ch-${cIndex}" class="${detailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
@@ -5545,6 +6152,9 @@ function goToPlayScreen() {
 }
 
 window.goToSpecificCard = function(cIndex) {
+    // En mode Facile, une réponse validée est définitive : aucun retour possible.
+    if (currentPlayerMode === 'easy') return;
+
     const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const cardPos = myIndices.indexOf(cIndex);
@@ -6500,12 +7110,15 @@ function startBigScreenEngine() {
         if (gridEl) gridEl.classList.add("bs-faded"); 
         
         setTimeout(() => {
-          window.bsFinalRecapIndex += 2;
-          if (window.bsFinalRecapIndex >= game.challenges.length) {
-            window.bsFinalRecapIndex = 0;
-          }
-          renderBigScreen();
-          if (gridEl) gridEl.classList.remove("bs-faded");
+const totalChallenges = (game.challenges || []).length;
+window.bsFinalRecapIndex = totalChallenges
+  ? (window.bsFinalRecapIndex + 2) % totalChallenges
+  : 0;
+
+renderBigScreen();
+
+const newGridEl = document.getElementById("bsRecapContainer");
+if (newGridEl) newGridEl.classList.remove("bs-faded");
         }, 800);
       }
     } else {
@@ -6674,19 +7287,28 @@ function renderBigScreen() {
 
          // 3. Récapitulatif : On isole la grille dans un "Container" pour ne faire disparaître QUE les cartes
          if (!document.getElementById("bsMiddle").innerHTML.includes("RÉCAPITULATIF DES RÉSULTATS")) {
-             document.getElementById("bsMiddle").innerHTML = `
-                <div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:25px; color:#e2e8f0; text-transform:uppercase;">RÉCAPITULATIF DES RÉSULTATS</div>
-                <div id="bsRecapContainer" style="transition: opacity 0.8s ease, transform 0.8s ease;"></div>
-             `;
+document.getElementById("bsMiddle").innerHTML = `
+   <div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:18px; color:#e2e8f0; text-transform:uppercase; text-align:center; flex-shrink:0;">
+      RÉCAPITULATIF DES RÉSULTATS
+   </div>
+   <div id="bsRecapContainer" style="transition: opacity 0.8s ease, transform 0.8s ease; flex:1; min-height:0; display:flex;"></div>
+`;
          }
 
-         let recapHtml = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:20px; padding-bottom: 20px;">`;
+let recapHtml = `<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:20px; width:100%; height:100%; min-height:0;">`;
 
-         if (typeof window.bsFinalRecapIndex === 'undefined' || window.bsFinalRecapIndex >= game.challenges.length) {
-            window.bsFinalRecapIndex = 0;
-         }
+const totalChallenges = game.challenges.length;
 
-         const visibleIndices = [window.bsFinalRecapIndex, window.bsFinalRecapIndex + 1].filter(idx => idx < game.challenges.length);
+if (typeof window.bsFinalRecapIndex === 'undefined' || window.bsFinalRecapIndex >= totalChallenges) {
+   window.bsFinalRecapIndex = 0;
+}
+
+// Toujours 2 cadres : si on arrive à la dernière question d'un nombre impair,
+// la deuxième carte revient à la première question.
+const currentRecapIndex = totalChallenges ? window.bsFinalRecapIndex % totalChallenges : 0;
+const visibleIndices = totalChallenges
+  ? [currentRecapIndex, (currentRecapIndex + 1) % totalChallenges]
+  : [];
 
          visibleIndices.forEach(i => {
             const ch = game.challenges[i];
@@ -6697,7 +7319,7 @@ function renderBigScreen() {
                const icon = isCorrect ? '✅' : '❌';
 
                answersHtml += `
-                  <div style="${bgStyle} padding:8px 12px; border-radius:8px; margin-bottom:6px; font-size:14px; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+                  <div style="${bgStyle} padding:clamp(10px, 1vh, 18px) clamp(12px, 1.2vw, 20px); border-radius:12px; margin-bottom:10px; font-size:clamp(15px, 1.1vw, 22px); font-weight:800; display:flex; justify-content:space-between; align-items:center;">
                      <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ans}</span>
                      <span>${icon}</span>
                   </div>
@@ -6705,10 +7327,10 @@ function renderBigScreen() {
             });
 
             recapHtml += `
-               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:15px; display:flex; flex-direction:column; justify-content:space-between; min-height:260px;">
+               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:22px; padding:clamp(16px, 1.6vw, 26px); display:flex; flex-direction:column; justify-content:space-between; min-height:0; height:100%; box-sizing:border-box; overflow:hidden;">
                   <div>
                      <div style="font-size:11px; color:#a855f7; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Challenge ${i+1} • ${ch.category}</div>
-                     <div style="font-size:16px; font-weight:600; color:white; margin-bottom:15px; line-height:1.3;">${ch.question}</div>
+                     <div style="font-size:clamp(18px, 1.5vw, 28px); font-weight:800; color:white; margin-bottom:18px; line-height:1.25;">${ch.question}</div>
                   </div>
                   <div>${answersHtml}</div>
                </div>
@@ -7337,9 +7959,10 @@ function copyWelcomeCode() {
 
 function closeWelcomeCode() {
     document.getElementById("welcomeCodeOverlay").style.display = "none";
-    // NOUVEAU : Maintenant que l'écran est dégagé, on peut lancer le tutoriel !
+    // Maintenant que l'écran est dégagé, on peut lancer le tutoriel automatique,
+    // mais seulement s'il n'a jamais été vu pour ce joueur/session.
     if (typeof startTuto === 'function') {
-        startTuto();
+        startTuto(false);
     }
 }
 
@@ -7444,11 +8067,15 @@ function updatePlayChallengesLive() {
                     if (getEffectiveStatus(ch) === "open") {
                         const probs = getLMSRProbs(ch.votes);
                         ch.answers.forEach((ans, aIdx) => {
-                            const pct = probs[aIdx];
-                            const pts = +(1 / Math.max(0.001, pct)).toFixed(2);
-                            
-                            const ptsEl = document.getElementById(`recap-pts-val-${cIndex}-${aIdx}`);
-                            if (ptsEl && ptsEl.innerHTML !== `${pts} 💰`) ptsEl.innerHTML = `${pts} 💰`;
+                          const pct = probs[aIdx];
+                          const snapForAnswer = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === aIdx && b.bet > 0 && !b.cashedOut);
+
+                          const pts = snapForAnswer
+                            ? window.getAMMValue(ch, snapForAnswer)
+                            : +window.PredictiveMath.calcSharesToBuy(ch.votes, aIdx, 1).toFixed(2);
+
+                          const ptsEl = document.getElementById(`recap-pts-val-${cIndex}-${aIdx}`);
+                          if (ptsEl && ptsEl.innerHTML !== `${pts} 💰`) ptsEl.innerHTML = `${pts} 💰`;
                             
                             const pctEl = document.getElementById(`recap-pct-val-${cIndex}-${aIdx}`);
                             if (pctEl && pctEl.innerHTML !== `${(pct*100).toFixed(1)}%`) pctEl.innerHTML = `${(pct*100).toFixed(1)}%`;
@@ -7457,19 +8084,10 @@ function updatePlayChallengesLive() {
                 });
             }
 
-            // C. Mise à jour chirurgicale du Classement et des scores globaux MTM
-            let totalPotentialPoints = 0;
-            player.portfolio.forEach(snap => {
-                const ch = game.challenges[snap.cIndex];
-                const isWin = (snap.type === 'YES' && snap.ansIndex === ch.correct) ||
-                              (snap.type === 'NO' && snap.ansIndex !== ch.correct) ||
-                              (!snap.type && snap.ansIndex === ch.correct);
-                if ((ch.status !== "resolved" || isWin) && !snap.paidOut) {
-                    totalPotentialPoints += snap.pts;
-                }
-            });
-            const maxScorePossible = (player.balance + totalPotentialPoints).toFixed(2);
-            const maxScoreEl = document.getElementById("recap-max-score");
+// C. Mise à jour chirurgicale du Classement et des scores globaux MTM
+// On utilise la même formule que le classement provisoire.
+const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
+const maxScoreEl = document.getElementById("recap-max-score");
             if (maxScoreEl) {
                 const scoreHtml = `${maxScorePossible} <span style="font-size:18px;">💰</span>`;
                 if (maxScoreEl.innerHTML !== scoreHtml) maxScoreEl.innerHTML = scoreHtml;
