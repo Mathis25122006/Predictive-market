@@ -301,20 +301,18 @@
 
 
 /* NOUVEAU : On crée un "calque" indépendant qui reste figé derrière le site */
- body::before {
+body::before {
    content: "";
    position: fixed;
-   inset: 0;
-   width: 100vw;
-   height: 100vh;
+   top: 0; left: 0; 
+   width: 100vw; height: 100vh;
    z-index: -1;
-   background:
-     radial-gradient(circle at 18% 20%, rgba(168,85,247,0.44) 0%, transparent 42%),
-     radial-gradient(circle at 86% 78%, rgba(96,165,250,0.18) 0%, transparent 38%),
-     radial-gradient(circle at 50% 110%, rgba(236,72,153,0.13) 0%, transparent 34%),
-     linear-gradient(135deg, var(--pg-bg-0), var(--pg-bg-1) 52%, #050816);
-   background-size: 150% 150%;
-   animation: cosmicDrift 18s ease-in-out infinite;
+   background-color: #05010d;
+   background-image: 
+     radial-gradient(circle at 20% 30%, rgba(91, 33, 182, 0.45) 0%, transparent 60%),
+     radial-gradient(circle at 80% 80%, rgba(30, 10, 60, 0.6) 0%, transparent 50%);
+   background-size: 150% 150%; 
+   animation: cosmicDrift 15s ease-in-out infinite;
    pointer-events: none;
  }
 
@@ -1395,34 +1393,37 @@ body.play-mode-active {
   <div id="bsAuthMsg" class="msg"></div>
 </div>
 
-<div id="bigScreen" class="bs-stage" style="display:none;">
-  <div class="bs-shell">
+<div id="bigScreen" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background: radial-gradient(circle at center, #2e1065, #0f172a); z-index:3000; color:white; overflow:hidden; padding:5px 40px 15px 40px; box-sizing:border-box; font-family: system-ui, sans-serif;">
+  <div style="display:flex; flex-direction:column; height:100%;">
+    
+   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-shrink:0;">
+       
+       <div style="width:320px; display:flex; justify-content:flex-start;">
+           <div id="bsQrContainer" style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);"></div>
+       </div>
 
-    <div class="bs-topbar">
-      <div class="bs-header-slot">
-        <div id="bsQrContainer" class="bs-code-card"></div>
-      </div>
+       <div style="text-align:center; flex:1; cursor:pointer; margin-top:-35px;" onclick="showScreen('home')">
+              <img src="FDJ_Predinno.png" alt="Viva Technology" style="width: 100%; max-width: 350px; height: auto; margin-bottom: 5px;">
+              
+              <div style="font-size:34px; font-weight:900; letter-spacing:1px; margin-bottom:12px; line-height:1.2;">LIVE PREDICTION GAME</div>
+              
+              <div style="display:inline-block; background:rgba(248,113,113,0.1); border:1px solid #f87171; padding:6px 18px; border-radius:999px;">
+                 <span style="font-size:11px; color:#f87171; font-weight:bold; text-transform:uppercase; margin-right:10px;">Fin de la session :</span>
+                 <span id="bsGlobalTimer" style="font-size:22px; font-weight:800; font-family:monospace; color:#f87171;">00:00:00</span>
+              </div>
+       </div>
 
-      <div class="bs-brand-center" onclick="showScreen('home')">
-        <img src="FDJ_Predinno.png" alt="FDJ Predinno" style="width:100%; max-width:300px; height:auto; margin-bottom:10px;">
-        <div class="bs-main-title">Live Prediction Game</div>
-        <div class="bs-session-pill">
-          <span>Fin de la session :</span>
-          <span id="bsGlobalTimer">00:00:00</span>
-        </div>
-      </div>
-
-      <div class="bs-header-slot right">
-        <div id="bsNextSessionHeaderContainer"></div>
-      </div>
+       <div style="width:320px; display:flex; justify-content:flex-end;">
+          <div id="bsNextSessionHeaderContainer"></div>
+       </div>
     </div>
 
-    <div class="bs-grid">
-      <div id="bsLeft" class="bs-panel"></div>
-      <div id="bsMiddle" class="bs-panel"></div>
-      <div id="bsRight" class="bs-panel bs-panel--leaderboard"></div>
+    <div style="display:flex; justify-content:space-between; gap:25px; flex:1; min-height:0;">
+       <div id="bsLeft" style="flex:1; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column;"></div>
+       <div id="bsMiddle" style="flex:1; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column;"></div>
+       <div id="bsRight" style="flex:0.8; background:#1e1b4b; border:1px solid rgba(168,85,247,0.4); border-radius:24px; padding:22px; box-shadow:0 15px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(168,85,247,0.08); display:flex; flex-direction:column; overflow-y:auto;"></div>
     </div>
-
+    
   </div>
 </div>
 <div id="welcomeCodeOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2,6,23,0.95); backdrop-filter:blur(10px); z-index:10000; flex-direction:column; justify-content:center; align-items:center; padding:20px; text-align:center; box-sizing:border-box;">
@@ -3011,23 +3012,21 @@ const block = document.createElement("div");
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
     // CORRECTION : On conditionne l'affichage du solde pour le cacher en Mode Facile
-const cardPosition = myIndices.indexOf(cIndex) + 1;
-const progressLabel = `${cardPosition}/${myIndices.length}`;
-
-const scoreHtml = currentPlayerMode === 'easy'
-  ? `<div class="player-pill player-pill--ghost">Question ${progressLabel}</div>`
-  : `<div class="player-pill"><span id="live-score-${cIndex}">${currentPlayerBalance}</span><span>💰</span></div>`;
+const scoreHtml = currentPlayerMode === 'easy' 
+   ? `<div></div>`
+   : `<div style="color:#fde047; font-size:15px; font-weight:900; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.4); padding:4px 12px; border-radius:999px; border: 1px solid rgba(255,255,255,0.1);">
+         <span id="live-score-${cIndex}">${currentPlayerBalance}</span> 💰
+      </div>`;
 
 header.innerHTML = `
-  <div class="mobile-card-topbar">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(2px, 0.5vh, 6px);">
     ${scoreHtml}
-    <div class="timer-pill">
-      <span style="font-size:12px; opacity:0.82;">⏱️</span>
-      <span id="open-timer-${cIndex}">--:--</span>
+    <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
+       <span style="font-size:10px; opacity:0.8;">⏱️</span>
+       <div id="open-timer-${cIndex}" style="color:#fde047; font-size:13px; font-weight:900; font-family:monospace; margin-top:1px;">--:--</div>
     </div>
   </div>
-
-  <div class="mobile-category">${ch.category}</div>
+  <div style="font-size:clamp(14px, 2.5vh, 20px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
   ${imgHtml}
 `;
 
@@ -3068,8 +3067,8 @@ const hintText = currentPlayerMode === 'easy'
     const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
     // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
 const btnHtml = (isLastCard || window.isRebetting)
-   ? `<button onclick="playNext()" class="btn-mobile-main">Valider mes paris</button>${hintText}`
-   : `<button onclick="swipeNextCard()" class="btn-mobile-main">Suivant</button>${hintText}`;
+   ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+   : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
     // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
     footer.innerHTML = `
@@ -3500,8 +3499,7 @@ function renderAnswersForChallenge(cIndex){
   const hasSelection = hasBets || (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined);
   
 // Couleurs identiques au Grand Écran
-const letters = ['A','B','C','D','E','F','G','H'];
-const colors = ["#22c55e","#60a5fa","#f97316","#ec4899","#a855f7","#22d3ee","#fde047"];
+const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
 
   // --- NOUVEAU : MOTEUR DE MISE À JOUR SANS DESTRUCTION ---
   // On vérifie si les boutons existent déjà. Si oui, on les met à jour au lieu de les recréer.
@@ -3566,7 +3564,7 @@ const c = colors[i % colors.length];
     div.style.padding = btnPadding;
     label.style.fontSize = labelFontSize;
     ptsSpan.style.fontSize = ptsFontSize;
-label.textContent = `${letters[i] || ""} · ${a}`;
+label.textContent = a;
 
     // L'animation de remplissage de la jauge (Exactement comme l'écran TV)
     if (gauge) {
@@ -3652,29 +3650,13 @@ label.textContent = `${letters[i] || ""} · ${a}`;
     }
 
     // Mise à jour des textes de cotes
-const pctLabel = (pct * 100) < 1 ? "&lt;1%" : `${(pct * 100).toFixed(currentPlayerMode === 'easy' ? 0 : 1)}%`;
-
 if (currentPlayerMode === 'easy') {
-    ptsSpan.innerHTML = `
-      <div class="answer-metric">
-        <strong>${pctLabel}</strong>
-      </div>
-    `;
+    ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100) < 1 ? '&lt;1%' : (pct*100).toFixed(1) + '%'}</span></div>`;
 } else {
     if (snapForThisAns) {
-        ptsSpan.innerHTML = `
-          <div class="answer-metric">
-            <strong>${snapForThisAns.bet} 💰</strong>
-            <span>Misé</span>
-          </div>
-        `;
+        ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Mise: ${snapForThisAns.bet}u</span>`;
     } else {
-        ptsSpan.innerHTML = `
-          <div class="answer-metric">
-            <strong>${pts.toFixed(2)} 💰</strong>
-            <span>${pctLabel}</span>
-          </div>
-        `;
+        ptsSpan.innerHTML = `${(pct*100) < 1 ? '&lt;1' : (pct*100).toFixed(0)}<span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
     }
 }
   });
@@ -8259,12 +8241,12 @@ function renderBigScreen() {
       const scanText = isFinished ? "Scannez pour voir<br>votre classement" : "Scannez pour jouer";
       
 document.getElementById("bsQrContainer").innerHTML = `
-  <img src="${qrUrl}">
-  <div>
-    <div class="bs-code-label">${scanText}</div>
-    <div class="bs-code-value">${activeCode}</div>
-  </div>
-`;
+      <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+      <div>
+        <div style="font-size:11px; color:#9ca3af; text-transform:uppercase; font-weight:bold; line-height:1.2; margin-bottom:4px;">${scanText}</div>
+        <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px; line-height:1;">${activeCode}</div>
+      </div>
+    `;
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
          // CORRECTION : Répartition parfaite 40% / 60% pour le podium et les récapitulatifs
@@ -8349,30 +8331,15 @@ const visibleIndices = totalChallenges
          visibleIndices.forEach(i => {
             const ch = game.challenges[i];
             let answersHtml = '';
-const voteStats = typeof getAdminVoteStatsForChallenge === "function"
-  ? getAdminVoteStatsForChallenge(i)
-  : null;
-
 ch.answers.forEach((ans, aIdx) => {
-   const isCorrect = Number(ch.correct) === Number(aIdx);
-   const votes = voteStats && voteStats.counts ? (voteStats.counts[aIdx] || 0) : 0;
-   const totalVotes = voteStats ? (voteStats.total || 0) : 0;
-   const votePct = totalVotes > 0 ? (votes / totalVotes) * 100 : 0;
-
-   const bgStyle = isCorrect
-     ? 'background:rgba(34,197,94,0.16); border:1px solid rgba(34,197,94,0.92); color:#4ade80;'
-     : 'background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.08); color:#cbd5e1;';
+   const isCorrect = (ch.correct === aIdx);
+   const bgStyle = isCorrect ? 'background:rgba(34,197,94,0.2); border:1px solid #22c55e; color:#4ade80;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#9ca3af; opacity:0.6;';
+   const icon = isCorrect ? '✅' : '❌';
 
    answersHtml += `
-      <div style="${bgStyle} position:relative; overflow:hidden; padding:clamp(10px, 1vh, 18px) clamp(12px, 1.2vw, 20px); border-radius:14px; margin-bottom:10px; font-size:clamp(15px, 1.1vw, 22px); font-weight:900;">
-        <div style="position:absolute; inset:0 auto 0 0; width:${votePct}%; background:${isCorrect ? 'rgba(34,197,94,0.18)' : 'rgba(168,85,247,0.16)'};"></div>
-
-        <div style="position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; gap:18px;">
-          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ans}</span>
-          <span style="font-size:clamp(13px, 0.95vw, 18px); color:${isCorrect ? '#4ade80' : '#94a3b8'};">
-            ${isCorrect ? '✓ Bonne réponse' : `${votePct.toFixed(0)}%`}
-          </span>
-        </div>
+      <div style="${bgStyle} padding:clamp(10px, 1vh, 18px) clamp(12px, 1.2vw, 20px); border-radius:12px; margin-bottom:10px; font-size:clamp(15px, 1.1vw, 22px); font-weight:800; display:flex; justify-content:space-between; align-items:center;">
+         <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ans}</span>
+         <span>${icon}</span>
       </div>
    `;
 });
@@ -8523,29 +8490,20 @@ ch.answers.forEach((ans, aIdx) => {
      return { name: p.name, score: window.calculatePlayerScore(p, game) };
   }).sort((a,b) => b.score - a.score).slice(0, 10);
 
-let lbHtml = `
-  <div style="font-size:clamp(24px, 2vw, 36px); font-weight:950; letter-spacing:0.06em; margin-bottom:18px; color:#f8fafc; text-transform:uppercase; flex-shrink:0;">
-    Leaderboard
-  </div>
-`;
+let lbHtml = `<div style="font-size:24px; font-weight:800; letter-spacing:1.5px; margin-bottom:15px; color:#e2e8f0; text-transform:uppercase; flex-shrink:0;">LEADERBOARD</div>`;
 
-lbHtml += `<div style="display:flex; flex-direction:column; flex:1; justify-content:space-between; gap:7px; min-height:0;">`;
+lbHtml += `<div style="display:flex; flex-direction:column; flex:1; justify-content:space-between; min-height:0;">`;
 
 leaderboard.forEach((p, idx) => {
    const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
-   const isTop3 = idx < 3;
-
-   const rankColor = idx === 0 ? "#fde047" : idx === 1 ? "#e5e7eb" : idx === 2 ? "#fb923c" : "#c084fc";
-   const rowBg = isTop3 ? "rgba(255,255,255,0.085)" : "rgba(255,255,255,0.035)";
-   const border = isTop3 ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.06)";
 
    lbHtml += `
-      <div style="display:flex; flex:1; justify-content:space-between; align-items:center; min-height:0; padding:0 14px; border-radius:13px; background:${rowBg}; border:1px solid ${border}; font-size:clamp(14px, 1.85vh, 21px);">
-         <div style="display:flex; gap:16px; align-items:center; min-width:0;">
-            <span style="color:${rankColor}; font-weight:950; width:32px; font-size:clamp(16px, 2vh, 23px);">${idx + 1}</span>
-            <span style="font-weight:800; text-transform:capitalize; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
+      <div style="display:flex; flex:1; justify-content:space-between; align-items:center; font-size:clamp(14px, 2vh, 22px); border-bottom:1px solid rgba(255,255,255,0.05); min-height:0;">
+         <div style="display:flex; gap:20px; align-items:center;">
+            <span style="color:#a855f7; font-weight:900; width:30px; font-size:clamp(14px, 2vh, 20px);">${idx+1}</span>
+            <span style="font-weight:500; text-transform:capitalize;">${p.name}</span>
          </div>
-         <div style="font-weight:950; color:#ffffff;">${scoreDisplay}</div>
+         <div style="font-weight:800;">${scoreDisplay}</div>
       </div>
    `;
 });
@@ -8558,41 +8516,35 @@ lbHtml += `</div>`;
 
 function renderBsProgress(ch) {
   let probs = [];
-
-  if (typeof getChallengeDisplayProbs === "function") {
-    probs = getChallengeDisplayProbs(ch);
-  } else if (typeof getLMSRProbs === "function") {
-    probs = getLMSRProbs(ch.votes);
+  if (typeof getLMSRProbs === 'function') {
+     probs = getLMSRProbs(ch.votes);
   } else {
-    const t = ch.votes.reduce((a,b) => a + b, 0) || 1;
-    probs = ch.votes.map(v => v / t);
+     const t = ch.votes.reduce((a,b)=>a+b,0)||1;
+     probs = ch.votes.map(v=>v/t);
   }
-
+  
   const letters = ['A','B','C','D','E','F','G','H'];
-  const colors = ["#22c55e","#60a5fa","#f97316","#ec4899","#a855f7","#22d3ee","#fde047"];
-
-  return ch.answers.map((ans, i) => {
-    const rawPct = Math.max(0, Math.min(100, (probs[i] || 0) * 100));
-    const pct = rawPct < 1 ? "<1" : rawPct.toFixed(0);
-    const c = colors[i % colors.length];
-
-    return `
-      <div style="display:flex; align-items:center; width:100%; flex:1 1 0; min-height:0; gap:16px;">
-        <div style="flex:1; height:100%; min-height:0; max-height:52px; position:relative; overflow:hidden; border-radius:14px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.07); box-shadow:inset 0 0 16px rgba(0,0,0,0.22);">
-          <div style="position:absolute; inset:0 auto 0 0; width:${rawPct}%; background:linear-gradient(90deg, ${c}, ${c}99); opacity:0.78; transition:width 0.8s cubic-bezier(0.2,0.8,0.2,1);"></div>
-
-          <div style="position:absolute; inset:0 16px; display:flex; align-items:center; min-width:0; font-size:clamp(12px, 1.55vh, 17px); font-weight:900; text-shadow:0 3px 10px rgba(0,0,0,0.85);">
-            <span style="color:${c}; flex-shrink:0; margin-right:12px;">${letters[i]} •</span>
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${ans}</span>
-          </div>
-        </div>
-
-        <div style="width:74px; text-align:right; font-size:clamp(16px, 2.1vh, 24px); font-weight:950; color:${c}; flex-shrink:0;">
-          ${pct}%
-        </div>
-      </div>
-    `;
-  }).join("");
+  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
+  
+let html = '';
+      ch.answers.forEach((ans, i) => {
+         const pct = (probs[i]*100).toFixed(0);
+         const c = colors[i % colors.length];
+         
+         html += `
+            <div style="display:flex; align-items:center; width:100%; flex:1 1 0; min-height:0;">
+               <div style="flex:1; background:rgba(255,255,255,0.05); border-radius:8px; height:100%; min-height:0; max-height:45px; position:relative; overflow:hidden; border:1px solid rgba(255,255,255,0.02);">
+                  <div style="position:absolute; top:0; left:0; height:100%; width:${pct}%; background:${c}; opacity:0.6; transition:width 1s ease-in-out;"></div>
+                  <div style="position:absolute; top:0; left:15px; right:10px; height:100%; display:flex; align-items:center; font-size:clamp(11px, 1.6vh, 16px); font-weight:600; text-shadow: 0 2px 4px rgba(0,0,0,0.8); white-space:nowrap; overflow:hidden;">
+                     <span style="margin-right:10px; color:${c}; font-weight:900; flex-shrink:0;">${letters[i]} •</span> 
+                     <span style="overflow:hidden; text-overflow:ellipsis;">${ans}</span>
+                  </div>
+               </div>
+               <div style="width:70px; text-align:right; font-size:clamp(14px, 2vh, 22px); font-weight:900; color:${c}; flex-shrink:0;">${pct}%</div>
+            </div>
+         `;
+      });
+      return html;
 }
 
 function updateBsTimers() {
