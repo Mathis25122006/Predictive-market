@@ -836,43 +836,37 @@ body.play-mode-active {
 
 #challengesPlay .challenge-block {
   position: absolute;
-
-  /* Plus haut et moins collé au bas : meilleur sur Safari iPhone */
-  top: calc(max(14px, env(safe-area-inset-top)) + 72px);
-  bottom: calc(max(74px, env(safe-area-inset-bottom)) + 18px);
-  left: 16px;
-  right: 16px;
+  top: calc(max(15px, env(safe-area-inset-top)) + 65px); 
+  bottom: calc(max(15px, env(safe-area-inset-bottom)) + 15px);
+  left: 15px; 
+  right: 15px; 
   margin: auto;
-
-  height: auto;
-  max-height: 760px;
+  
+  height: auto; 
+  max-height: 750px;
   box-sizing: border-box;
-
-  background:
-    radial-gradient(circle at 50% 0%, rgba(168,85,247,0.22), transparent 38%),
-    linear-gradient(180deg, rgba(24, 12, 52, 0.92) 0%, rgba(8, 4, 22, 0.985) 100%) !important;
-
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-
-  border-radius: 34px !important;
-  padding: clamp(18px, 2.5vh, 24px) clamp(18px, 4vw, 24px) clamp(14px, 2vh, 20px) !important;
-
-  border: 1.5px solid var(--pg-border-strong) !important;
-  box-shadow:
-    var(--pg-shadow-glow),
-    inset 0 0 22px rgba(168,85,247,0.22),
-    0 34px 76px rgba(0,0,0,0.82) !important;
-
+  
+  background: linear-gradient(180deg, rgba(20, 10, 40, 0.8) 0%, rgba(5, 2, 15, 0.98) 100%) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 36px !important;
+  padding: 24px 20px 12px 20px !important;
+  
+  border: 2px solid rgba(168, 85, 247, 1) !important;
+  box-shadow: 
+      0 0 35px rgba(168, 85, 247, 0.65),       
+      inset 0 0 25px rgba(168, 85, 247, 0.4),  
+      0 40px 80px rgba(0,0,0,0.95) !important; 
+  
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-
+  overflow: hidden; 
+  
   transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out;
   transform-origin: center bottom;
   z-index: 1;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: none; 
 }
 
 /* Effets d'empilement (Stack) des cartes suivantes */
@@ -2902,6 +2896,42 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
     return betInfoHtml;
 };
 
+window.getPlayerDisplayIndices = function(player) {
+  const rawIndices = (player && Array.isArray(player.assignedIndices))
+    ? [...player.assignedIndices]
+    : [];
+
+  const uniqueIndices = [...new Set(rawIndices)]
+    .filter(i => game.challenges && game.challenges[i]);
+
+  const statusPriority = (cIndex) => {
+    const ch = game.challenges[cIndex];
+    const status = ch ? getEffectiveStatus(ch) : "unknown";
+
+    // Priorité absolue : questions ouvertes.
+    if (status === "open") return 0;
+
+    // Ensuite les questions pas encore ouvertes.
+    if (status === "pending") return 1;
+
+    // Puis les questions closes mais pas encore résolues.
+    if (status === "closed") return 2;
+
+    // Enfin les questions terminées.
+    if (status === "resolved") return 3;
+
+    return 4;
+  };
+
+  return uniqueIndices.sort((a, b) => {
+    const priorityDiff = statusPriority(a) - statusPriority(b);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    // Dans chaque groupe, on respecte l'ordre d'apparition réel des questions.
+    return Number(a) - Number(b);
+  });
+};
+
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
@@ -2911,19 +2941,22 @@ function renderPlayChallenges(){
   
 const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+  const displayIndices = typeof window.getPlayerDisplayIndices === "function"
+    ? window.getPlayerDisplayIndices(player)
+    : myIndices;
 
   // SÉCURITÉ : Si on est en train de glisser une carte, on n'interrompt pas le rendu
   if (window.isCardDragging) return; 
 
-  // pour respecter l'ordre et assurer que la dernière carte soit bien la dernière affichée.
-  myIndices.forEach((cIndex) => {
+  // Les questions ouvertes passent toujours devant, dans l'ordre d'apparition réel.
+  displayIndices.forEach((cIndex, displayPos) => {
     const ch = game.challenges[cIndex];
     if (!ch) return;
 
 const block = document.createElement("div");
     block.className = "challenge-block";
     block.dataset.cIndex = String(cIndex);
-    block.dataset.cardPos = String(myIndices.indexOf(cIndex));
+    block.dataset.cardPos = String(displayPos);
     const effStatus = getEffectiveStatus(ch);
     // (L'événement de clic est désormais géré intelligemment par le moteur tactile pour éviter les bugs sur mobile)
 
@@ -3296,11 +3329,12 @@ activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), op
         
         // Si on a tapé dans le vide (pas sur un bouton ni sur une réponse), on désélectionne !
         if (!e.target.closest('button') && !e.target.closest('.answer-btn')) {
-            const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-            const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-            const cIndex = myIndices[window.currentCardIndex];
+const activeCardForTap = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
+            const cIndex = activeCardForTap && activeCardForTap.dataset && activeCardForTap.dataset.cIndex !== undefined
+              ? Number(activeCardForTap.dataset.cIndex)
+              : null;
             
-            if (currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
+            if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
                 selectedAnswers[cIndex] = null;
                 selectedBets[cIndex] = 0;
                 window.saveLocalProgress();
@@ -7154,9 +7188,13 @@ window.goToSpecificCard = function(cIndex) {
         return;
     }
 
-    const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
+const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-    const cardPos = myIndices.indexOf(cIndex);
+    const displayIndices = typeof window.getPlayerDisplayIndices === "function"
+      ? window.getPlayerDisplayIndices(player)
+      : myIndices;
+
+    const cardPos = displayIndices.indexOf(cIndex);
     
     if (cardPos !== -1) {
         window.currentCardIndex = cardPos; 
