@@ -3137,7 +3137,22 @@ const btnHtml = (isLastCard || window.isRebetting)
   };
 
 window.swipeNextCard = function() {
+    const domActiveCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+    const activeCard = domActiveCard || cardsElements[window.currentCardIndex];
+
+    if (!activeCard) return false;
+
+    const realCardIndex = cardsElements.indexOf(activeCard);
+    if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+        window.currentCardIndex = realCardIndex;
+    }
+
     if(window.currentCardIndex >= cardsElements.length - 1) return false;
+
+    // Dès que le tuto demande de swiper, on libère le verrou de la première carte.
+    if (window.currentTutoStep >= 5 && typeof window.releaseTutoCardLockForNavigation === "function") {
+        window.releaseTutoCardLockForNavigation();
+    }
 
     // CORRECTION : Si on attendait un swipe vers le bas (étape 6) mais qu'il fait un swipe vers le haut, on ferme le tuto et on autorise.
     if (window.currentTutoStep === 6) {
@@ -3147,12 +3162,13 @@ window.swipeNextCard = function() {
     // Utilisation de la vérification centralisée
     if (!window.canPassCurrentCard()) return false;
 
-    const activeCard = cardsElements[window.currentCardIndex];
     activeCard.style.transform = '';
 
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-    const cIndex = myIndices[window.currentCardIndex];
+    const cIndex = activeCard.dataset && activeCard.dataset.cIndex !== undefined
+      ? Number(activeCard.dataset.cIndex)
+      : myIndices[window.currentCardIndex];
 
     const goNextForReal = () => {
         activeCard.classList.add('fly-away'); 
@@ -3218,9 +3234,14 @@ window.swipePrevCard = function() {
   window.isCardDragging = false; 
   window.hasMovedCard = false; // NOUVEAU : Détecteur d'intention de mouvement
 
-  containerEl.addEventListener('touchstart', (e) => {
-    const activeCard = cardsElements[window.currentCardIndex];
+containerEl.addEventListener('touchstart', (e) => {
+    const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
     if(!activeCard || !activeCard.contains(e.target)) return;
+
+    const realCardIndex = cardsElements.indexOf(activeCard);
+    if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+        window.currentCardIndex = realCardIndex;
+    }
     
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
@@ -3235,8 +3256,10 @@ window.swipePrevCard = function() {
     
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
-    const activeCard = cardsElements[window.currentCardIndex];
-    const deltaY = e.touches[0].clientY - startY;
+  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
+if (!activeCard) return;
+
+const deltaY = e.touches[0].clientY - startY;
     const deltaX = e.touches[0].clientX - startX;
     
     // NOUVEAU : Si le doigt parcourt plus de 10 pixels, c'est définitivement un glissement
@@ -3254,8 +3277,15 @@ window.swipePrevCard = function() {
     
     if (window.currentTutoStep > 0 && window.currentTutoStep !== 4 && window.currentTutoStep !== 5 && window.currentTutoStep !== 6 && window.currentTutoStep !== 7) return;
     
-    const activeCard = cardsElements[window.currentCardIndex];
-    activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
+const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
+if (!activeCard) return;
+
+const realCardIndex = cardsElements.indexOf(activeCard);
+if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+    window.currentCardIndex = realCardIndex;
+}
+
+activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
     const deltaX = e.changedTouches[0].clientX - startX;
@@ -3348,9 +3378,9 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
       if (window.currentTutoStep === 1) {
           nextTuto(3);
       } 
-      else if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
-          closeTuto();
-      }
+else if (window.currentTutoStep === 7) {
+    closeTuto();
+}
   }, true); 
 
   updateCardStack();
@@ -3707,13 +3737,21 @@ window.getActiveCardChallengeIndex = function() {
 };
 
 window.restoreTutoCardIfNeeded = function() {
-  if (window.currentTutoStep <= 0) return;
+  // On verrouille seulement les étapes où le tuto doit encadrer un élément précis.
+  // Dès l'étape 5, l'utilisateur doit pouvoir swiper librement.
+  if (window.currentTutoStep <= 0 || window.currentTutoStep >= 5) return;
   if (window.tutoLockedCardIndex === null || window.tutoLockedCardIndex === undefined) return;
 
   if (window.currentCardIndex !== window.tutoLockedCardIndex) {
     window.currentCardIndex = window.tutoLockedCardIndex;
     if (typeof updateCardStack === "function") updateCardStack();
   }
+};
+
+window.releaseTutoCardLockForNavigation = function() {
+  window.isTutoDomFrozen = false;
+  window.tutoLockedCardIndex = null;
+  window.tutoLockedChallengeIndex = null;
 };
 
 window.getTutoStorageKey = function() {
@@ -3795,6 +3833,10 @@ function clearTutoHighlights() {
 }
 
 function nextTuto(step) {
+  if (step >= 5 && typeof window.releaseTutoCardLockForNavigation === "function") {
+    window.releaseTutoCardLockForNavigation();
+  }
+
   if (window.tutoLockedCardIndex !== null && window.tutoLockedCardIndex !== undefined && step >= 1 && step <= 4) {
     window.currentCardIndex = window.tutoLockedCardIndex;
     if (typeof updateCardStack === "function") updateCardStack();
@@ -9165,22 +9207,27 @@ const maxScoreEl = document.getElementById("recap-max-score");
     // SÉCURITÉ TUTORIEL :
     // Pendant le tuto, on ne reconstruit jamais les réponses ni les cartes en arrière-plan.
     // Sinon une question derrière la carte active peut détruire le DOM encadré et désynchroniser currentCardIndex.
-    if (window.currentTutoStep > 0 || window.isTutoDomFrozen) {
-        if (typeof window.restoreTutoCardIfNeeded === "function") window.restoreTutoCardIfNeeded();
+const shouldFreezeTutoDom =
+  window.isTutoDomFrozen === true &&
+  window.currentTutoStep > 0 &&
+  window.currentTutoStep < 5;
 
-        const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
-          ? window.getActiveCardChallengeIndex()
-          : myIndices[window.currentCardIndex];
+if (shouldFreezeTutoDom) {
+    if (typeof window.restoreTutoCardIfNeeded === "function") window.restoreTutoCardIfNeeded();
 
-        if (activeCIndex !== null && activeCIndex !== undefined) {
-            const scoreEl = document.getElementById("live-score-" + activeCIndex);
-            if (scoreEl && typeof currentPlayerBalance !== "undefined") {
-                scoreEl.innerHTML = `${currentPlayerBalance}`;
-            }
+    const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
+      ? window.getActiveCardChallengeIndex()
+      : myIndices[window.currentCardIndex];
+
+    if (activeCIndex !== null && activeCIndex !== undefined) {
+        const scoreEl = document.getElementById("live-score-" + activeCIndex);
+        if (scoreEl && typeof currentPlayerBalance !== "undefined") {
+            scoreEl.innerHTML = `${currentPlayerBalance}`;
         }
-
-        return;
     }
+
+    return;
+}
 
     myIndices.forEach((cIndex) => {
         const ch = game.challenges[cIndex];
