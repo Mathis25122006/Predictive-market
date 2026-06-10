@@ -1871,6 +1871,65 @@ body.play-mode-active {
 let screenHistory = [];
 let currentScreenId = 'home';
 
+const ROUTE_BY_SCREEN = {
+  home: "/",
+  adminMenu: "/admin",
+  selectMode: "/admin/nouveau",
+  setup: "/admin/configuration",
+  manageAuth: "/admin/gerer",
+  manageGame: "/admin/gestion",
+  simulationSetup: "/admin/simulateur",
+  play: "/jouer",
+  playerRecap: "/recap",
+  playerResult: "/fin",
+  results: "/resultats",
+  sessionInfo: "/session",
+  bigScreenAuth: "/grand-ecran",
+  bigScreen: "/grand-ecran/live"
+};
+
+const SCREEN_BY_ROUTE = Object.entries(ROUTE_BY_SCREEN).reduce((acc, [screen, path]) => {
+  acc[path] = screen;
+  return acc;
+}, {});
+
+function getScreenFromCurrentUrl() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  return SCREEN_BY_ROUTE[path] || "home";
+}
+
+function getRouteForScreen(screenId) {
+  return ROUTE_BY_SCREEN[screenId] || "/";
+}
+
+function getPreservedSearchForScreen(screenId) {
+  const params = new URLSearchParams(window.location.search);
+  const session = params.get("session");
+
+  // On garde ?session=XXXX seulement sur les pages joueur utiles.
+  if (session && ["play", "playerRecap", "playerResult", "results"].includes(screenId)) {
+    return "?session=" + encodeURIComponent(session);
+  }
+
+  return "";
+}
+
+function updateUrlForScreen(screenId, replace = false) {
+  const route = getRouteForScreen(screenId);
+  const search = getPreservedSearchForScreen(screenId);
+  const nextUrl = route + search;
+
+  if (window.location.pathname + window.location.search === nextUrl) return;
+
+  const state = { screenId };
+
+  if (replace) {
+    window.history.replaceState(state, "", nextUrl);
+  } else {
+    window.history.pushState(state, "", nextUrl);
+  }
+}
+
 // NOUVEAU : Fonction de retour en arrière
 function goBack() {
   if (screenHistory.length > 0) {
@@ -1881,7 +1940,7 @@ function goBack() {
   }
 }
 
-function showScreen(screenId, isBack = false) {
+function showScreen(screenId, isBack = false, skipUrlUpdate = false) {
   try {
     // Ajout de l'écran actuel à l'historique si on avance
     if (!isBack && currentScreenId && currentScreenId !== screenId) {
@@ -1892,6 +1951,10 @@ function showScreen(screenId, isBack = false) {
       screenHistory = []; 
     }
     currentScreenId = screenId;
+
+if (!skipUrlUpdate) {
+  updateUrlForScreen(screenId, isBack);
+}
 
     // Liste des écrans gérés
     const screens = ['home', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup'];
@@ -1983,6 +2046,11 @@ window.currentTutoStep = 0;
     console.error("Erreur critique dans showScreen :", e);
   }
 }
+
+window.addEventListener("popstate", () => {
+  const screenId = getScreenFromCurrentUrl();
+  showScreen(screenId, true, true);
+});
 
 
 
@@ -6825,10 +6893,8 @@ function confirmExitManage() {
   }
 }
 
-// On regroupe toute la logique de chargement à la fin pour être sûr que les variables existent
-// NOUVEAU : Logique de démarrage séparée pour pouvoir être appelée après le tutoriel
+// Chargement initial : restauration des données + gestion des liens session
 window.addEventListener('load', () => {
-  // 1. Restauration localStorage
   const savedConfig = localStorage.getItem('savedSessionConfig');
   const savedGame = localStorage.getItem('savedGameData');
   
@@ -6837,15 +6903,17 @@ window.addEventListener('load', () => {
     game = JSON.parse(savedGame);
   }
 
-  // 2. Gestion du lien URL (Paramètre session, pseudo ET email)
   const urlParams = new URLSearchParams(window.location.search);
   const codeFromUrl = urlParams.get('session');
   const pseudoFromUrl = urlParams.get('p'); 
   const emailFromUrl = urlParams.get('e');
 
   if (codeFromUrl) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    showScreen('play');
+    // IMPORTANT :
+    // On ne supprime plus ?session=XXXX.
+    // On force seulement la bonne page logique.
+    showScreen('play', true, false);
+
     const inputField = document.getElementById("accessCode");
     if (inputField) {
       inputField.value = codeFromUrl.toUpperCase();
@@ -6860,10 +6928,9 @@ window.addEventListener('load', () => {
       const finalEmail = emailFromUrl || localStorage.getItem('monPredictionEmail');
       
       if (finalPseudo && finalEmail) {
-         document.getElementById("pseudo").value = finalPseudo;
-         document.getElementById("playerEmail").value = finalEmail;
-         
-         setTimeout(() => checkAccess(), 500);
+        document.getElementById("pseudo").value = finalPseudo;
+        document.getElementById("playerEmail").value = finalEmail;
+        setTimeout(() => checkAccess(), 500);
       }
     }
   }
@@ -8384,8 +8451,7 @@ if (sessionConfig.mode === 'both' && window.isCommonManagement) {
   }
 
   // 2. PRÉPARATION DE L'ALERTE EXTERNE (Pour Make.com / Zapier)
-  const currentUrl = window.location.href.split('?')[0];
-  const joinUrl = `${currentUrl}?session=${sessionConfig.code}`;
+const joinUrl = `${window.location.origin}/jouer?session=${sessionConfig.code}`;
   const alertText = `Vous avez un nouveau message, consultez le rapidement pour adapter vos pronostics ! Lien direct : ${joinUrl}`;
 
   // On rassemble les contacts de tous les joueurs ayant fourni un tél ou un mail
@@ -8423,7 +8489,7 @@ function sendFinalRankingAlert() {
   const sessionCode = sessionConfig.code;
   
   // NOUVEAU : On récupère l'adresse actuelle du site automatiquement
-  const currentUrl = window.location.href.split('?')[0];
+  const currentUrl = `${window.location.origin}/resultats`;
 
   const contacts = (game.players || [])
     .map(p => ({ name: p.name, email: p.email }))
@@ -8451,8 +8517,7 @@ function sendFinalRankingAlert() {
 // --- NOUVEAU : ALERTE NOUVELLE QUESTION ---
 function sendNewQuestionAlert(ch) {
   const sessionCode = sessionConfig.code;
-  const currentUrl = window.location.href.split('?')[0];
-  const joinUrl = `${currentUrl}?session=${sessionCode}`;
+const joinUrl = `${window.location.origin}/jouer?session=${sessionConfig.code}`;
 
   // On liste les joueurs qui ont un email
   const contacts = (game.players || [])
@@ -9523,8 +9588,8 @@ function linkNextSession() {
 function renderNextSessionQR() {
     if (!sessionConfig.nextSessionCode) return;
     
-    const currentUrl = window.location.href.split('?')[0];
-    const nextUrl = `${currentUrl}?session=${sessionConfig.nextSessionCode}`;
+const baseUrl = window.location.origin;
+const nextUrl = `${baseUrl}/jouer?session=${sessionConfig.nextSessionCode}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(nextUrl)}`;
     
     // CORRECTION : Rendu compact inséré en haut à droite, symétrique au bloc de gauche
@@ -9754,6 +9819,36 @@ window.copyCodeToClipboard = function(code, btn) {
         setTimeout(() => { btn.textContent = oldTxt; }, 2000);
     }).catch(err => console.error("Erreur de copie", err));
 };
+
+
+function initRouteOnLoad() {
+  const screenId = getScreenFromCurrentUrl();
+
+  // On remplace l’état initial du navigateur par l’écran actuel.
+  updateUrlForScreen(screenId, true);
+
+  // On affiche la bonne page.
+  showScreen(screenId, true, true);
+
+  // Si l’URL contient ?session=XXXX, on préremplit le code de session.
+  const params = new URLSearchParams(window.location.search);
+  const sessionCode = params.get("session");
+
+  if (sessionCode) {
+    setTimeout(() => {
+      const accessCodeInput = document.getElementById("accessCode");
+      if (accessCodeInput) {
+        accessCodeInput.value = sessionCode.toUpperCase();
+      }
+    }, 100);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initRouteOnLoad);
+} else {
+  initRouteOnLoad();
+}
 
 </script>
 
