@@ -1769,10 +1769,10 @@ body.play-mode-active {
 
   <div id="chartsContainer"></div>
 
-  <div style="display:flex; gap:10px; margin-top:20px;">
-    <button onclick="goBack()" style="margin:0;">Retour</button>
-    <button onclick="location.reload()" style="margin:0;">Accueil</button>
-  </div>
+<div style="display:flex; gap:10px; margin-top:20px;">
+  <button onclick="goBack()" style="margin:0;">Retour</button>
+  <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+</div>
 </div>
 <div id="playerRecap" class="card" style="display:none; padding-bottom: 100px;">
   <h2>Vos Prédictions</h2>
@@ -1783,9 +1783,9 @@ body.play-mode-active {
   <h3>Évolution des probabilités globales</h3>
   <div id="recapChartsContainer"></div>
   
-  <div style="display:flex; gap:10px; margin-top:20px;">
-    <button onclick="location.reload()" style="margin:0;">Accueil</button>
-  </div>
+<div style="display:flex; gap:10px; margin-top:20px;">
+  <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+</div>
 </div>
 
 <div id="bigScreenAuth" class="card" style="display:none; text-align: center;">
