@@ -1897,6 +1897,31 @@ function getRouteForScreen(screenId) {
   return ROUTE_BY_SCREEN[screenId] || "/";
 }
 
+function getRouteForScreen(screenId) {
+  return ROUTE_BY_SCREEN[screenId] || "/";
+}
+
+function getAssetUrl(path) {
+  if (!path) return "";
+
+  const cleanPath = String(path).trim();
+
+  if (
+    cleanPath.startsWith("http://") ||
+    cleanPath.startsWith("https://") ||
+    cleanPath.startsWith("data:")
+  ) {
+    return cleanPath;
+  }
+
+  if (window.location.protocol === "file:") {
+    return cleanPath;
+  }
+
+  return "/" + cleanPath.replace(/^\/+/, "");
+}
+
+
 function getPlayerJoinUrl(code) {
   const cleanCode = encodeURIComponent(String(code || "").trim().toUpperCase());
 
@@ -3497,10 +3522,14 @@ const block = document.createElement("div");
     let imgHtml = "";
     if (ch.imageUrl) {
         // NOUVEAU : On transforme dynamiquement le nom de l'image pour afficher la version "question" sur mobile
-        let mobileImageUrl = ch.imageUrl.replace('.jpg', '_question.png').replace('_carte.png', '_question.png');
+let mobileImageUrl = ch.imageUrl.replace('.jpg', '_question.png').replace('_carte.png', '_question.png');
 
-        // CORRECTION : L'image s'écrase fortement (jusqu'à 60px) si l'espace manque
-        imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+mobileImageUrl = getAssetUrl(mobileImageUrl);
+
+imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+
+
+
     }
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
@@ -7847,23 +7876,17 @@ function toggleCustomCat(index) {
   }
 }
 
-// Fonction pour appeler DALL-E 3
-// Fonction pour appeler DALL-E 3 ou attribuer les images fixes
+
 function getRandomCategoryImage(category) {
-  // 1. On convertit en minuscule et on remplace les espaces par des underscores
-  const normalizedCat = category.toLowerCase().trim();
-  const fileName = normalizedCat.replace(/\s+/g, '_');
-  
-  // 2. Liste des catégories qui utilisent le nouveau format PNG
-  const pngCategories = ["future_spotlight", "live_traffic", "innovation_arena", "fun_fact", "saisie_libre", 'trend_signal'];
+  const fileName = String(category || "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 
-  // 3. Si la catégorie est dans la liste, on applique le suffixe _carte.png
-  if (pngCategories.includes(fileName)) {
-    return `${fileName}_carte.png`;
-  }
-
-  // 4. Pour toutes les autres catégories, on garde le format classique .jpg
-  return `${fileName}.jpg`; 
+  return getAssetUrl(`${fileName}_carte.png`);
 }
 
 // --- FONCTIONS DE RACCOURCIS CIBLÉES ---
@@ -9065,13 +9088,13 @@ ch.answers.forEach((ans, aIdx) => {
       }
       // Mise à jour fluide des textes et de l'image
       document.getElementById("bsLeftCat").textContent = leftCh ? leftCh.category : '';
-      const lImg = document.getElementById("bsLeftImg");
-      if (leftCh && leftCh.imageUrl) {
-          lImg.src = leftCh.imageUrl; // NOUVEAU : Application sur balise img
-          lImg.style.display = "block";
-      } else {
-          lImg.style.display = "none";
-      }
+const lImg = document.getElementById("bsLeftImg");
+if (leftCh && leftCh.imageUrl) {
+    lImg.src = getAssetUrl(leftCh.imageUrl);
+    lImg.style.display = "block";
+} else {
+    lImg.style.display = "none";
+}
       document.getElementById("bsLeftQ").textContent = leftCh ? leftCh.question : 'En attente de la prochaine question...';
       document.getElementById("bsLeftProg").innerHTML = leftCh ? renderBsProgress(leftCh) : '';
 
