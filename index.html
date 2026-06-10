@@ -1897,6 +1897,18 @@ function getRouteForScreen(screenId) {
   return ROUTE_BY_SCREEN[screenId] || "/";
 }
 
+function getPlayerJoinUrl(code) {
+  const cleanCode = encodeURIComponent(String(code || "").trim().toUpperCase());
+
+  // En local avec file://, /jouer ne peut pas fonctionner.
+  // Sur Vercel, on force toujours /jouer.
+  if (window.location.protocol === "file:") {
+    return `${window.location.href.split("?")[0]}?session=${cleanCode}`;
+  }
+
+  return `${window.location.origin}/jouer?session=${cleanCode}`;
+}
+
 function getPreservedSearchForScreen(screenId) {
   const params = new URLSearchParams(window.location.search);
   const session = params.get("session");
@@ -3125,7 +3137,6 @@ const baseVolume = Math.max(1, (customB || 50) * PROBABILITY_RESISTANCE);
 
 function showSessionInfo() {
   const container = document.getElementById("sessionInfo");
-  const currentUrl = window.location.href.split('?')[0];
   const expiry = new Date(sessionConfig.expiresAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
   let html = `<h2>Sessions Générées</h2><p class="subtitle">Valide jusqu'à ${expiry}</p>`;
@@ -3133,7 +3144,7 @@ function showSessionInfo() {
   // Bloc Mode Facile
   if (sessionConfig.mode === 'easy' || sessionConfig.mode === 'both') {
     const codeEasy = sessionConfig.code;
-    const urlEasy = `${currentUrl}?session=${codeEasy}`;
+    const urlEasy = getPlayerJoinUrl(codeEasy);
     const qrEasy = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlEasy)}`;
     html += `
       <div class="card" style="border-color:#22c55e; margin-bottom:15px; padding-bottom:15px; text-align:center;">
@@ -3159,7 +3170,7 @@ function showSessionInfo() {
   // Bloc Mode Avancé
   if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
     const codeAdv = sessionConfig.mode === 'both' ? sessionConfig.codeAdvanced : sessionConfig.code;
-    const urlAdv = `${currentUrl}?session=${codeAdv}`;
+    const urlAdv = getPlayerJoinUrl(codeAdv);
     const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
     html += `
       <div class="card" style="border-color:#f97316; margin-bottom:15px; padding-bottom:15px; text-align:center;">
@@ -8846,12 +8857,11 @@ function renderBigScreen() {
       bsScreen.style.display = 'block';
   }
 
- // GÉNÉRATION DU QR CODE DE REJOINDRE
-      const currentUrl = window.location.href.split('?')[0];
-      // CORRECTION : On force l'utilisation du code de la session actuellement projetée (Gère le mode Avancé)
-      const activeCode = window.currentActiveSessionCode || sessionConfig.code;
-      const joinUrl = `${currentUrl}?session=${activeCode}`;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
+// GÉNÉRATION DU QR CODE DE REJOINDRE
+// CORRECTION : On force l'utilisation du code de la session actuellement projetée (Gère le mode Avancé)
+const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+const joinUrl = getPlayerJoinUrl(activeCode);
+const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
       
       // CORRECTION : On change dynamiquement le texte si la session est terminée ou en attente de résultats
       const checkNow = Date.now();
@@ -9649,9 +9659,8 @@ function linkNextSession() {
 function renderNextSessionQR() {
     if (!sessionConfig.nextSessionCode) return;
     
-const baseUrl = window.location.origin;
-const nextUrl = `${baseUrl}/jouer?session=${sessionConfig.nextSessionCode}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(nextUrl)}`;
+const nextUrl = getPlayerJoinUrl(sessionConfig.nextSessionCode);
+const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(nextUrl)}`;
     
     // CORRECTION : Rendu compact inséré en haut à droite, symétrique au bloc de gauche
     document.getElementById("bsNextSessionHeaderContainer").innerHTML = `
@@ -9883,22 +9892,18 @@ window.copyCodeToClipboard = function(code, btn) {
 
 
 function initRouteOnLoad() {
-  const screenId = getScreenFromCurrentUrl();
+  const params = new URLSearchParams(window.location.search);
+  const sessionCode = params.get("session");
 
-  // On remplace l’état initial du navigateur par l’écran actuel,
-  // mais on ne bloque jamais l'affichage si l'URL échoue.
-  try {
-    updateUrlForScreen(screenId, true);
-  } catch (urlError) {
-    console.warn("Route initiale ignorée :", urlError);
-  }
+  // Si une URL contient ?session=XXXX, c'est forcément une entrée joueur,
+  // même si l'ancien QR pointe vers /session ou /grand-ecran/live.
+  const screenId = sessionCode ? "play" : getScreenFromCurrentUrl();
+
+  // On remplace l’état initial du navigateur par l’écran actuel.
+  updateUrlForScreen(screenId, true);
 
   // On affiche la bonne page.
   showScreen(screenId, true, true);
-
-  // Si l’URL contient ?session=XXXX, on préremplit le code de session.
-  const params = new URLSearchParams(window.location.search);
-  const sessionCode = params.get("session");
 
   if (sessionCode) {
     setTimeout(() => {
