@@ -1641,10 +1641,10 @@ body.play-mode-active {
   </div>
 
   <div class="bet-quick-row">
-    <button class="bet-chip-btn" onclick="addBetAmount(10)">+10</button>
-    <button class="bet-chip-btn" onclick="addBetAmount(25)">+25</button>
-    <button class="bet-chip-btn" onclick="addBetAmount(50)">+50</button>
-    <button class="bet-chip-btn is-max" onclick="setBetMax()">MAX</button>
+<button id="betQuick10" class="bet-chip-btn" onclick="addBetFraction(0.10)">+—</button>
+<button id="betQuick25" class="bet-chip-btn" onclick="addBetFraction(0.25)">+—</button>
+<button id="betQuick50" class="bet-chip-btn" onclick="addBetFraction(0.50)">+—</button>
+<button class="bet-chip-btn is-max" onclick="setBetMax()">MAX</button>
   </div>
 
   <div class="bet-result-card">
@@ -1709,7 +1709,7 @@ body.play-mode-active {
          <h3 style="color:#fde047; margin:0; font-size:13px; font-weight:900;">GÉREZ VOS CRÉDITS</h3>
       </div>
       <p id="tutoNText" style="font-size:11px; color:#e2e8f0; line-height:1.2; margin-bottom:10px;"></p>
-      <div class="tuto-tap-text">👆 Touchez la barre de saisie pour miser</div>
+      <div class="tuto-tap-text">👆 Touchez la barre ou faites glisser le curseur pour miser</div>
     </div>
   </div>
 
@@ -3372,6 +3372,12 @@ const shouldFreezeTutoDom =
   window.currentTutoStep > 0 &&
   window.currentTutoStep < 5;
 
+// Mise à jour légère en continu : probabilités, jauges et gains potentiels.
+// Ça ne reconstruit pas les cartes.
+if (!window.isCardDragging && typeof updatePlayChallengesLive === "function") {
+    updatePlayChallengesLive();
+}
+
 if (needsRefresh && !window.isCardDragging && !shouldFreezeTutoDom) {
     renderPlayChallenges();
 }
@@ -3860,12 +3866,14 @@ const activeCardForTap = document.querySelector('#challengesPlay .challenge-bloc
               ? Number(activeCardForTap.dataset.cIndex)
               : null;
             
-            if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
-                selectedAnswers[cIndex] = null;
-                selectedBets[cIndex] = 0;
-                window.saveLocalProgress();
-                renderAnswersForChallenge(cIndex);
-            }
+if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
+    window.lastAnswerInteractionAt = Date.now();
+
+    selectedAnswers[cIndex] = null;
+    selectedBets[cIndex] = 0;
+    window.saveLocalProgress();
+    renderAnswersForChallenge(cIndex);
+}
         }
         return; 
     }
@@ -3928,8 +3936,14 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
 
   // CORRECTION : Écouteur de clics permissif, mais il ne doit jamais intercepter
   // un vrai clic sur réponse ou bouton.
-  containerEl.addEventListener('click', (e) => {
+containerEl.addEventListener('click', (e) => {
       if (e.target.closest('button') || e.target.closest('.answer-btn') || e.target.closest('.side-panel')) {
+          return;
+      }
+
+      // Sécurité : après une sélection/désélection de réponse,
+      // on ignore le clic global fantôme qui peut arriver juste après sur mobile.
+      if (Date.now() - (window.lastAnswerInteractionAt || 0) < 450) {
           return;
       }
 
@@ -4139,28 +4153,34 @@ label.textContent = a;
                 return;
             }
 
-            if (selectedAnswers[cIndex] === i) {
-                selectedAnswers[cIndex] = null; 
-                selectedBets[cIndex] = 0; 
-            } else {
-                selectedAnswers[cIndex] = i; 
-                selectedBets[cIndex] = 1; 
-            }
-            window.saveLocalProgress(); 
-            renderAnswersForChallenge(cIndex); 
-            
-            // CORRECTION : On informe le tutoriel seulement si le clic vient de la carte active verrouillée
-            const activeTutoCIndex = typeof window.getActiveCardChallengeIndex === "function"
-              ? window.getActiveCardChallengeIndex()
-              : cIndex;
+window.lastAnswerInteractionAt = Date.now();
 
-            if (
-              window.currentTutoStep === 3 &&
-              Number(activeTutoCIndex) === Number(cIndex) &&
-              selectedAnswers[cIndex] !== null
-            ) {
-                nextTuto(5); 
-            }
+const wasAlreadySelected = selectedAnswers[cIndex] === i;
+
+if (wasAlreadySelected) {
+    selectedAnswers[cIndex] = null; 
+    selectedBets[cIndex] = 0; 
+} else {
+    selectedAnswers[cIndex] = i; 
+    selectedBets[cIndex] = 1; 
+}
+
+window.saveLocalProgress(); 
+renderAnswersForChallenge(cIndex); 
+
+// On fait avancer le tuto uniquement quand le joueur SÉLECTIONNE une réponse.
+// S'il déclique / désélectionne, on ne relance pas le tuto.
+const activeTutoCIndex = typeof window.getActiveCardChallengeIndex === "function"
+  ? window.getActiveCardChallengeIndex()
+  : cIndex;
+
+if (
+  window.currentTutoStep === 3 &&
+  Number(activeTutoCIndex) === Number(cIndex) &&
+  !wasAlreadySelected
+) {
+    nextTuto(5); 
+}
         };
     } else {
         div.onclick = (e) => {
@@ -4174,12 +4194,28 @@ label.textContent = a;
               ? window.getActiveCardChallengeIndex()
               : cIndex;
 
-            if (window.currentTutoStep === 3 && Number(activeTutoCIndex) === Number(cIndex)) {
-                if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
-                const step3El = document.getElementById("tutoStep3");
-                if (step3El) step3El.classList.add("hidden");
-                setTimeout(() => nextTuto(4), 500); 
-            }
+if (window.currentTutoStep === 3 && Number(activeTutoCIndex) === Number(cIndex)) {
+    if (typeof clearTutoHighlights === 'function') clearTutoHighlights();
+
+    const step3El = document.getElementById("tutoStep3");
+    if (step3El) step3El.classList.add("hidden");
+
+    if (window.tutoPendingStepTimer) {
+        clearTimeout(window.tutoPendingStepTimer);
+    }
+
+    window.tutoPendingStepTimer = setTimeout(() => {
+        const panel = document.getElementById("betPanel");
+
+        if (
+            window.currentTutoStep === 3 &&
+            panel &&
+            panel.classList.contains("open")
+        ) {
+            nextTuto(4);
+        }
+    }, 250);
+}
         };
     }
 
@@ -4264,9 +4300,10 @@ function updateAdminButton(){
 // ==========================================
 // MOTEUR DU TUTORIEL INTERACTIF (Flou & Clic)
 // ==========================================
-window.sessionTutoDone = false; // Se réinitialise si on quitte et relance l'application
+window.sessionTutoDone = false;
 window.currentTutoStep = 0;
 window.currentTutoWasForced = false;
+window.tutoPendingStepTimer = null;
 
 // Verrou anti-bug : pendant le tuto, on garde la carte de départ stable,
 // même si une autre question se met à jour en arrière-plan.
@@ -4277,25 +4314,17 @@ window.isTutoDomFrozen = false;
 window.getActiveCardChallengeIndex = function() {
   const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
 
-if (step === 5) {
-  const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
-  const isLastVisibleCard = window.currentCardIndex >= cards.length - 1;
-
-  const tutoStep5Text = document.getElementById("tutoStep5Text");
-  if (tutoStep5Text) {
-    tutoStep5Text.innerHTML = (isLastVisibleCard || window.isRebetting)
-      ? `Glissez vers le <strong>HAUT</strong> pour valider vos paris.`
-      : `Glissez vers le <strong>HAUT</strong> pour la question suivante.`;
-  }
-}
-
   if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
     return Number(activeCard.dataset.cIndex);
   }
 
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
-  return myIndices[window.currentCardIndex];
+
+  const displayIndices = typeof window.getPlayerDisplayIndices === "function"
+    ? window.getPlayerDisplayIndices(player)
+    : ((player && player.assignedIndices) ? player.assignedIndices : []);
+
+  return displayIndices[window.currentCardIndex];
 };
 
 window.restoreTutoCardIfNeeded = function() {
@@ -4428,10 +4457,25 @@ if (typeof window.updateCardStack === "function") window.updateCardStack();
      if (el) el.classList.add("hidden");
   });
   
-  const targetEl = document.getElementById("tutoStep" + step);
-  if(targetEl) targetEl.classList.remove("hidden");
+const targetEl = document.getElementById("tutoStep" + step);
+if (targetEl) targetEl.classList.remove("hidden");
 
-  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+const activeCard =
+  document.querySelector('#challengesPlay .challenge-block.active-card') ||
+  cards[window.currentCardIndex] ||
+  cards[0];
+
+if (step === 5) {
+  const isLastVisibleCard = window.currentCardIndex >= cards.length - 1;
+
+  const tutoStep5Text = document.getElementById("tutoStep5Text");
+  if (tutoStep5Text) {
+    tutoStep5Text.innerHTML = (isLastVisibleCard || window.isRebetting)
+      ? `Glissez vers le <strong>HAUT</strong> pour valider vos paris.`
+      : `Glissez vers le <strong>HAUT</strong> pour la question suivante.`;
+  }
+}
 
   if (!activeCard) {
     setTimeout(() => {
@@ -4504,42 +4548,76 @@ if (typeof window.updateCardStack === "function") window.updateCardStack();
     const tutoNText = document.getElementById("tutoNText");
     if (tutoNText) tutoNText.innerHTML = `Attention, gérez vos crédits intelligemment car vous avez <strong>${n} questions</strong> à disposition.`;
     
-    // CORRECTION : On ne met plus de calque invisible. On écoute directement la barre de saisie !
-    const betInput = document.getElementById('betInput');
-    
-    const dismissTutoOnInput = () => {
-       if (window.currentTutoStep === 4) {
-           clearTutoHighlights();
-           const step4El = document.getElementById("tutoStep4");
-           if (step4El) step4El.classList.add("hidden");
-           
-           // On supprime l'écouteur pour ne pas perturber les futures mises
-           betInput.removeEventListener('focus', dismissTutoOnInput);
-           betInput.removeEventListener('click', dismissTutoOnInput);
-           betInput.removeEventListener('input', dismissTutoOnInput);
-       }
-    };
-    
-    if (betInput) {
-        // CORRECTION : On attend 250ms (un quart de seconde) avant d'écouter les clics sur la barre de saisie. 
-        // Cela empêche le clic d'ouverture du panneau de fermer le tutoriel par accident !
-        setTimeout(() => {
-            betInput.addEventListener('focus', dismissTutoOnInput);
-            betInput.addEventListener('click', dismissTutoOnInput);
-            betInput.addEventListener('input', dismissTutoOnInput); // Sécurité supplémentaire si le joueur tape un chiffre
-        }, 250);
-    }
+// On écoute la saisie numérique ET le curseur de mise.
+const betInput = document.getElementById('betInput');
+const betSlider = document.getElementById('betSlider');
+
+// Nettoyage d'anciens écouteurs si l'étape 4 est relancée.
+if (typeof window.tutoBetCleanupListeners === "function") {
+    window.tutoBetCleanupListeners();
+}
+
+const dismissTutoOnBetInteraction = () => {
+   if (window.currentTutoStep !== 4) return;
+
+   clearTutoHighlights();
+
+   const step4El = document.getElementById("tutoStep4");
+   if (step4El) step4El.classList.add("hidden");
+
+   if (typeof window.tutoBetCleanupListeners === "function") {
+      window.tutoBetCleanupListeners();
+      window.tutoBetCleanupListeners = null;
+   }
+};
+
+window.tutoBetCleanupListeners = () => {
+   if (betInput) {
+      betInput.removeEventListener('focus', dismissTutoOnBetInteraction);
+      betInput.removeEventListener('click', dismissTutoOnBetInteraction);
+      betInput.removeEventListener('input', dismissTutoOnBetInteraction);
+   }
+
+   if (betSlider) {
+      betSlider.removeEventListener('pointerdown', dismissTutoOnBetInteraction);
+      betSlider.removeEventListener('mousedown', dismissTutoOnBetInteraction);
+      betSlider.removeEventListener('touchstart', dismissTutoOnBetInteraction);
+      betSlider.removeEventListener('input', dismissTutoOnBetInteraction);
+      betSlider.removeEventListener('change', dismissTutoOnBetInteraction);
+   }
+};
+
+// On attend 250ms pour éviter que le clic qui ouvre le panneau ferme aussitôt le tuto.
+setTimeout(() => {
+   if (betInput) {
+      betInput.addEventListener('focus', dismissTutoOnBetInteraction);
+      betInput.addEventListener('click', dismissTutoOnBetInteraction);
+      betInput.addEventListener('input', dismissTutoOnBetInteraction);
+   }
+
+   if (betSlider) {
+      betSlider.addEventListener('pointerdown', dismissTutoOnBetInteraction);
+      betSlider.addEventListener('mousedown', dismissTutoOnBetInteraction);
+      betSlider.addEventListener('touchstart', dismissTutoOnBetInteraction, { passive: true });
+      betSlider.addEventListener('input', dismissTutoOnBetInteraction);
+      betSlider.addEventListener('change', dismissTutoOnBetInteraction);
+   }
+}, 250);
 
   }
 
   }
 
 function closeTuto() {
+  if (typeof window.tutoBetCleanupListeners === "function") {
+    window.tutoBetCleanupListeners();
+    window.tutoBetCleanupListeners = null;
+  }
+
   document.getElementById("tutoContainer").style.display = "none";
   clearTutoHighlights();
   window.sessionTutoDone = true;
   window.currentTutoStep = 0;
-
   window.isTutoDomFrozen = false;
   window.tutoLockedCardIndex = null;
   window.tutoLockedChallengeIndex = null;
@@ -4760,6 +4838,11 @@ if (betSliderEl) {
   betSliderEl.value = "0";
 }
 
+// Met à jour les boutons rapides avec les vraies valeurs : +20, +50, +100, etc.
+if (typeof updateBetQuickButtons === "function") {
+  updateBetQuickButtons();
+}
+
 const betConfirmBtn = document.getElementById("betConfirmBtn");
 if (betConfirmBtn) betConfirmBtn.disabled = true;
 
@@ -4776,17 +4859,38 @@ if (betConfirmBtn) betConfirmBtn.disabled = true;
   });
 }
 
-function closeBetPanel() {
+function closeBetPanel(options = {}) {
   const panel = document.getElementById("betPanel");
-  document.getElementById("betPanelOverlay").classList.remove("open");
-  panel.classList.remove("open");
-  panel.style.transform = ''; 
-  
-  // CORRECTION TUTO : Si le joueur annule (ou glisse vers le bas) pendant l'étape 4, on le fait passer à l'étape 5 !
+  const overlay = document.getElementById("betPanelOverlay");
+
+  if (overlay) overlay.classList.remove("open");
+  if (panel) {
+    panel.classList.remove("open");
+    panel.style.transform = '';
+  }
+
+  const suppressTuto = options && options.suppressTuto === true;
+
+  if (suppressTuto) {
+    return;
+  }
+
+  // Si on ferme/annule pendant l'étape 4, on passe à la suite.
   if (window.currentTutoStep === 4) {
-      nextTuto(5);
-  } else if (window.currentTutoStep === 3) {
-      nextTuto(1); 
+    nextTuto(5);
+    return;
+  }
+
+  // Ne jamais renvoyer à l'étape 1.
+  // Si le panneau se ferme alors que l'étape 4 n'a pas encore eu le temps d'apparaître,
+  // on revient simplement à l'étape 3.
+  if (window.currentTutoStep === 3) {
+    if (window.tutoPendingStepTimer) {
+      clearTimeout(window.tutoPendingStepTimer);
+      window.tutoPendingStepTimer = null;
+    }
+
+    nextTuto(3);
   }
 }
 
@@ -4918,23 +5022,60 @@ function setBetPercent(percent) {
   updatePotentialGain();
 }
 
-// NOUVEAU : Fonction utilitaire pour les boutons +10 et +50
+function getStartingCapital() {
+  const fromSession = Number(sessionConfig && sessionConfig.initialBalance);
+  if (Number.isFinite(fromSession) && fromSession > 0) return fromSession;
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const fromPlayerStart = Number(player && player.startingBalance);
+  if (Number.isFinite(fromPlayerStart) && fromPlayerStart > 0) return fromPlayerStart;
+
+  return 100;
+}
+
+function getBetFractionAmount(fraction) {
+  const startingCapital = getStartingCapital();
+  return Math.max(1, Math.floor(startingCapital * fraction));
+}
+
+function addBetFraction(fraction) {
+  const amount = getBetFractionAmount(fraction);
+  addBetAmount(amount);
+}
+
 function addBetAmount(amount) {
   const input = document.getElementById("betInput");
-  let currentVal = parseInt(input.value) || 0;
+  if (!input) return;
+
+  let currentVal = parseInt(input.value, 10) || 0;
   let newVal = currentVal + amount;
   
-  // On s'assure de ne pas dépasser le solde
   if (newVal > currentPlayerBalance) {
-      newVal = currentPlayerBalance;
+    newVal = Math.floor(currentPlayerBalance);
   }
-  
-input.value = newVal;
 
-const slider = document.getElementById("betSlider");
-if (slider) slider.value = newVal;
+  input.value = newVal;
 
-updatePotentialGain();
+  const slider = document.getElementById("betSlider");
+  if (slider) slider.value = newVal;
+
+  updatePotentialGain();
+}
+
+function updateBetQuickButtons() {
+  const values = [
+    { id: "betQuick10", fraction: 0.10 },
+    { id: "betQuick25", fraction: 0.25 },
+    { id: "betQuick50", fraction: 0.50 }
+  ];
+
+  values.forEach(({ id, fraction }) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+
+    const amount = getBetFractionAmount(fraction);
+    btn.textContent = "+" + amount;
+  });
 }
 
 function confirmBet() {
@@ -4999,15 +5140,23 @@ const ch = game.challenges[tempBetCIndex];
       selectedBetTypes[tempBetCIndex] = tempBetType; 
   }
 
-  closeBetPanel();
-  
-  // On rafraîchit visuellement la carte pour afficher le pari ajouté !
-  if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
+const tutoStepBeforeClose = window.currentTutoStep;
 
-  if (window.currentTutoStep === 4) {
-      window.currentTutoStep = 5; 
-      nextTuto(5);
-  }
+if (window.tutoPendingStepTimer) {
+    clearTimeout(window.tutoPendingStepTimer);
+    window.tutoPendingStepTimer = null;
+}
+
+closeBetPanel({ suppressTuto: true });
+
+// On rafraîchit visuellement la carte pour afficher le pari ajouté.
+if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
+
+// Après validation d'une mise pendant le tuto,
+// on passe directement à l'étape suivante au lieu de revenir au début.
+if (tutoStepBeforeClose === 3 || tutoStepBeforeClose === 4) {
+    nextTuto(5);
+}
 }
 // ----------------------------------------------
 
@@ -9870,6 +10019,23 @@ if (shouldFreezeTutoDom) {
         const scoreEl = document.getElementById("live-score-" + activeCIndex);
         if (scoreEl && typeof currentPlayerBalance !== "undefined") {
             scoreEl.innerHTML = `${currentPlayerBalance}`;
+        }
+
+        // IMPORTANT :
+        // Même pendant le tuto, on met à jour les probabilités et les gains
+        // de la carte active, sans reconstruire toute la carte.
+        const ansBox = document.getElementById("answers-ch" + activeCIndex);
+        if (ansBox && typeof renderAnswersForChallenge === "function") {
+            renderAnswersForChallenge(activeCIndex);
+        }
+
+        const ch = game.challenges[activeCIndex];
+        const betInfoEl = document.getElementById("bet-info-" + activeCIndex);
+        if (ch && betInfoEl && typeof window.generateBetInfoHtml === "function") {
+            const newBetHtml = window.generateBetInfoHtml(activeCIndex, ch, getEffectiveStatus(ch));
+            if (betInfoEl.innerHTML !== newBetHtml) {
+                betInfoEl.innerHTML = newBetHtml;
+            }
         }
     }
 
