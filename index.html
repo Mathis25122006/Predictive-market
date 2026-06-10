@@ -1244,6 +1244,13 @@ body.play-mode-active {
   z-index: 8;
 }
 
+#challengesPlay .challenge-block.stacked-prev {
+  transform: translateY(-15px) scale(0.95);
+  opacity: 0.55;
+  z-index: 8;
+  pointer-events: none;
+}
+
 /* Animation quand la carte est jetée hors de l'écran */
 #challengesPlay .challenge-block.fly-away {
   transform: translate(120%, -120%) rotate(25deg) !important;
@@ -1711,7 +1718,7 @@ body.play-mode-active {
         <div class="swipe-up-hand" style="font-size:18px;">👆</div>
     </div>
     <h3 style="color:#fde047; margin-bottom:2px; font-size:11px; font-weight:900;">NAVIGUEZ</h3>
-    <p style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:0;">Défiler en <strong>HAUT</strong> pour la question suivante.</p>
+<p id="tutoStep5Text" style="font-size:10px; color:#e2e8f0; line-height:1.2; margin-bottom:0;">Glissez vers le <strong>HAUT</strong> pour la question suivante.</p>
   </div>
 
   <div id="tutoStep6" class="hidden" style="position:absolute; top:max(40px, env(safe-area-inset-top)); left:50%; transform:translateX(-50%); width:170px; background:rgba(59,130,246,0.95); border:1px solid #60a5fa; border-radius:10px; padding:8px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.8); pointer-events:none; z-index:10007;">
@@ -1842,19 +1849,7 @@ body.play-mode-active {
 
 <script>
 
-  function getEffectiveStatus(ch) {
-  const now = Date.now();
-  
-  // Si l'admin a déjà validé un résultat final, le statut est verrouillé
-  if (ch.status === "resolved") return "resolved";
-  
-  // Sinon, on suit scrupuleusement l'horloge
-  if (now < ch.startTime) return "pending";
-  if (now >= ch.startTime && now < ch.endTime) return "open";
-  if (now >= ch.endTime) return "closed";
-  
-  return "pending";
-}
+
 
 // Au chargement, on tente de récupérer une session existante
 
@@ -1917,16 +1912,22 @@ function getPreservedSearchForScreen(screenId) {
 function updateUrlForScreen(screenId, replace = false) {
   const route = getRouteForScreen(screenId);
   const search = getPreservedSearchForScreen(screenId);
-  const nextUrl = route + search;
+  const nextPath = route + search;
 
-  if (window.location.pathname + window.location.search === nextUrl) return;
+  if (window.location.pathname + window.location.search === nextPath) return;
+
+  // Sécurité : si le site est ouvert en local avec file://,
+  // history.pushState peut planter. Dans ce cas, on ne change pas l'URL.
+  if (window.location.protocol === "file:") {
+    return;
+  }
 
   const state = { screenId };
 
   if (replace) {
-    window.history.replaceState(state, "", nextUrl);
+    window.history.replaceState(state, "", nextPath);
   } else {
-    window.history.pushState(state, "", nextUrl);
+    window.history.pushState(state, "", nextPath);
   }
 }
 
@@ -1953,7 +1954,11 @@ function showScreen(screenId, isBack = false, skipUrlUpdate = false) {
     currentScreenId = screenId;
 
 if (!skipUrlUpdate) {
-  updateUrlForScreen(screenId, isBack);
+  try {
+    updateUrlForScreen(screenId, isBack);
+  } catch (urlError) {
+    console.warn("Navigation URL ignorée :", urlError);
+  }
 }
 
     // Liste des écrans gérés
@@ -3324,10 +3329,16 @@ function startPlayScreenTimers() {
         if (effStatus === "open" && oTimer) oTimer.textContent = formatTimeDiff(ch.endTime - now);
     });
 
-    // On ne reconstruit la structure complète QUE SI le statut change (ex: pending -> open)
-    if (needsRefresh && !window.isCardDragging) {
-        renderPlayChallenges();
-    }
+// On ne reconstruit PAS les cartes pendant les premières étapes du tuto,
+// sinon le DOM surligné peut être détruit quand une question s'ouvre derrière.
+const shouldFreezeTutoDom =
+  window.isTutoDomFrozen === true &&
+  window.currentTutoStep > 0 &&
+  window.currentTutoStep < 5;
+
+if (needsRefresh && !window.isCardDragging && !shouldFreezeTutoDom) {
+    renderPlayChallenges();
+}
   }, 1000);
 }
 
@@ -3582,29 +3593,34 @@ const btnHtml = (isLastCard || window.isRebetting)
   // NOUVEAU : On met à jour le record de la carte la plus loin atteinte
   window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
 
-  function updateCardStack() {
-    cardsElements.forEach((card, i) => {
-      card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'fly-away');
+function updateCardStack() {
+  cardsElements.forEach((card, i) => {
+    card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'stacked-prev', 'fly-away');
       card.style.transform = ''; 
       card.style.opacity = '';
       card.style.pointerEvents = '';
 
-      if (i === window.currentCardIndex) {
-        card.classList.add('active-card');
-      } else if (i === window.currentCardIndex + 1) {
-        card.classList.add('stacked-1');
-      } else if (i === window.currentCardIndex + 2) {
-        card.classList.add('stacked-2');
-      } else if (i < window.currentCardIndex) {
-        card.style.transform = 'translateY(-150%) rotate(10deg)';
-        card.style.opacity = '0';
-        card.style.pointerEvents = 'none';
-      } else {
-        card.style.opacity = '0';
-        card.style.pointerEvents = 'none';
-      }
+if (i === window.currentCardIndex) {
+  card.classList.add('active-card');
+} else if (window.isRebetting && i === window.currentCardIndex - 1) {
+  // En mode re-mise, on laisse voir la carte précédente pour éviter l'effet "carte seule".
+  card.classList.add('stacked-prev');
+} else if (i === window.currentCardIndex + 1) {
+  card.classList.add('stacked-1');
+} else if (i === window.currentCardIndex + 2) {
+  card.classList.add('stacked-2');
+} else if (i < window.currentCardIndex) {
+  card.style.transform = 'translateY(-150%) rotate(10deg)';
+  card.style.opacity = '0';
+  card.style.pointerEvents = 'none';
+} else {
+  card.style.opacity = '0';
+  card.style.pointerEvents = 'none';
+}
     });
   }
+
+window.updateCardStack = updateCardStack;
 
 // NOUVEAU : Fonction centralisée pour vérifier si le joueur a le droit de quitter la carte
   window.canPassCurrentCard = function() {
@@ -3907,9 +3923,16 @@ else if (window.currentTutoStep === 7) {
                   if (window.currentCardIndex < cards.length - 1) {
                       if (typeof window.swipeNextCard === 'function') window.swipeNextCard();
                   } else {
-                      if (window.currentTutoStep === 5) { nextTuto(7); return; }
-                      if (window.currentTutoStep === 7) { closeTuto(); return; }
-                      if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+                      if (window.currentTutoStep === 5) {
+    closeTuto();
+}
+
+if (window.currentTutoStep === 7) {
+    closeTuto();
+    return;
+}
+
+if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
                           const activeCard = cards[window.currentCardIndex];
                           activeCard.classList.add('fly-away');
                           setTimeout(() => {
@@ -4214,6 +4237,18 @@ window.isTutoDomFrozen = false;
 window.getActiveCardChallengeIndex = function() {
   const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
 
+if (step === 5) {
+  const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+  const isLastVisibleCard = window.currentCardIndex >= cards.length - 1;
+
+  const tutoStep5Text = document.getElementById("tutoStep5Text");
+  if (tutoStep5Text) {
+    tutoStep5Text.innerHTML = (isLastVisibleCard || window.isRebetting)
+      ? `Glissez vers le <strong>HAUT</strong> pour valider vos paris.`
+      : `Glissez vers le <strong>HAUT</strong> pour la question suivante.`;
+  }
+}
+
   if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
     return Number(activeCard.dataset.cIndex);
   }
@@ -4231,7 +4266,7 @@ window.restoreTutoCardIfNeeded = function() {
 
   if (window.currentCardIndex !== window.tutoLockedCardIndex) {
     window.currentCardIndex = window.tutoLockedCardIndex;
-    if (typeof updateCardStack === "function") updateCardStack();
+if (typeof window.updateCardStack === "function") window.updateCardStack();
   }
 };
 
@@ -4281,12 +4316,16 @@ function startTuto(force = false) {
   // On autorise si c'est forcé (Revoir le tuto), sinon on doit obligatoirement être sur la carte 0 pour le premier démarrage
   if (!force && window.currentCardIndex !== 0) return;
 
-  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+const displayIndices = typeof window.getPlayerDisplayIndices === "function"
+  ? window.getPlayerDisplayIndices(player)
+  : myIndices;
 
-  window.tutoLockedCardIndex = Number.isInteger(window.currentCardIndex) ? window.currentCardIndex : 0;
-  window.tutoLockedChallengeIndex = myIndices[window.tutoLockedCardIndex];
-  window.isTutoDomFrozen = true;
+window.tutoLockedCardIndex = Number.isInteger(window.currentCardIndex) ? window.currentCardIndex : 0;
+window.tutoLockedChallengeIndex = displayIndices[window.tutoLockedCardIndex];
+window.isTutoDomFrozen = true;
+
   
   window.sessionTutoDone = false;
   document.getElementById("tutoContainer").style.display = "block";
@@ -4306,17 +4345,28 @@ function startTuto(force = false) {
       nextTuto(1);
 }
 
+function safeRemoveElement(el) {
+  if (!el) return;
+
+  if (typeof el.remove === "function") {
+    el.remove();
+  } else if (el.parentNode) {
+    el.parentNode.removeChild(el);
+  }
+}
+
 function clearTutoHighlights() {
-  document.querySelectorAll('.tuto-highlight').forEach(el => el.classList.remove('tuto-highlight'));
-  const oldBg = document.getElementById("cardTutoBackdrop");
-  if (oldBg) oldBg.remove();
-  
-  // CORRECTION : Nettoyer le fond flou du panneau de mise
-  const panelBg = document.getElementById("panelTutoBackdrop");
-  if (panelBg) panelBg.remove();
-  
-  const dismiss = document.getElementById("tutoDismissOverlay");
-  if (dismiss) dismiss.remove();
+  try {
+    document
+      .querySelectorAll('.tuto-highlight')
+      .forEach(el => el.classList.remove('tuto-highlight'));
+
+    safeRemoveElement(document.getElementById("cardTutoBackdrop"));
+    safeRemoveElement(document.getElementById("panelTutoBackdrop"));
+    safeRemoveElement(document.getElementById("tutoDismissOverlay"));
+  } catch (e) {
+    console.warn("Nettoyage tuto ignoré :", e);
+  }
 }
 
 function nextTuto(step) {
@@ -4326,7 +4376,7 @@ function nextTuto(step) {
 
   if (window.tutoLockedCardIndex !== null && window.tutoLockedCardIndex !== undefined && step >= 1 && step <= 4) {
     window.currentCardIndex = window.tutoLockedCardIndex;
-    if (typeof updateCardStack === "function") updateCardStack();
+if (typeof window.updateCardStack === "function") window.updateCardStack();
   }
 
   window.currentTutoStep = step;
@@ -7738,14 +7788,25 @@ const player = (game.players || []).find(p => p.name === game.currentPlayerName)
 
     const cardPos = displayIndices.indexOf(cIndex);
     
-    if (cardPos !== -1) {
-        window.currentCardIndex = cardPos; 
-        window.isRebetting = true; // CORRECTION : On active le mode "Retour Rapide" pour la validation
-        showScreen('play');
-        selectedAnswers = new Array(game.challenges.length).fill(null);
-        selectedBets = new Array(game.challenges.length).fill(0);
-        renderPlayChallenges();
-    }
+if (cardPos !== -1) {
+    window.isRebetting = true; // Mode "Retour Rapide" pour re-miser puis revenir au récap
+    window.currentCardIndex = cardPos;
+    window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, cardPos);
+
+    showScreen('play');
+
+    selectedAnswers = new Array(game.challenges.length).fill(null);
+    selectedBets = new Array(game.challenges.length).fill(0);
+
+    renderPlayChallenges();
+
+    setTimeout(() => {
+      window.currentCardIndex = cardPos;
+      if (typeof window.updateCardStack === "function") {
+        window.updateCardStack();
+      }
+    }, 0);
+}
 };
 
 // NOUVEAU : Dérouler les détails d'une question (Mode Facile)
@@ -9824,8 +9885,13 @@ window.copyCodeToClipboard = function(code, btn) {
 function initRouteOnLoad() {
   const screenId = getScreenFromCurrentUrl();
 
-  // On remplace l’état initial du navigateur par l’écran actuel.
-  updateUrlForScreen(screenId, true);
+  // On remplace l’état initial du navigateur par l’écran actuel,
+  // mais on ne bloque jamais l'affichage si l'URL échoue.
+  try {
+    updateUrlForScreen(screenId, true);
+  } catch (urlError) {
+    console.warn("Route initiale ignorée :", urlError);
+  }
 
   // On affiche la bonne page.
   showScreen(screenId, true, true);
