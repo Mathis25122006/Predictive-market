@@ -6372,7 +6372,7 @@ const block = document.createElement("div");
 
     let imgHtml = "";
     if (ch.imageUrl) {
-// On force la version réaliste sur mobile aussi
+// Image question mobile
 let mobileImageUrl = getRealisticCardImageUrl(ch.imageUrl);
 
 mobileImageUrl = getAssetUrl(mobileImageUrl);
@@ -10948,6 +10948,10 @@ function getRandomCategoryImage(category) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+  if (["live_traffic", "livetraffic"].includes(fileName)) {
+    return getAssetUrl("live_traffic_realiste_question.png");
+  }
+
   return getAssetUrl(`${fileName}_realiste.png`);
 }
 
@@ -10955,6 +10959,13 @@ function getRealisticCardImageUrl(imageUrl) {
   if (!imageUrl) return "";
 
   const raw = String(imageUrl).trim();
+
+  if (
+    raw.includes("live_traffic") ||
+    raw.includes("livetraffic")
+  ) {
+    return "live_traffic_realiste_question.png";
+  }
 
   if (raw.includes("_realiste.")) {
     return raw;
