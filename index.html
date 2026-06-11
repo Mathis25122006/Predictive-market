@@ -1541,15 +1541,48 @@ body {
   bottom: calc(max(16px, env(safe-area-inset-bottom)) + 18px) !important;
   left: 16px !important;
   right: 16px !important;
-  border-radius: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
+
+  border-radius: 30px !important;
+  border: 2px solid rgba(255,255,255,0.22) !important;
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)),
+    radial-gradient(circle at 50% 0%, rgba(168,85,247,0.22), transparent 42%),
+    rgba(8, 13, 28, 0.96) !important;
+
+  box-shadow:
+    0 0 0 1px rgba(168,85,247,0.82),
+    0 0 34px rgba(168,85,247,0.46),
+    0 0 70px rgba(59,130,246,0.16),
+    0 28px 80px rgba(0,0,0,0.88),
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    inset 0 0 34px rgba(168,85,247,0.14) !important;
+
+  padding: clamp(16px, 2vh, 24px) clamp(16px, 4.6vw, 22px) clamp(12px, 1.6vh, 18px) !important;
+}
+
+#challengesPlay .challenge-block::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 28px;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.22), transparent 22%, transparent 72%, rgba(168,85,247,0.18));
+  opacity: 0.42;
+}
+
+#challengesPlay .challenge-block > * {
+  position: relative;
+  z-index: 1;
 }
 
 .answer-btn {
-  min-height: 62px !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
   border-radius: 14px !important;
   background: rgba(255,255,255,0.045) !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
@@ -1585,6 +1618,33 @@ body {
   font-size: 10px;
   color: #a7adc8;
   text-align: right;
+}
+
+.answer-label-text {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.answer-label-text span:last-child {
+  min-width: 0 !important;
+  display: -webkit-box !important;
+  line-clamp: var(--answer-text-lines, 2) !important;
+  -webkit-line-clamp: var(--answer-text-lines, 2) !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.answer-pts-text {
+  flex-shrink: 0 !important;
+  max-width: 42% !important;
+  overflow: hidden !important;
+}
+
+.answer-letter {
+  width: var(--answer-letter-size, 32px) !important;
+  height: var(--answer-letter-size, 32px) !important;
+  min-width: var(--answer-letter-size, 32px) !important;
 }
 
 .bs-stage {
@@ -5826,10 +5886,10 @@ if (!isValid) {
     const selectedMode = selects[i].value;
     
     if (selectedMode === "custom") {
-      // Saisie libre : version réaliste
+      // Saisie libre : image normale stockée pour l'écran d'affichage
       ch.imageUrl = "saisie_libre_realiste.png";
     } else {
-      // Sinon, on applique la logique automatique réaliste
+      // Image normale stockée ; les cartes mobile convertiront vers *_realiste_question.png
       ch.imageUrl = getRandomCategoryImage(ch.category);
     }
   });
@@ -6370,18 +6430,17 @@ const block = document.createElement("div");
     const myRank = myRankIdx >= 0 ? (myRankIdx + 1) : "-";
     const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
 
-    let imgHtml = "";
-    if (ch.imageUrl) {
-// Image question mobile
-let mobileImageUrl = getRealisticCardImageUrl(ch.imageUrl);
+let imgHtml = "";
 
-mobileImageUrl = getAssetUrl(mobileImageUrl);
+// Image question mobile : uniquement pour les cartes.
+// On utilise la catégorie pour retrouver le bon fichier, ex : Trend Signals -> trend_signal_realiste_question.png
+let mobileImageUrl = getQuestionCardImageUrl(ch.imageUrl, ch.category);
 
-imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+if (mobileImageUrl) {
+  mobileImageUrl = getAssetUrl(mobileImageUrl);
 
-
-
-    }
+  imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
+}
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
     // CORRECTION : On conditionne l'affichage du solde pour le cacher en Mode Facile
@@ -6420,7 +6479,7 @@ header.innerHTML = `
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
     /* CORRECTION : "overflow: hidden" interdit formellement le défilement et force l'élasticité absolue ! */
-    answersBox.style.cssText = "flex: 1 1 auto; display: flex; flex-direction: column; justify-content: stretch; gap: clamp(6px, 1.2vh, 10px); min-height: 0; overflow: hidden; padding-bottom: 5px;";
+    answersBox.style.cssText = "flex: 1 1 0; height: 100%; min-height: 0; display: grid; grid-template-rows: repeat(var(--answer-count, 1), minmax(0, 1fr)); gap: var(--answer-gap, clamp(5px, 1vh, 9px)); overflow: hidden; padding-bottom: 0;";
     answersBox.classList.add("hide-scrollbar");
     
     // On insère la boîte de réponses à l'intérieur de la zone globale
@@ -6867,26 +6926,69 @@ function renderAnswersForChallenge(cIndex){
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
   
-  const hasBets = snaps.length > 0;
-  const ansCount = ch.answers.length;
+const hasBets = snaps.length > 0;
+const ansCount = ch.answers.length;
+const safeAnsCount = Math.max(1, ansCount);
 
-  let btnPadding = "clamp(6px, 1.5vh, 12px) 16px";
-  let labelFontSize = "clamp(14px, 1.8vh, 17px)";
-  let ptsFontSize = "clamp(15px, 2vh, 19px)";
+// Une ligne égale par réponse : les réponses remplissent exactement la zone disponible.
+box.style.display = "grid";
+box.style.gridTemplateRows = `repeat(${safeAnsCount}, minmax(0, 1fr))`;
+box.style.alignItems = "stretch";
+box.style.setProperty("--answer-count", String(safeAnsCount));
 
-  if (ansCount > 4 && hasBets) {
-      box.style.gap = "clamp(2px, 0.6vh, 4px)";
-      btnPadding = "clamp(2px, 0.8vh, 6px) 12px";
-      labelFontSize = "clamp(11px, 1.3vh, 13px)";
-      ptsFontSize = "clamp(12px, 1.4vh, 14px)";
-  } else if (ansCount > 4) {
-      box.style.gap = "clamp(4px, 1vh, 6px)";
-      btnPadding = "clamp(4px, 1.2vh, 8px) 12px";
-      labelFontSize = "clamp(12px, 1.5vh, 15px)";
-      ptsFontSize = "clamp(13px, 1.6vh, 16px)";
-  } else {
-      box.style.gap = "clamp(6px, 1.2vh, 10px)";
-  }
+let answerGap = "clamp(6px, 1.2vh, 10px)";
+let btnPadding = "clamp(6px, 1.5vh, 12px) 16px";
+let labelFontSize = "clamp(14px, 1.8vh, 17px)";
+let ptsFontSize = "clamp(15px, 2vh, 19px)";
+let answerLetterSize = "32px";
+let answerTextLines = "2";
+
+if (ansCount <= 2) {
+  answerGap = "clamp(10px, 1.8vh, 16px)";
+  btnPadding = "clamp(10px, 2vh, 16px) 16px";
+  labelFontSize = "clamp(16px, 2.1vh, 20px)";
+  ptsFontSize = "clamp(16px, 2.2vh, 21px)";
+  answerLetterSize = "34px";
+  answerTextLines = "2";
+} else if (ansCount === 3) {
+  answerGap = "clamp(8px, 1.5vh, 13px)";
+  btnPadding = "clamp(8px, 1.7vh, 13px) 15px";
+  labelFontSize = "clamp(15px, 1.95vh, 18px)";
+  ptsFontSize = "clamp(15px, 2vh, 19px)";
+  answerLetterSize = "32px";
+  answerTextLines = "2";
+} else if (ansCount === 4) {
+  answerGap = "clamp(6px, 1.2vh, 10px)";
+  btnPadding = "clamp(6px, 1.45vh, 10px) 14px";
+  labelFontSize = "clamp(14px, 1.75vh, 17px)";
+  ptsFontSize = "clamp(14px, 1.85vh, 18px)";
+  answerLetterSize = "31px";
+  answerTextLines = "2";
+} else if (ansCount === 5) {
+  answerGap = "clamp(4px, 0.85vh, 7px)";
+  btnPadding = "clamp(4px, 1vh, 7px) 12px";
+  labelFontSize = "clamp(12px, 1.5vh, 15px)";
+  ptsFontSize = "clamp(12px, 1.6vh, 16px)";
+  answerLetterSize = "28px";
+  answerTextLines = "1";
+} else {
+  answerGap = "clamp(2px, 0.55vh, 5px)";
+  btnPadding = "clamp(2px, 0.75vh, 5px) 10px";
+  labelFontSize = "clamp(10px, 1.25vh, 13px)";
+  ptsFontSize = "clamp(10px, 1.3vh, 13px)";
+  answerLetterSize = "24px";
+  answerTextLines = "1";
+}
+
+if (hasBets && ansCount >= 5) {
+  answerGap = "clamp(2px, 0.45vh, 4px)";
+  btnPadding = "clamp(2px, 0.65vh, 4px) 10px";
+}
+
+box.style.gap = answerGap;
+box.style.setProperty("--answer-gap", answerGap);
+box.style.setProperty("--answer-letter-size", answerLetterSize);
+box.style.setProperty("--answer-text-lines", answerTextLines);
 
   const probs = getLMSRProbs(ch.votes);
   const hasSelection = hasBets || (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined);
@@ -6935,12 +7037,12 @@ const c = colors[i % colors.length];
         // Le Texte
         label = document.createElement("div");
         label.className = "answer-label-text";
-        label.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; color: #ffffff; flex:1; padding-right:10px; line-height: 1.2; letter-spacing: 0.3px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
+        label.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 700; color: #ffffff; flex:1 1 auto; min-width:0; overflow:hidden; padding-right:10px; line-height: 1.15; letter-spacing: 0.2px; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
 
         // Le Score
         ptsSpan = document.createElement("div");
         ptsSpan.className = "answer-pts-text";
-        ptsSpan.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; color: #ffffff; white-space:nowrap; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
+        ptsSpan.style.cssText = `position:relative; z-index:1; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 900; color: #ffffff; white-space:nowrap; flex-shrink:0; max-width:42%; overflow:hidden; text-align:right; text-shadow: 0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
 
         div.appendChild(gauge);
         div.appendChild(label);
@@ -9554,13 +9656,29 @@ function startQRScanner() {
         const url = new URL(decodedText);
         const code = url.searchParams.get("session");
         if (code) {
-          document.getElementById("accessCode").value = code.toUpperCase();
+          const accessCodeInput = document.getElementById("accessCode");
+          if (accessCodeInput) accessCodeInput.value = code.trim().toUpperCase();
+
           stopQRScanner();
+
+          setTimeout(() => {
+            if (typeof continueFromSessionCode === "function") {
+              continueFromSessionCode();
+            }
+          }, 250);
         }
       } catch (e) {
         // Si ce n'est pas une URL, on prend le texte brut
-        document.getElementById("accessCode").value = decodedText.toUpperCase();
+        const accessCodeInput = document.getElementById("accessCode");
+        if (accessCodeInput) accessCodeInput.value = decodedText.trim().toUpperCase();
+
         stopQRScanner();
+
+        setTimeout(() => {
+          if (typeof continueFromSessionCode === "function") {
+            continueFromSessionCode();
+          }
+        }, 250);
       }
     },
     (errorMessage) => { /* Erreurs de scan silencieuses */ }
@@ -10060,29 +10178,25 @@ window.addEventListener('load', () => {
   const emailFromUrl = urlParams.get('e');
 
   if (codeFromUrl) {
-    // IMPORTANT :
-    // On ne supprime plus ?session=XXXX.
-    // On force seulement la bonne page logique.
+    // QR session : même parcours que si le joueur venait d'entrer le code manuellement.
+    // On préremplit le code, puis on lance le tuto d'entrée.
     showScreen('play', true, false);
 
     const inputField = document.getElementById("accessCode");
     if (inputField) {
-      inputField.value = codeFromUrl.toUpperCase();
+      inputField.value = codeFromUrl.trim().toUpperCase();
 
       const codeContainer = document.getElementById("accessCodeContainer");
-      if (codeContainer) codeContainer.style.display = "none";
+      if (codeContainer) codeContainer.style.display = "block";
 
       const qrContainer = document.getElementById("qrScannerContainer");
-      if (qrContainer) qrContainer.style.display = "none";
+      if (qrContainer) qrContainer.style.display = "";
 
-      const finalPseudo = pseudoFromUrl || localStorage.getItem('monPredictionPseudo');
-      const finalEmail = emailFromUrl || localStorage.getItem('monPredictionEmail');
-      
-      if (finalPseudo && finalEmail) {
-        document.getElementById("pseudo").value = finalPseudo;
-        document.getElementById("playerEmail").value = finalEmail;
-        setTimeout(() => checkAccess(), 500);
-      }
+      setTimeout(() => {
+        if (typeof continueFromSessionCode === "function") {
+          continueFromSessionCode();
+        }
+      }, 250);
     }
   }
 });
@@ -10948,10 +11062,6 @@ function getRandomCategoryImage(category) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-  if (["live_traffic", "livetraffic"].includes(fileName)) {
-    return getAssetUrl("live_traffic_realiste_question.png");
-  }
-
   return getAssetUrl(`${fileName}_realiste.png`);
 }
 
@@ -10960,23 +11070,74 @@ function getRealisticCardImageUrl(imageUrl) {
 
   const raw = String(imageUrl).trim();
 
-  if (
-    raw.includes("live_traffic") ||
-    raw.includes("livetraffic")
-  ) {
-    return "live_traffic_realiste_question.png";
-  }
-
-  if (raw.includes("_realiste.")) {
-    return raw;
-  }
-
+  // Image normale : utilisée par l'écran d'affichage.
+  // Si une ancienne session contient déjà *_realiste_question.png,
+  // on revient à *_realiste.png pour le grand écran.
   return raw
+    .replace("_realiste_question.png", "_realiste.png")
     .replace("_carte.png", "_realiste.png")
     .replace("_question.png", "_realiste.png")
     .replace(".jpg", "_realiste.png")
     .replace(".jpeg", "_realiste.png")
     .replace(".png", "_realiste.png");
+}
+
+function getQuestionCardImageUrl(imageUrl, category) {
+  const normalizeSlug = (value) => String(value || "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  // Correspondances réelles des fichiers utilisés sur les cartes mobile.
+  // Important : Trend Signals devient trend_signal, sans "s".
+  const cardImageSlugs = {
+    live_traffic: "live_traffic",
+    future_spotlight: "future_spotlight",
+    trend_signals: "trend_signal",
+    trend_signal: "trend_signal",
+    innovation_arena: "innovation_arena",
+    fun_facts: "fun_fact",
+    fun_fact: "fun_fact",
+    funfact: "fun_fact"
+  };
+
+  const categorySlug = normalizeSlug(category);
+  if (cardImageSlugs[categorySlug]) {
+    return `${cardImageSlugs[categorySlug]}_realiste_question.png`;
+  }
+
+  if (!imageUrl) return "";
+
+  const raw = String(imageUrl).trim();
+  const rawSlug = normalizeSlug(raw);
+
+  // Sécurité pour les anciennes sessions qui auraient stocké un mauvais nom.
+  if (rawSlug.includes("trend_signals") || rawSlug.includes("trend_signal")) {
+    return "trend_signal_realiste_question.png";
+  }
+
+  if (rawSlug.includes("fun_facts") || rawSlug.includes("fun_fact") || rawSlug.includes("funfact")) {
+    return "fun_fact_realiste_question.png";
+  }
+
+  if (rawSlug.includes("live_traffic")) {
+    return "live_traffic_realiste_question.png";
+  }
+
+  if (raw.includes("_realiste_question.")) {
+    return raw;
+  }
+
+  return raw
+    .replace("_realiste.png", "_realiste_question.png")
+    .replace("_carte.png", "_realiste_question.png")
+    .replace("_question.png", "_realiste_question.png")
+    .replace(".jpg", "_realiste_question.png")
+    .replace(".jpeg", "_realiste_question.png")
+    .replace(".png", "_realiste_question.png");
 }
 
 // --- FONCTIONS DE RACCOURCIS CIBLÉES ---
