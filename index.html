@@ -11144,17 +11144,24 @@ function getRandomCategoryImage(category) {
 
   return getAssetUrl(`${fileName}_realiste.png`);
 }
-
 function getRealisticCardImageUrl(imageUrl) {
   if (!imageUrl) return "";
 
   const raw = String(imageUrl).trim();
 
-  // Image normale : utilisée par l'écran d'affichage.
+  // Image normale : utilisée uniquement par l'écran d'affichage.
   // Si une ancienne session contient déjà *_realiste_question.png,
-  // on revient à *_realiste.png pour le grand écran.
+  // on revient à *_realiste.png.
+  if (raw.includes("_realiste_question.")) {
+    return raw.replace("_realiste_question.png", "_realiste.png");
+  }
+
+  // Si l'image est déjà au bon format, on ne la modifie surtout pas.
+  if (raw.includes("_realiste.")) {
+    return raw;
+  }
+
   return raw
-    .replace("_realiste_question.png", "_realiste.png")
     .replace("_carte.png", "_realiste.png")
     .replace("_question.png", "_realiste.png")
     .replace(".jpg", "_realiste.png")
