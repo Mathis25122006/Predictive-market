@@ -1395,6 +1395,30 @@ body {
   margin-bottom: 112px;
 }
 
+.app-top-logo {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(96px, 28vw, 128px);
+  height: auto;
+  z-index: 12000;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 26px rgba(0,0,0,0.42));
+}
+
+body.has-app-top-logo .card {
+  margin-top: max(86px, calc(env(safe-area-inset-top) + 64px)) !important;
+}
+
+body.has-app-top-logo #playerResult {
+  padding-top: max(96px, calc(env(safe-area-inset-top) + 74px)) !important;
+}
+
+body.has-app-top-logo #playerAuth.join-card {
+  padding-top: max(118px, calc(env(safe-area-inset-top) + 92px)) !important;
+}
+
 .ui-home-graph {
   width: 210px;
   height: 160px;
@@ -3678,9 +3702,11 @@ body {
 </head>
 <body>
 <!-- NOUVEAU : top: max(16px, env(safe-area-inset-top)) protège contre l'encoche -->
-  <div id="globalBalance" class="hidden" style="position:fixed; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:700; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+<div id="globalBalance" class="hidden" style="position:fixed; top:max(16px, env(safe-area-inset-top)); right:16px; background:rgba(15,23,42,0.9); padding:6px 12px; border-radius:999px; border:1px solid #3b82f6; color:#3b82f6; font-weight:bold; font-size:14px; z-index:700; box-shadow:0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
   💰 <span id="globalBalanceAmt">0</span>
 </div>
+
+<img id="appTopLogo" src="FDJ_Predinno-3.png" alt="FDJ Predinno" class="app-top-logo" style="display:none;">
 
 <div id="sellPanelOverlay" class="side-panel-overlay" onclick="closeSellPanel()"></div>
 <div id="sellPanel" class="side-panel">
@@ -3722,10 +3748,6 @@ body {
   <button onclick="askJoinGameChoice()" class="ui-btn-white">Rejoindre le jeu</button>
   <button onclick="checkAdminPassword()" class="ui-btn-outline">Connection administrateur</button>
 
-  <p class="ui-legal">
-    En rejoignant, vous acceptez<br>
-    nos <a href="#">Conditions d'utilisation</a>.
-  </p>
 </div>
 
 <div id="previousSessionPrompt" style="display:none; position:fixed; inset:0; z-index:20000; background:rgba(0,0,0,0.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); align-items:center; justify-content:center; padding:24px; box-sizing:border-box;">
@@ -4809,6 +4831,8 @@ function showJoinCodeStep() {
   if (codeStep) codeStep.classList.remove("hidden");
   if (detailsStep) detailsStep.classList.add("hidden");
 
+  updateAppTopLogo("play");
+
   const codeInput = document.getElementById("accessCode");
   if (codeInput) setTimeout(() => codeInput.focus(), 80);
 }
@@ -4818,6 +4842,8 @@ function showJoinDetailsStep() {
   const detailsStep = document.getElementById("joinDetailsStep");
   if (codeStep) codeStep.classList.add("hidden");
   if (detailsStep) detailsStep.classList.remove("hidden");
+
+  updateAppTopLogo("play");
 
   const pseudoInput = document.getElementById("pseudo");
   if (pseudoInput) setTimeout(() => pseudoInput.focus(), 80);
@@ -5060,9 +5086,28 @@ function getLastPlayerSession() {
   }
 }
 
+function resetPreviousSessionPromptButtons() {
+  const prompt = document.getElementById("previousSessionPrompt");
+  if (!prompt) return;
+
+  prompt.querySelectorAll("button").forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = "";
+    btn.style.pointerEvents = "";
+    btn.style.cursor = "";
+  });
+}
+
 function hidePreviousSessionPrompt() {
+  resetPreviousSessionPromptButtons();
+
   const prompt = document.getElementById("previousSessionPrompt");
   if (prompt) prompt.style.display = "none";
+}
+
+function completePreviousSessionReconnect() {
+  window.isReconnectingPreviousSession = false;
+  hidePreviousSessionPrompt();
 }
 
 function returnToHomeFromPreviousSessionPrompt() {
@@ -5099,7 +5144,10 @@ function askJoinGameChoice() {
   }
 
   const prompt = document.getElementById("previousSessionPrompt");
-  if (prompt) prompt.style.display = "flex";
+  if (prompt) {
+    resetPreviousSessionPromptButtons();
+    prompt.style.display = "flex";
+  }
 }
 
 function startFreshJoinSession() {
@@ -5264,6 +5312,28 @@ function reconnectPreviousSession() {
   }, 40);
 }
 
+function updateAppTopLogo(screenId) {
+  const logo = document.getElementById("appTopLogo");
+  if (!logo) return;
+
+  const gameContent = document.getElementById("gameContent");
+  const isQuestionScreen =
+    screenId === "play" &&
+    gameContent &&
+    !gameContent.classList.contains("hidden");
+
+  // Accueil : logo déjà présent dans la page.
+  // Grand écran : logo déjà présent au centre.
+  // Questions : pas de logo pour ne pas gêner les cartes.
+  const shouldShow =
+    screenId !== "home" &&
+    screenId !== "bigScreen" &&
+    !isQuestionScreen;
+
+  logo.style.display = shouldShow ? "block" : "none";
+  document.body.classList.toggle("has-app-top-logo", shouldShow);
+}
+
 function showScreen(screenId, isBack = false, skipUrlUpdate = false) {
   try {
     // Ajout de l'écran actuel à l'historique si on avance
@@ -5341,16 +5411,20 @@ window.currentTutoStep = 0;
     }
 
     // 2. Boucle principale pour afficher l'écran demandé et masquer les autres
-    screens.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        if (id === screenId) {
-          el.style.display = 'block';
-        } else {
-          el.style.display = 'none';
-        }
-      }
-    });
+screens.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    if (id === screenId) {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+});
+
+updateAppTopLogo(screenId);
+
+// 3. CORRECTION MAJEURE : On cache le logo et le titre sur l'écran de jeu ET sur le Grand Écran !
 
     // 3. CORRECTION MAJEURE : On cache le logo et le titre sur l'écran de jeu ET sur le Grand Écran !
     const mainLogo = document.getElementById('mainLogo');
@@ -5492,15 +5566,16 @@ const pctAtBet = (pctBefore * 100).toFixed(1);
   simulatedVotes[ansIndex] += bet;
   ch.votes = simulatedVotes;
 
-  player.portfolio.push({
-    cIndex: cIndex,
-    ansIndex: ansIndex,
-    bet: bet,
-    pts: pointsPotentiels,
-    type: bType,
-    pctAtBet: pctAtBet,
-    validatedAt: Date.now()
-  });
+player.portfolio.push({
+  cIndex: cIndex,
+  ansIndex: ansIndex,
+  bet: bet,
+  pts: pointsPotentiels,
+  type: bType,
+  pctAtBet: pctAtBet,
+  marketProbsAtBet: marketProbsAtBet,
+  validatedAt: betTime
+});
 
   player.lastLocalUpdate = Date.now();
   window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
@@ -6790,6 +6865,10 @@ window.getPlayerDisplayIndices = function(player) {
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
+
+  // Sur les cartes de questions, le logo doit disparaître.
+  updateAppTopLogo("play");
+
   container.innerHTML = "";
 
   // L'ancien bouton "quickRecap" a été supprimé au profit de la barre flottante mobile
@@ -8205,24 +8284,30 @@ window.validateCurrentCardVote = function(cIndex) {
 const probsBefore = window.PredictiveMath.getProbs(ch.votes);
 const pctBefore = probsBefore[ansIndex] || 0;
 
+// Photo complète du marché au moment où le joueur valide.
+// Cela permettra d'afficher : "quand j'ai misé" vs "maintenant".
+const marketProbsAtBet = probsBefore.map(p => +(p * 100).toFixed(1));
+
 // On verrouille les parts réellement achetées en tenant compte du mouvement du marché.
 // Cela corrige la valeur provisoire trop haute en mode facile.
 const pointsPotentiels = +window.PredictiveMath.calcSharesToBuy(ch.votes, ansIndex, bet).toFixed(2);
-const pctAtBet = (pctBefore * 100).toFixed(1);
+const pctAtBet = marketProbsAtBet[ansIndex];
+const betTime = Date.now();
 
   let simulatedVotes = [...ch.votes];
   simulatedVotes[ansIndex] += bet;
   ch.votes = simulatedVotes;
 
-  player.portfolio.push({
-    cIndex: cIndex,
-    ansIndex: ansIndex,
-    bet: bet,
-    pts: pointsPotentiels,
-    type: bType,
-    pctAtBet: pctAtBet,
-    validatedAt: Date.now()
-  });
+player.portfolio.push({
+  cIndex: cIndex,
+  ansIndex: ansIndex,
+  bet: bet,
+  pts: pointsPotentiels,
+  type: bType,
+  pctAtBet: pctAtBet,
+  marketProbsAtBet: marketProbsAtBet,
+  validatedAt: betTime
+});
 
   player.lastLocalUpdate = Date.now();
   window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
@@ -10002,6 +10087,8 @@ function checkAccess() {
 
     saveLastPlayerSession(inputCode, finalPlayer.name, finalPlayer.email || emailInput, modeToPlay);
 
+    completePreviousSessionReconnect();
+
     showPlayerResult(finalPlayer.name);
   } else {
     game.currentPlayerName = pseudoInput;
@@ -10015,6 +10102,8 @@ function checkAccess() {
     currentPlayerBalance = existingPlayer.balance || 0;
 
     saveLastPlayerSession(inputCode, existingPlayer.name, existingPlayer.email || emailInput, modeToPlay);
+
+    completePreviousSessionReconnect();
 
     updateGlobalBalance();
     renderPlayerRecap(existingPlayer.name);
@@ -10053,10 +10142,12 @@ function checkAccess() {
       }
     });
 
-} else {
-    msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
-    msg.className = "msg ok";
-}
+    } else {
+        completePreviousSessionReconnect();
+
+        msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
+        msg.className = "msg ok";
+    }
       }
       return; 
     }
@@ -10173,12 +10264,11 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
         }
 
         if (isFirstLoad) {
-            isFirstLoad = false;
+                    isFirstLoad = false;
 
-            window.isReconnectingPreviousSession = false;
-            hidePreviousSessionPrompt();
+                    completePreviousSessionReconnect();
 
-            document.getElementById("playerAuth").classList.add("hidden");
+                    document.getElementById("playerAuth").classList.add("hidden");
             
             if (!window.hasSeenWelcomeCode) {
                 const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
@@ -10968,6 +11058,45 @@ if (diff <= 0) {
 // Fonction interne pour mettre à jour les chiffres en temps réel
 // Fonction interne pour mettre à jour les chiffres en temps réel
 // Fonction interne pour mettre à jour les chiffres en temps réel
+function getQuestionBettorStats(cIndex) {
+  const ch = game && game.challenges ? game.challenges[cIndex] : null;
+  const answersCount = ch && Array.isArray(ch.answers) ? ch.answers.length : 0;
+
+  const answerCounts = new Array(answersCount).fill(0);
+  const questionPlayers = new Set();
+
+  const players = game && Array.isArray(game.players) ? game.players : [];
+
+  players.forEach((p, pIndex) => {
+    const playerKey = String(p.email || p.name || `player_${pIndex}`).trim().toLowerCase();
+    const answersPlayedByThisPlayer = new Set();
+
+    (p.portfolio || []).forEach(snap => {
+      if (Number(snap.cIndex) !== Number(cIndex)) return;
+      if (!(Number(snap.bet || 0) > 0)) return;
+      if (snap.cashedOut) return;
+
+      const ansIndex = Number(snap.ansIndex);
+      if (!Number.isInteger(ansIndex) || ansIndex < 0 || ansIndex >= answersCount) return;
+
+      answersPlayedByThisPlayer.add(ansIndex);
+    });
+
+    if (answersPlayedByThisPlayer.size > 0) {
+      questionPlayers.add(playerKey);
+    }
+
+    answersPlayedByThisPlayer.forEach(ansIndex => {
+      answerCounts[ansIndex] += 1;
+    });
+  });
+
+  return {
+    totalBettors: questionPlayers.size,
+    answerCounts
+  };
+}
+
 function updateRecapUI(pseudo) {
   let player = (game.players || []).find(p => p.name === pseudo) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === pseudo ? window.localPlayerSnapshot : null);
   if (!player) {
@@ -11125,10 +11254,130 @@ const probs = getChallengeDisplayProbs(ch);
 
     if (currentPlayerMode === 'easy') {
       const snap = snaps.length > 0 ? snaps[0] : null;
-      if (snap) {
-        let answersHtml = '';
+if (snap) {
+  const entryMarketProbs = Array.isArray(snap.marketProbsAtBet)
+    ? snap.marketProbsAtBet.map(Number)
+    : [];
+
+  const fallbackAtBetPct = Number(snap.pctAtBet);
+  const selectedAtBetPct = Number.isFinite(entryMarketProbs[snap.ansIndex])
+    ? entryMarketProbs[snap.ansIndex]
+    : (
+        Number.isFinite(fallbackAtBetPct)
+          ? fallbackAtBetPct
+          : +(((probs[snap.ansIndex] || 0) * 100).toFixed(1))
+      );
+
+  const selectedNowPct = +(((probs[snap.ansIndex] || 0) * 100).toFixed(1));
+  const selectedDeltaPct = +(selectedNowPct - selectedAtBetPct).toFixed(1);
+
+  const easySelectedIsWinning = isResolvedQuestion && correctIdx === snap.ansIndex;
+  const easyTicketValue = isResolvedQuestion
+    ? (easySelectedIsWinning ? Number(snap.pts || 0) : 0)
+    : Number(window.getAMMValue(ch, snap) || 0);
+
+  const betTimeLabel = snap.validatedAt
+    ? new Date(Number(snap.validatedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : "";
+
+  const deltaColor = selectedDeltaPct >= 0 ? "#4ade80" : "#f87171";
+  const deltaArrow = selectedDeltaPct >= 0 ? "↗" : "↘";
+
+  const deltaExplanation = isResolvedQuestion
+    ? (
+        easySelectedIsWinning
+          ? "Votre prédiction était la bonne réponse."
+          : "Le marché est terminé : votre prédiction n'a pas gagné."
+      )
+    : selectedDeltaPct > 0
+      ? "Le marché va davantage dans votre sens qu'au moment de votre mise."
+      : selectedDeltaPct < 0
+        ? "Le marché va moins dans votre sens qu'au moment de votre mise."
+        : "Le marché est stable depuis votre mise.";
+
+    const ticketValueLabel = isResolvedQuestion
+      ? "Valeur finale de votre ticket"
+      : "Valeur actuelle de votre ticket";
+
+    const bettorStats = getQuestionBettorStats(cIndex);
+    const selectedBettorCount = bettorStats.answerCounts[snap.ansIndex] || 0;
+    const totalBettors = bettorStats.totalBettors || 0;
+
+    const selectedBettorText =
+      `${selectedBettorCount} ${selectedBettorCount > 1 ? "personnes" : "personne"} sur votre réponse`;
+
+    const totalBettorText =
+      `${totalBettors} ${totalBettors > 1 ? "personnes ont misé" : "personne a misé"} sur cette question`;
+
+    const easyMarketInsightHtml = `
+    <div style="background:linear-gradient(135deg, rgba(59,130,246,0.14), rgba(168,85,247,0.12)); border:1px solid rgba(96,165,250,0.32); border-radius:14px; padding:12px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
+        <div>
+          <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:900; letter-spacing:0.08em;">Votre ticket</div>
+          <div style="font-size:13px; color:#fff; font-weight:900; margin-top:3px;">${ch.answers[snap.ansIndex]}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px; color:#94a3b8;">Mise</div>
+          <div style="font-size:15px; color:#fde047; font-weight:950;">${Number(snap.bet || 0)} 💰</div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; background:rgba(0,0,0,0.20); border-radius:12px; padding:10px; margin-bottom:10px;">
+        <div>
+          <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:800;">Quand vous avez misé${betTimeLabel ? ` · ${betTimeLabel}` : ""}</div>
+          <div style="font-size:18px; color:#e5e7eb; font-weight:950;">${selectedAtBetPct.toFixed(1)}%</div>
+        </div>
+
+        <div style="font-size:18px; color:#64748b; font-weight:900;">→</div>
+
+<div style="text-align:right;">
+  <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:800;">Marché maintenant</div>
+  <div style="font-size:18px; color:#fff; font-weight:950;">${selectedNowPct.toFixed(1)}%</div>
+</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.10); border-radius:12px; padding:9px 10px; margin-bottom:10px;">
+        <div style="font-size:11px; color:#cbd5e1; font-weight:800;">👥 ${selectedBettorText}</div>
+        <div style="font-size:10px; color:#94a3b8; text-align:right;">${totalBettorText}</div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="font-size:11px; color:${deltaColor}; font-weight:900;">
+          ${deltaArrow} ${selectedDeltaPct >= 0 ? "+" : ""}${selectedDeltaPct.toFixed(1)} pts
+        </div>
+        <div style="font-size:11px; color:#cbd5e1; text-align:right; line-height:1.25;">
+          ${deltaExplanation}
+        </div>
+      </div>
+
+      <div style="margin-top:10px; padding-top:10px; border-top:1px dashed rgba(255,255,255,0.14); display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:11px; color:#94a3b8;">${ticketValueLabel}</div>
+        <div style="font-size:15px; color:#fde047; font-weight:950;">${easyTicketValue.toFixed(2)} 💰</div>
+      </div>
+    </div>
+  `;
+
+  let answersHtml = '';
         ch.answers.forEach((ans, aIdx) => {
 const pct = probs[aIdx] || 0;
+const currentPctDisplay = +((pct * 100).toFixed(1));
+
+const entryPctForAnswer = Number(entryMarketProbs[aIdx]);
+const hasEntryPctForAnswer = Number.isFinite(entryPctForAnswer);
+const answerDelta = hasEntryPctForAnswer
+  ? +(currentPctDisplay - entryPctForAnswer).toFixed(1)
+  : 0;
+
+const answerMarketText = hasEntryPctForAnswer
+  ? `${entryPctForAnswer.toFixed(1)}% → ${currentPctDisplay.toFixed(1)}%`
+  : `${currentPctDisplay.toFixed(1)}%`;
+
+const answerDeltaText = hasEntryPctForAnswer
+  ? `${answerDelta >= 0 ? "+" : ""}${answerDelta.toFixed(1)} pts`
+  : "";
+
+const answerDeltaColor = answerDelta >= 0 ? "#4ade80" : "#f87171";
+
 const isSelected = snap.ansIndex === aIdx;
 const isCorrectAnswer = isResolvedQuestion && correctIdx === aIdx;
 
@@ -11136,28 +11385,13 @@ const icon = isResolvedQuestion
   ? (isCorrectAnswer ? '🏁 ' : (isSelected ? '❌ ' : ''))
   : (isSelected ? '✅ ' : '');
 
-// Valeur affichée dans le détail du mode facile.
-// Question ouverte :
-// - réponse jouée = valeur AMM actuelle de la position
-// - autres réponses = valeur estimée si on misait 1 maintenant
-// Question résolue :
-// - bonne réponse jouée = gain final
-// - mauvaise réponse jouée = perdu
-const liveMarketValue = isSelected
-  ? window.getAMMValue(ch, snap)
-  : +window.PredictiveMath.calcSharesToBuy(ch.votes, aIdx, 1).toFixed(2);
+// Affichage simplifié dans le détail du mode facile :
+// en bas, on ne montre que le pourcentage du marché.
+const pctLabel = `${(pct * 100).toFixed(1)}%`;
 
-const ptsLabel = isResolvedQuestion
-  ? (
-      isSelected && isCorrectAnswer
-        ? `${Number(snap.pts).toFixed(2)} 💰 gagné`
-        : isSelected
-          ? `0 💰 perdu`
-          : isCorrectAnswer
-            ? `Réponse validée`
-            : `0 💰`
-    )
-  : `${Number(liveMarketValue).toFixed(2)} 💰`;
+const answerBettorCount = bettorStats.answerCounts[aIdx] || 0;
+const answerBettorLabel =
+  `${answerBettorCount} ${answerBettorCount > 1 ? "personnes" : "personne"}`;
 
 const bg = isCorrectAnswer
   ? 'background:rgba(34,197,94,0.18); border:1px solid #22c55e;'
@@ -11166,11 +11400,16 @@ const bg = isCorrectAnswer
     : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); opacity:0.7;';
 
 answersHtml += `
-  <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-    <div style="font-size:12px; color:white; width:65%; line-height:1.2;">${icon}${ans}</div>
-    <div style="text-align:right;">
-      <div id="recap-pts-val-${cIndex}-${aIdx}" style="font-size:12px; font-weight:bold; color:#fde047;">${ptsLabel}</div>
-      <div id="recap-pct-val-${cIndex}-${aIdx}" style="font-size:10px; color:#9ca3af;">${(pct*100).toFixed(1)}%</div>
+  <div style="${bg} padding:8px 12px; border-radius:8px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+    <div style="font-size:12px; color:white; flex:1; min-width:0; line-height:1.2;">${icon}${ans}</div>
+
+    <div style="text-align:right; min-width:74px;">
+      <div id="recap-pct-val-${cIndex}-${aIdx}" style="font-size:14px; font-weight:900; color:#fde047;">
+        ${pctLabel}
+      </div>
+      <div style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
+        👥 ${answerBettorLabel}
+      </div>
     </div>
   </div>
 `;
@@ -11190,7 +11429,7 @@ const selectedAnswerIcon = isResolvedQuestion
 
 const selectedValueLabel = isResolvedQuestion
   ? (selectedIsWinning ? `+${Number(snap.pts).toFixed(2)} 💰 gagné` : `0 💰 perdu`)
-  : `+${Number(snap.pts).toFixed(2)} 💰 pot.`;
+  : `${Number(window.getAMMValue(ch, snap)).toFixed(2)} 💰 maintenant`;
 
 const selectedValueColor = isResolvedQuestion
   ? (selectedIsWinning ? "#4ade80" : "#f87171")
@@ -11210,7 +11449,8 @@ const selectedValueColor = isResolvedQuestion
             </div>
 
             <div id="details-ch-${cIndex}" class="${detailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
-              <div style="font-size:11px; color:#a855f7; margin-bottom:8px; font-weight:bold;">Évolution en direct :</div>
+              ${easyMarketInsightHtml}
+              <div style="font-size:11px; color:#a855f7; margin-bottom:8px; font-weight:bold;">Marché par réponse :</div>
               ${answersHtml}
             </div>
           </div>
@@ -13344,7 +13584,6 @@ document.getElementById("bsQrContainer").innerHTML = `
   <div>
     <div class="bs-code-label">${scanText.replace("<br>", " ")}</div>
     <div class="bs-code-value">${activeCode}</div>
-    <div style="margin-top:10px; color:#a78bfa; font-size:14px;">🔗 fdjpredinno.fr/join</div>
   </div>
 `;
 
