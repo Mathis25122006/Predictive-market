@@ -777,6 +777,17 @@ button {
     inset 0 1px 18px rgba(168,85,247,0.12);
   transition: transform 0.34s cubic-bezier(0.18, 0.9, 0.22, 1);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+body.bet-panel-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body.bet-panel-open #challengesPlay {
+  touch-action: none !important;
 }
 
 #betPanel.bet-sheet.open {
@@ -912,7 +923,7 @@ button {
   top: 50%;
   transform: translateY(-50%);
   width: calc(100% + 4px);
-  height: 34px;
+  height: 42px;
   margin: 0;
   padding: 0;
   background: transparent;
@@ -920,6 +931,9 @@ button {
   -webkit-appearance: none;
   cursor: pointer;
   z-index: 2;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .bet-balance-slider::-webkit-slider-runnable-track {
@@ -1131,6 +1145,27 @@ button {
 }
 .bs-faded {
   opacity: 0 !important;
+}
+
+.bs-option-bar span,
+.bs-option-pct,
+.bs-trend-pct,
+.bs-leader-row,
+.bs-stat strong {
+  transition:
+    width 0.42s ease,
+    opacity 0.24s ease,
+    transform 0.24s ease,
+    color 0.24s ease;
+}
+
+.bs-option-pct,
+.bs-trend-pct,
+.bs-leader-score,
+.bs-stat strong,
+.bs-mini-timer,
+#bsGlobalTimer {
+  font-variant-numeric: tabular-nums;
 }
 
 /* NOUVEAU : Masquer les barres de défilement pour un rendu propre sur TV */
@@ -3684,13 +3719,29 @@ body {
   <h1 class="ui-title">Bienvenue dans<br>FDJ Predinno</h1>
   <p class="ui-subtitle">Prédisez, suivez les tendances<br>et placez-vous en tête.</p>
 
-  <button onclick="showScreen('play')" class="ui-btn-white">Rejoindre le jeu</button>
-  <button onclick="checkAdminPassword()" class="ui-btn-outline">Se connecter</button>
+  <button onclick="askJoinGameChoice()" class="ui-btn-white">Rejoindre le jeu</button>
+  <button onclick="checkAdminPassword()" class="ui-btn-outline">Connection administrateur</button>
 
   <p class="ui-legal">
     En rejoignant, vous acceptez<br>
     nos <a href="#">Conditions d'utilisation</a>.
   </p>
+</div>
+
+<div id="previousSessionPrompt" style="display:none; position:fixed; inset:0; z-index:20000; background:rgba(0,0,0,0.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); align-items:center; justify-content:center; padding:24px; box-sizing:border-box;">
+  <div style="width:min(100%, 390px); background:linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.035)), rgba(8,13,28,0.98); border:1px solid rgba(168,85,247,0.38); border-radius:28px; padding:26px 22px; box-shadow:0 30px 90px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.12); text-align:center;">
+    <div style="font-size:34px; margin-bottom:12px;">🎮</div>
+    <h2 style="margin:0 0 10px; font-size:25px; line-height:1.1; font-weight:950;">Reprendre votre partie ?</h2>
+    <p style="margin:0 0 20px; color:#a7adc8; font-size:14px; line-height:1.45;">
+      Voulez-vous vous reconnecter à votre session précédente ou rejoindre une nouvelle session ?
+    </p>
+
+    <div id="previousSessionLabel" style="margin-bottom:18px; padding:12px; border-radius:16px; background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.08); color:#e5e7eb; font-size:13px; line-height:1.35;"></div>
+
+  <button onclick="reconnectPreviousSession()" class="ui-btn-purple" style="max-width:none !important;">Session précédente</button>
+  <button onclick="startFreshJoinSession()" class="ui-btn-outline" style="max-width:none !important;">Nouvelle session</button>
+  <button onclick="returnToHomeFromPreviousSessionPrompt()" class="ui-btn-outline" style="max-width:none !important; border-color:rgba(255,255,255,0.18) !important; color:#a7adc8 !important;">Retour au menu principal</button>
+  </div>
 </div>
 
 <div id="onboarding" class="ui-screen tuto-screen" style="display:none;">
@@ -4741,8 +4792,20 @@ function goBack() {
 }
 
 function showJoinCodeStep() {
+  const playerAuth = document.getElementById("playerAuth");
+  const gameContent = document.getElementById("gameContent");
   const codeStep = document.getElementById("joinCodeStep");
   const detailsStep = document.getElementById("joinDetailsStep");
+
+  if (playerAuth) {
+    playerAuth.classList.remove("hidden");
+    playerAuth.style.display = "block";
+  }
+
+  if (gameContent) {
+    gameContent.classList.add("hidden");
+  }
+
   if (codeStep) codeStep.classList.remove("hidden");
   if (detailsStep) detailsStep.classList.add("hidden");
 
@@ -4960,6 +5023,247 @@ function backFromJoinTuto() {
   setTimeout(showJoinCodeStep, 0);
 }
 
+const LAST_PLAYER_SESSION_KEY = "monPredictionLastPlayerSession";
+
+function saveLastPlayerSession(code, pseudo, email, mode) {
+  if (!code || !pseudo || !email) return;
+
+  localStorage.setItem(LAST_PLAYER_SESSION_KEY, JSON.stringify({
+    code: String(code).trim().toUpperCase(),
+    pseudo: String(pseudo).trim(),
+    email: String(email).trim(),
+    mode: mode || "",
+    savedAt: Date.now()
+  }));
+}
+
+function getLastPlayerSession() {
+  try {
+    const raw = localStorage.getItem(LAST_PLAYER_SESSION_KEY);
+    if (!raw) return null;
+
+    const data = JSON.parse(raw);
+
+    if (!data || !data.code || !data.pseudo || !data.email) {
+      return null;
+    }
+
+    return {
+      code: String(data.code).trim().toUpperCase(),
+      pseudo: String(data.pseudo).trim(),
+      email: String(data.email).trim(),
+      mode: data.mode || "",
+      savedAt: data.savedAt || 0
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+function hidePreviousSessionPrompt() {
+  const prompt = document.getElementById("previousSessionPrompt");
+  if (prompt) prompt.style.display = "none";
+}
+
+function returnToHomeFromPreviousSessionPrompt() {
+  hidePreviousSessionPrompt();
+
+  // On s'assure de quitter proprement l'espace joueur.
+  document.body.classList.remove("play-mode-active");
+  document.body.classList.remove("bet-panel-open");
+
+  if (typeof closeBetPanel === "function") closeBetPanel({ suppressTuto: true });
+  if (typeof closeSellPanel === "function") closeSellPanel();
+
+  showScreen("home", false, true);
+
+  if (window.location.protocol !== "file:" && typeof getRouteForScreen === "function") {
+    window.history.replaceState({ screenId: "home" }, "", getRouteForScreen("home"));
+  }
+}
+
+function askJoinGameChoice() {
+  const previous = getLastPlayerSession();
+
+  if (!previous) {
+    startFreshJoinSession();
+    return;
+  }
+
+  const label = document.getElementById("previousSessionLabel");
+  if (label) {
+    label.innerHTML = `
+      <strong style="color:#fff;">${window.escapeHtml(previous.pseudo)}</strong><br>
+      Session <strong style="color:#a78bfa; letter-spacing:0.08em;">${window.escapeHtml(previous.code)}</strong>
+    `;
+  }
+
+  const prompt = document.getElementById("previousSessionPrompt");
+  if (prompt) prompt.style.display = "flex";
+}
+
+function startFreshJoinSession() {
+  hidePreviousSessionPrompt();
+
+  // On coupe l'ancienne écoute Firebase joueur, sinon l'ancienne session peut
+  // continuer à réafficher le jeu pendant qu'on essaie de saisir un nouveau code.
+  try {
+    if (window.currentActiveSessionCode) {
+      db.ref("sessions").child(window.currentActiveSessionCode).off();
+    }
+  } catch (e) {}
+
+  // On arrête les timers joueur/récap s'ils tournaient encore.
+  if (typeof playerTimerInterval !== "undefined" && playerTimerInterval) {
+    clearInterval(playerTimerInterval);
+    playerTimerInterval = null;
+  }
+
+  if (typeof recapTimerInterval !== "undefined" && recapTimerInterval) {
+    clearInterval(recapTimerInterval);
+    recapTimerInterval = null;
+  }
+
+  // On ferme les panneaux éventuels.
+  if (typeof closeBetPanel === "function") closeBetPanel();
+  if (typeof closeSellPanel === "function") closeSellPanel();
+  if (typeof stopQRScanner === "function") stopQRScanner();
+
+  // Nettoyage des états mobile qui peuvent bloquer l'affichage.
+  document.body.classList.remove("play-mode-active");
+  document.body.classList.remove("bet-panel-open");
+
+  // On revient à un état vierge côté joueur.
+  window.currentActiveSessionCode = "";
+  window.currentCardIndex = 0;
+  window.hasSeenWelcomeCode = false;
+  window.pendingJoinMode = null;
+  window.pendingJoinQuestionsPerPlayer = null;
+  window.isRebetting = false;
+
+  if (typeof selectedAnswers !== "undefined") {
+    selectedAnswers = {};
+  }
+
+  if (game) {
+    game.currentPlayerName = "";
+  }
+
+  const accessCode = document.getElementById("accessCode");
+  const playMsg = document.getElementById("playMsg");
+  const playerAuth = document.getElementById("playerAuth");
+  const gameContent = document.getElementById("gameContent");
+  const challengesPlay = document.getElementById("challengesPlay");
+  const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+
+  if (accessCode) accessCode.value = "";
+
+  if (playMsg) {
+    playMsg.textContent = "";
+    playMsg.className = "msg";
+  }
+
+  if (playerAuth) {
+    playerAuth.classList.remove("hidden");
+    playerAuth.style.display = "block";
+  }
+
+  if (gameContent) {
+    gameContent.classList.add("hidden");
+    gameContent.style.display = "";
+  }
+
+  if (challengesPlay) {
+    challengesPlay.innerHTML = "";
+  }
+
+  if (welcomeOverlay) {
+    welcomeOverlay.style.display = "none";
+  }
+
+  // Important : on ne conserve pas l'ancien ?session=XXXX dans l'URL.
+  // Sinon le site peut croire qu'on veut encore rejoindre l'ancienne session.
+  showScreen('play', false, true);
+
+  if (window.location.protocol !== "file:") {
+    window.history.replaceState({ screenId: "play" }, "", getRouteForScreen("play"));
+  }
+
+  setTimeout(() => {
+    showJoinCodeStep();
+
+    const codeInput = document.getElementById("accessCode");
+    if (codeInput) codeInput.focus();
+  }, 0);
+}
+
+function reconnectPreviousSession() {
+  const previous = getLastPlayerSession();
+
+  if (!previous) {
+    startFreshJoinSession();
+    return;
+  }
+
+  // On garde la fenêtre par-dessus pendant la reconnexion,
+  // pour éviter d'apercevoir l'écran de saisie du code.
+  const prompt = document.getElementById("previousSessionPrompt");
+  const label = document.getElementById("previousSessionLabel");
+
+  if (label) {
+    label.innerHTML = `
+      <strong style="color:#fff;">Reconnexion en cours...</strong><br>
+      <span style="color:#a7adc8;">Retour à votre session précédente</span>
+    `;
+  }
+
+  if (prompt) {
+    prompt.style.display = "flex";
+    prompt.querySelectorAll("button").forEach(btn => {
+      btn.disabled = true;
+      btn.style.opacity = "0.55";
+      btn.style.pointerEvents = "none";
+    });
+  }
+
+  const accessCode = document.getElementById("accessCode");
+  const pseudo = document.getElementById("pseudo");
+  const email = document.getElementById("playerEmail");
+  const playMsg = document.getElementById("playMsg");
+  const playerAuth = document.getElementById("playerAuth");
+  const gameContent = document.getElementById("gameContent");
+
+  if (accessCode) accessCode.value = previous.code;
+  if (pseudo) pseudo.value = previous.pseudo;
+  if (email) email.value = previous.email;
+
+  if (playMsg) {
+    playMsg.textContent = "";
+    playMsg.className = "msg";
+  }
+
+  // Flag anti-flash : showScreen('play') ne doit pas afficher la saisie du code.
+  window.isReconnectingPreviousSession = true;
+  window.hasSeenWelcomeCode = true;
+
+  showScreen('play', false, true);
+
+  if (playerAuth) {
+    playerAuth.classList.add("hidden");
+    playerAuth.style.display = "none";
+  }
+
+  if (gameContent) {
+    gameContent.classList.add("hidden");
+  }
+
+  setTimeout(() => {
+    if (typeof checkAccess === "function") {
+      checkAccess();
+    }
+  }, 40);
+}
+
 function showScreen(screenId, isBack = false, skipUrlUpdate = false) {
   try {
     // Ajout de l'écran actuel à l'historique si on avance
@@ -5059,14 +5363,32 @@ if (screenId === 'onboarding') {
 }
 
 if (screenId === 'play') {
-  if (typeof initAccessView === 'function') {
-    initAccessView();
-  }
-
   const playMsg = document.getElementById("playMsg");
   if (playMsg) {
     playMsg.textContent = "";
     playMsg.className = "msg";
+  }
+
+  // Reconnexion silencieuse : on n'affiche ni la saisie du code,
+  // ni l'étape pseudo/e-mail pendant le chargement Firebase.
+  if (window.isReconnectingPreviousSession) {
+    const playerAuth = document.getElementById("playerAuth");
+    const gameContent = document.getElementById("gameContent");
+
+    if (playerAuth) {
+      playerAuth.classList.add("hidden");
+      playerAuth.style.display = "none";
+    }
+
+    if (gameContent) {
+      gameContent.classList.add("hidden");
+    }
+
+    return;
+  }
+
+  if (typeof initAccessView === 'function') {
+    initAccessView();
   }
 
   const codeInput = document.getElementById("accessCode");
@@ -5297,9 +5619,23 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // --- CALCULATEUR D'ÉTAT TEMPOREL ---
+function isSessionTradingClosed() {
+  const targetTime = Number(
+    sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt)
+  ) || 0;
+
+  return !!(game && game.isResolved) || (targetTime > 0 && Date.now() >= targetTime);
+}
+
 function getEffectiveStatus(ch) {
   const now = Date.now();
+
   if (ch.status === "resolved") return "resolved";
+
+  // Dès que le récap affiche "SESSION TERMINÉE",
+  // toutes les questions doivent se comporter comme clôturées côté joueur.
+  if (isSessionTradingClosed()) return "closed";
+
   if (now < ch.startTime) return "pending";
   if (now >= ch.startTime && now < ch.endTime) return "open";
   return "closed";
@@ -6399,9 +6735,9 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
     if (snaps.length > 0) {
        snaps.forEach(snap => {
            // CORRECTION : Le bouton Cash Out est maintenant aligné sur la même ligne (flexbox) pour économiser la moitié de la hauteur !
-           const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open") 
-             ? `<button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
-             : "";
+          const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open" && !isSessionTradingClosed()) 
+            ? `<button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
+            : "";
            
            let ansText = ch.answers[snap.ansIndex];
            if (isCompact && ansText.length > 18) ansText = ansText.substring(0, 15) + "..."; 
@@ -6464,11 +6800,23 @@ const player = (game.players || []).find(p => p.name === game.currentPlayerName)
     ? window.getPlayerDisplayIndices(player)
     : myIndices;
 
+  const rebetSingleIndex = Number(window.rebetSingleCardCIndex);
+
+  const renderIndices =
+    window.isRebetting && Number.isFinite(rebetSingleIndex)
+      ? [rebetSingleIndex]
+      : displayIndices;
+
+  if (window.isRebetting) {
+    window.currentCardIndex = 0;
+    window.maxCardIndexSeen = 0;
+  }
+
   // SÉCURITÉ : Si on est en train de glisser une carte, on n'interrompt pas le rendu
   if (window.isCardDragging) return; 
 
   // Les questions ouvertes passent toujours devant, dans l'ordre d'apparition réel.
-  displayIndices.forEach((cIndex, displayPos) => {
+  renderIndices.forEach((cIndex, displayPos) => {
     const ch = game.challenges[cIndex];
     if (!ch) return;
 
@@ -6585,11 +6933,13 @@ const hintText = currentPlayerMode === 'easy'
        : `<div style="text-align:center; color:#9ca3af; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.4;">↑</div>`
      );
 
-    const isLastCard = myIndices.indexOf(cIndex) === myIndices.length - 1;
+    const isLastCard = renderIndices.indexOf(cIndex) === renderIndices.length - 1;
     // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
-const btnHtml = (isLastCard || window.isRebetting)
-   ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
-   : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
+const btnHtml = window.isRebetting
+   ? `<button onclick="finishRebetAndReturnToRecap()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+   : isLastCard
+      ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+      : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
     // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
     footer.innerHTML = `
@@ -6633,31 +6983,49 @@ const btnHtml = (isLastCard || window.isRebetting)
   window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
 
 function updateCardStack() {
-  cardsElements.forEach((card, i) => {
-    card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'stacked-prev', 'fly-away');
-      card.style.transform = ''; 
+  if (window.isRebetting) {
+    window.currentCardIndex = 0;
+
+    cardsElements.forEach((card, i) => {
+      card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'stacked-prev', 'fly-away');
+      card.style.transform = '';
       card.style.opacity = '';
       card.style.pointerEvents = '';
 
-if (i === window.currentCardIndex) {
-  card.classList.add('active-card');
-} else if (window.isRebetting && i === window.currentCardIndex - 1) {
-  // En mode re-mise, on laisse voir la carte précédente pour éviter l'effet "carte seule".
-  card.classList.add('stacked-prev');
-} else if (i === window.currentCardIndex + 1) {
-  card.classList.add('stacked-1');
-} else if (i === window.currentCardIndex + 2) {
-  card.classList.add('stacked-2');
-} else if (i < window.currentCardIndex) {
-  card.style.transform = 'translateY(-150%) rotate(10deg)';
-  card.style.opacity = '0';
-  card.style.pointerEvents = 'none';
-} else {
-  card.style.opacity = '0';
-  card.style.pointerEvents = 'none';
-}
+      if (i === 0) {
+        card.classList.add('active-card');
+      } else {
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
+        card.style.transform = 'translateY(120%) scale(0.92)';
+      }
     });
+
+    return;
   }
+
+  cardsElements.forEach((card, i) => {
+    card.classList.remove('active-card', 'stacked-1', 'stacked-2', 'stacked-prev', 'fly-away');
+    card.style.transform = ''; 
+    card.style.opacity = '';
+    card.style.pointerEvents = '';
+
+    if (i === window.currentCardIndex) {
+      card.classList.add('active-card');
+    } else if (i === window.currentCardIndex + 1) {
+      card.classList.add('stacked-1');
+    } else if (i === window.currentCardIndex + 2) {
+      card.classList.add('stacked-2');
+    } else if (i < window.currentCardIndex) {
+      card.style.transform = 'translateY(-150%) rotate(10deg)';
+      card.style.opacity = '0';
+      card.style.pointerEvents = 'none';
+    } else {
+      card.style.opacity = '0';
+      card.style.pointerEvents = 'none';
+    }
+  });
+}
 
 window.updateCardStack = updateCardStack;
 
@@ -6878,19 +7246,17 @@ if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !
 
     if (deltaY < -80) { // Glissement vers le haut (Suivant)
       
-      // NOUVEAU : Si le joueur est juste venu re-miser, le balayage valide directement et le ramène au récapitulatif !
-      if (window.isRebetting) {
-          if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
-              activeCard.style.transform = ''; 
-              activeCard.classList.add('fly-away'); 
-              setTimeout(() => {
-                  if (typeof playNext === 'function') playNext(); 
-              }, 400); 
-          } else {
-              activeCard.style.transform = ''; 
-          }
-          return; // On arrête là !
-      }
+      // Re-mise : le swipe vers le haut valide et retourne directement au récap.
+      // On ne passe plus par playNext(), sinon on peut tomber sur une autre carte.
+    if (window.isRebetting) {
+        const lockedRebetCard =
+          typeof getRebetTargetCard === "function"
+            ? getRebetTargetCard()
+            : null;
+
+        finishRebetAndReturnToRecap(lockedRebetCard || activeCard);
+        return;
+    }
 
       if (window.currentCardIndex < cardsElements.length - 1) {
           const success = swipeNextCard(); 
@@ -7685,6 +8051,77 @@ function closeTuto() {
   }
 }
 
+function getRebetTargetCard() {
+  const targetCIndex = Number(window.rebetTargetCIndex);
+
+  if (!Number.isFinite(targetCIndex)) return null;
+
+  return document.querySelector(
+    `#challengesPlay .challenge-block[data-c-index="${targetCIndex}"]`
+  );
+}
+
+function resetRebetLock() {
+  window.isRebetting = false;
+  window.returnToRecapAfterRebet = false;
+  window.isFinishingRebet = false;
+  window.rebetSingleCardCIndex = null;
+  window.rebetTargetCIndex = null;
+  window.rebetTargetCardPos = null;
+  window.currentCardIndex = 0;
+}
+
+function finishRebetAndReturnToRecap(activeCard) {
+  // Protection anti double-swipe / double-clic.
+  if (window.isFinishingRebet) return;
+
+  const pseudo = game && game.currentPlayerName;
+  const targetCIndex = Number(window.rebetTargetCIndex);
+  const targetCard = getRebetTargetCard();
+  const cardToAnimate = targetCard || activeCard;
+
+  // En mode re-mise, il n'y a qu'une seule carte affichée.
+window.currentCardIndex = 0;
+
+  if (Number.isFinite(targetCIndex)) {
+    const ch = game && game.challenges ? game.challenges[targetCIndex] : null;
+
+    if (!ch || getEffectiveStatus(ch) !== "open") {
+      if (cardToAnimate) cardToAnimate.style.transform = "";
+      showPlayerTradeClosedMessage("Les mises sont closes pour cette question.");
+      resetRebetLock();
+      return;
+    }
+  }
+
+  window.isFinishingRebet = true;
+  window.isRebetting = true;
+  window.returnToRecapAfterRebet = true;
+
+  if (cardToAnimate) {
+    cardToAnimate.style.transform = "";
+    cardToAnimate.classList.add("fly-away");
+  }
+
+  setTimeout(() => {
+    if (typeof validate === "function") {
+      validate();
+    } else if (pseudo && typeof renderPlayerRecap === "function") {
+      renderPlayerRecap(pseudo);
+    }
+
+    // Sécurité : même si le simulateur déclenche une update au même moment,
+    // on force le retour au récap après la validation.
+    setTimeout(() => {
+      if (pseudo && typeof renderPlayerRecap === "function") {
+        renderPlayerRecap(pseudo);
+      }
+
+      resetRebetLock();
+    }, 120);
+  }, cardToAnimate ? 260 : 0);
+}
+
 function playNext() {
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
@@ -7891,6 +8328,8 @@ if (betConfirmBtn) betConfirmBtn.disabled = true;
   const overlay = document.getElementById("betPanelOverlay");
   const panel = document.getElementById("betPanel");
 
+  document.body.classList.add("bet-panel-open");
+
   panel.style.transform = "";
   overlay.classList.add("open");
 
@@ -7902,6 +8341,8 @@ if (betConfirmBtn) betConfirmBtn.disabled = true;
 function closeBetPanel(options = {}) {
   const panel = document.getElementById("betPanel");
   const overlay = document.getElementById("betPanelOverlay");
+
+  document.body.classList.remove("bet-panel-open");
 
   if (overlay) overlay.classList.remove("open");
   if (panel) {
@@ -7934,50 +8375,105 @@ function closeBetPanel(options = {}) {
   }
 }
 
-// --- NOUVEAU : Moteur de glissement (Swipe Down) pour le panneau de mise ---
+// --- Moteur de glissement contrôlé pour le panneau de mise ---
 const betPanelEl = document.getElementById("betPanel");
 let betPanelStartY = 0;
+let betPanelStartX = 0;
+let betPanelLastDeltaY = 0;
 let isBetPanelDragging = false;
+let isBetPanelClosingIntent = false;
+
+function isBetPanelInteractiveTarget(target) {
+  return !!(
+    target &&
+    target.closest(
+      'input, button, textarea, select, .bet-balance-slider, .bet-balance-bar, .bet-quick-row, .bet-chip-btn, .bet-confirm-btn, .bet-cancel-btn'
+    )
+  );
+}
 
 if (betPanelEl) {
-    betPanelEl.addEventListener('touchstart', (e) => {
-        // On n'active le glissement que si on est tout en haut du panneau (pour laisser le défilement naturel fonctionner s'il y en a un)
-        if (betPanelEl.scrollTop > 0) return;
-        
-        betPanelStartY = e.touches[0].clientY;
-        isBetPanelDragging = true;
-        betPanelEl.style.transition = 'none'; // Désactive le lissage CSS pour coller exactement au doigt
-    }, {passive: true});
+  betPanelEl.addEventListener('touchstart', (e) => {
+    // Si on touche la barre de crédits ou un bouton, on ne déclenche jamais le swipe du panneau.
+    if (isBetPanelInteractiveTarget(e.target)) return;
 
-    betPanelEl.addEventListener('touchmove', (e) => {
-        if (!isBetPanelDragging) return;
-        
-        const deltaY = e.touches[0].clientY - betPanelStartY;
-        
-        // Si le doigt va vers le bas
-        if (deltaY > 0) {
-            if (e.cancelable) e.preventDefault(); // Empêche l'élasticité native de l'écran du navigateur
-            betPanelEl.style.transform = `translateY(${deltaY}px)`; // Déplace le panneau physiquement
-        }
-    }, {passive: false}); // passive: false permet d'utiliser preventDefault() proprement
+    // On ne permet la fermeture par swipe que quand le panneau est tout en haut.
+    if (betPanelEl.scrollTop > 0) return;
 
-    betPanelEl.addEventListener('touchend', (e) => {
-        if (!isBetPanelDragging) return;
-        isBetPanelDragging = false;
-        
-        // On réactive le lissage CSS pour que l'animation de fin (ou le rebond) soit fluide
-        betPanelEl.style.transition = 'transform 0.28s cubic-bezier(0.18, 0.9, 0.22, 1)';
-        
-        const deltaY = e.changedTouches[0].clientY - betPanelStartY;
-        
-        // Si on a tiré plus de 80px vers le bas, on valide la fermeture
-        if (deltaY > 80) {
-            closeBetPanel();
-        } else {
-            // Sinon, effet élastique : le panneau remonte à sa place initiale
-            betPanelEl.style.transform = '';
-        }
-    });
+    betPanelStartY = e.touches[0].clientY;
+    betPanelStartX = e.touches[0].clientX;
+    betPanelLastDeltaY = 0;
+    isBetPanelDragging = true;
+    isBetPanelClosingIntent = false;
+  }, { passive: true });
+
+  betPanelEl.addEventListener('touchmove', (e) => {
+    if (!isBetPanelDragging) return;
+
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - betPanelStartY;
+    const deltaX = touch.clientX - betPanelStartX;
+    const absX = Math.abs(deltaX);
+
+    betPanelLastDeltaY = deltaY;
+
+    // Mouvement vers le haut : on laisse le contenu interne du panneau respirer.
+    if (deltaY <= 0) return;
+
+    // Tant que l'intention n'est pas franche, le panneau ne bouge pas.
+    // On bloque quand même l'arrière-plan.
+    if (!isBetPanelClosingIntent) {
+      const hasClearDownIntent = deltaY > 26 && deltaY > absX * 1.35;
+
+      if (!hasClearDownIntent) {
+        if (betPanelEl.scrollTop <= 0 && e.cancelable) e.preventDefault();
+        return;
+      }
+
+      isBetPanelClosingIntent = true;
+      betPanelEl.style.transition = 'none';
+    }
+
+    if (e.cancelable) e.preventDefault();
+
+    // Résistance légère : le panneau suit le doigt, mais moins brutalement.
+    const resistedDelta = Math.min(deltaY, 260);
+    betPanelEl.style.transform = `translateY(${resistedDelta}px)`;
+  }, { passive: false });
+
+  betPanelEl.addEventListener('touchend', () => {
+    if (!isBetPanelDragging) return;
+
+    const shouldClose = isBetPanelClosingIntent && betPanelLastDeltaY > 120;
+
+    isBetPanelDragging = false;
+    isBetPanelClosingIntent = false;
+
+    betPanelEl.style.transition = 'transform 0.28s cubic-bezier(0.18, 0.9, 0.22, 1)';
+
+    if (shouldClose) {
+      closeBetPanel();
+    } else {
+      betPanelEl.style.transform = '';
+    }
+  });
+
+  betPanelEl.addEventListener('touchcancel', () => {
+    isBetPanelDragging = false;
+    isBetPanelClosingIntent = false;
+    betPanelEl.style.transition = 'transform 0.28s cubic-bezier(0.18, 0.9, 0.22, 1)';
+    betPanelEl.style.transform = '';
+  });
+}
+
+// La barre de crédits reste prioritaire : elle ne propage pas ses gestes au panneau.
+const betSliderGuardEl = document.getElementById("betSlider");
+if (betSliderGuardEl) {
+  ['touchstart', 'touchmove', 'pointerdown', 'pointermove'].forEach(evtName => {
+    betSliderGuardEl.addEventListener(evtName, (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+  });
 }
 // ---------------------------------------------------------------------------
 
@@ -8295,8 +8791,22 @@ function validate(){
     selectedBetTypes = new Array(game.challenges.length).fill('YES');
   }
 
+  // Après un retour depuis le récap pour parier / re-miser,
+  // on revient toujours automatiquement au récapitulatif.
+    const shouldForceRecap = window.returnToRecapAfterRebet === true;
+
+  window.isRebetting = false;
+
   // --- LA LIGNE MAGIQUE QUI AVAIT DISPARU ---
   renderPlayerRecap(pseudo);
+
+  if (shouldForceRecap) {
+    setTimeout(() => {
+      renderPlayerRecap(pseudo);
+      window.scrollTo(0, 0);
+      window.returnToRecapAfterRebet = false;
+    }, 80);
+  }
 }
 
 function computeHistories(){
@@ -9487,9 +9997,10 @@ function checkAccess() {
     window.lastFinalPseudo = finalPlayer.name;
     currentPlayerBalance = finalPlayer.balance || 0;
     window.localPlayerSnapshot = JSON.parse(JSON.stringify(finalPlayer));
-
     localStorage.setItem("monPredictionPseudo", finalPlayer.name);
     if (finalPlayer.email) localStorage.setItem("monPredictionEmail", finalPlayer.email);
+
+    saveLastPlayerSession(inputCode, finalPlayer.name, finalPlayer.email || emailInput, modeToPlay);
 
     showPlayerResult(finalPlayer.name);
   } else {
@@ -9502,6 +10013,9 @@ function checkAccess() {
     currentPlayerMode = modeToPlay; 
     game.currentPlayerName = existingPlayer.name;
     currentPlayerBalance = existingPlayer.balance || 0;
+
+    saveLastPlayerSession(inputCode, existingPlayer.name, existingPlayer.email || emailInput, modeToPlay);
+
     updateGlobalBalance();
     renderPlayerRecap(existingPlayer.name);
 
@@ -9617,6 +10131,8 @@ window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
 currentPlayerMode = modeToPlay;
 game.currentPlayerName = finalPseudo;
 
+saveLastPlayerSession(inputCode, finalPseudo, emailInput, modeToPlay);
+
 if (currentPlayerMode === 'easy' && typeof window.refreshEasyConfirmPreference === 'function') {
   window.refreshEasyConfirmPreference();
 } else {
@@ -9658,6 +10174,10 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
 
         if (isFirstLoad) {
             isFirstLoad = false;
+
+            window.isReconnectingPreviousSession = false;
+            hidePreviousSessionPrompt();
+
             document.getElementById("playerAuth").classList.add("hidden");
             
             if (!window.hasSeenWelcomeCode) {
@@ -10303,6 +10823,11 @@ function startPlayerTimer() {
     if (diff <= 0) {
       clearInterval(playerTimerInterval);
       timerEl.textContent = "TERMINÉ";
+
+      if (typeof closeSellPanel === "function") {
+        closeSellPanel();
+      }
+
       // Le temps est écoulé : on rafraîchit la page pour bloquer les mises et afficher le message d'attente
       if (game.currentPlayerName) renderPlayerRecap(game.currentPlayerName);
     } else {
@@ -10320,6 +10845,67 @@ function renderPlayerRecap(pseudo) {
   showScreen('playerRecap');
 }
 
+window.recapJumpPointer = null;
+window.returnToRecapAfterRebet = false;
+
+// En mode re-mise, on n'affiche qu'une seule carte : celle choisie depuis le récap.
+window.rebetSingleCardCIndex = null;
+
+// Verrou de re-mise : on mémorise LA question exacte à laquelle le joueur veut revenir.
+window.rebetTargetCIndex = null;
+window.rebetTargetCardPos = null;
+window.isFinishingRebet = false;
+
+function attachRecapJumpHandlers() {
+  if (window.recapJumpHandlersAttached) return;
+  window.recapJumpHandlersAttached = true;
+
+  document.addEventListener("pointerdown", (e) => {
+    const card = e.target.closest("[data-recap-jump-cindex]");
+    if (!card) return;
+
+    // On ne vole jamais les clics des boutons internes comme Cash out.
+    if (e.target.closest("button")) return;
+
+    const cIndex = Number(card.dataset.recapJumpCindex);
+    if (Number.isNaN(cIndex)) return;
+
+    window.recapJumpPointer = {
+      cIndex,
+      x: e.clientX,
+      y: e.clientY,
+      t: Date.now()
+    };
+  }, true);
+
+  document.addEventListener("pointerup", (e) => {
+    const jump = window.recapJumpPointer;
+    window.recapJumpPointer = null;
+
+    if (!jump) return;
+
+    const dx = Math.abs(e.clientX - jump.x);
+    const dy = Math.abs(e.clientY - jump.y);
+    const elapsed = Date.now() - jump.t;
+
+    // Si l'utilisateur scroll, on ne navigue pas.
+    if (dx > 18 || dy > 18 || elapsed > 900) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (typeof goToSpecificCard === "function") {
+      goToSpecificCard(jump.cIndex);
+    }
+  }, true);
+
+  document.addEventListener("pointercancel", () => {
+    window.recapJumpPointer = null;
+  }, true);
+}
+
+attachRecapJumpHandlers();
+
 let recapTimerInterval = null;
 
 function startRecapSessionTimer() {
@@ -10334,10 +10920,36 @@ function startRecapSessionTimer() {
     const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     const diff = targetTime - now;
 
-    if (diff <= 0) {
-      clearInterval(recapTimerInterval);
-      timerEl.textContent = "SESSION TERMINÉE";
-    } else {
+if (diff <= 0) {
+  clearInterval(recapTimerInterval);
+  timerEl.textContent = "SESSION TERMINÉE";
+
+  // Si un panneau Cash out était ouvert, on le ferme.
+  if (typeof closeSellPanel === "function") {
+    closeSellPanel();
+  }
+
+  // Le récap a peut-être été rendu AVANT la fin de session.
+  // On le reconstruit une seule fois pour supprimer réellement les boutons Cash out du DOM.
+  if (!window.recapSessionEndRefreshDone) {
+    window.recapSessionEndRefreshDone = true;
+
+    setTimeout(() => {
+      const playerName = game && game.currentPlayerName;
+      const recapEl = document.getElementById("playerRecap");
+
+      if (
+        playerName &&
+        recapEl &&
+        recapEl.style.display === "block" &&
+        typeof updateRecapUI === "function"
+      ) {
+        updateRecapUI(playerName);
+      }
+    }, 0);
+  }
+} else {
+  window.recapSessionEndRefreshDone = false;
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
@@ -10605,7 +11217,15 @@ const selectedValueColor = isResolvedQuestion
         `;
       }
 } else {
-        const canTradeQuestion = effStatus === "open";
+        const sessionClosedForRecap =
+  typeof isSessionTradingClosed === "function"
+    ? isSessionTradingClosed()
+    : (
+        Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt)) > 0 &&
+        Date.now() >= Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt))
+      );
+
+const canTradeQuestion = effStatus === "open" && !sessionClosedForRecap;
 
         const lockTitle =
           effStatus === "pending"
@@ -10620,7 +11240,7 @@ const selectedValueColor = isResolvedQuestion
             : "Vous ne pouvez plus parier ni faire de cash out sur cette question.";
 
         const activeCardAttrs = canTradeQuestion
-          ? `style="border-left: 3px solid #3b82f6; cursor:pointer;" onclick="goToSpecificCard(${cIndex})"`
+          ? `data-recap-jump-cindex="${cIndex}" style="border-left: 3px solid #3b82f6; cursor:pointer;"`
           : `style="border-left: 3px solid #64748b; cursor:default; opacity:0.85;"`;
 
         if (snaps.length > 0) {
@@ -10633,21 +11253,23 @@ const selectedValueColor = isResolvedQuestion
                 <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
              </div>
 
-             ${
-               canTradeQuestion
-                 ? `
-                   <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:6px 10px; border-radius:8px;">
-                      <div style="font-size:12px; color:#fdba74; font-weight:600;">Revente : <strong id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="color:#f97316; font-size:14px;">${window.getAMMValue(ch, snap)} 💰</strong></div>
-                      <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; margin:0; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
-                   </div>
-                 `
-                 : `
-                   <div style="margin-top:4px; margin-bottom:8px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
+            ${
+              canTradeQuestion
+                ? `
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:6px 10px; border-radius:8px;">
+                    <div style="font-size:12px; color:#fdba74; font-weight:600;">Revente : <strong id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="color:#f97316; font-size:14px;">${window.getAMMValue(ch, snap)} 💰</strong></div>
+                    <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; margin:0; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
+                  </div>
+                `
+                : sessionClosedForRecap
+                  ? ``
+                  : `
+                    <div style="margin-top:4px; margin-bottom:8px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
                       <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
                       <div style="font-size:11px; color:#94a3b8; margin-top:3px;">${lockText}</div>
-                   </div>
-                 `
-             }
+                    </div>
+                  `
+            }
              `;
           });
 
@@ -10661,18 +11283,20 @@ const selectedValueColor = isResolvedQuestion
               </div>
 
               <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-                  ${
-                    canTradeQuestion
-                      ? `<div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>`
-                      : `<div style="font-size:11px; color:#94a3b8; font-weight:bold;">🔒 Mises closes : re-mise et cash out indisponibles</div>`
-                  }
+              ${
+                canTradeQuestion
+                  ? `<div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>`
+                  : sessionClosedForRecap
+                    ? ``
+                    : `<div style="font-size:11px; color:#94a3b8; font-weight:bold;">🔒 Mises closes : re-mise et cash out indisponibles</div>`
+              }
               </div>
             </div>
           `;
         } else {
-          const emptyCardAttrs = canTradeQuestion
-            ? `style="border-left: 3px solid #64748b; opacity:0.85; cursor:pointer;" onclick="goToSpecificCard(${cIndex})"`
-            : `style="border-left: 3px solid #64748b; opacity:0.65; cursor:default;"`;
+        const emptyCardAttrs = canTradeQuestion
+          ? `data-recap-jump-cindex="${cIndex}" style="border-left: 3px solid #64748b; opacity:0.85; cursor:pointer;"`
+          : `style="border-left: 3px solid #64748b; opacity:0.65; cursor:default;"`;
 
           finalHtml += `
             <div class="challenge-block" ${emptyCardAttrs}>
@@ -10948,8 +11572,8 @@ function refreshOpenSellPanelValue() {
 function openSellPanel(cIndex, ansIndex, type) {
   const ch = game.challenges[cIndex];
 
-  if (!ch || getEffectiveStatus(ch) !== "open") {
-    showPlayerTradeClosedMessage("Les mises sont closes pour cette question : le cash out n'est plus disponible.");
+  if (!ch || isSessionTradingClosed() || getEffectiveStatus(ch) !== "open") {
+    showPlayerTradeClosedMessage("La session est terminée : le cash out n'est plus disponible.");
     return;
   }
 
@@ -11056,9 +11680,13 @@ function confirmSell() {
       if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
   }
 }
-
 function goToPlayScreen() {
   window.isRebetting = false; // CORRECTION : On réinitialise le mode "Retour Rapide"
+  window.returnToRecapAfterRebet = false;
+  window.isFinishingRebet = false;
+  window.rebetSingleCardCIndex = null;
+  window.rebetTargetCIndex = null;
+  window.rebetTargetCardPos = null;
   window.currentCardIndex = 0; // On repart toujours de la première question
   selectedAnswers = new Array(game.challenges.length).fill(null);
   selectedBets = new Array(game.challenges.length).fill(0);
@@ -11070,39 +11698,76 @@ window.goToSpecificCard = function(cIndex) {
     // En mode Facile, une réponse validée est définitive : aucun retour possible.
     if (currentPlayerMode === 'easy') return;
 
-    const ch = game.challenges[cIndex];
+    cIndex = Number(cIndex);
+
+    const ch = game && game.challenges ? game.challenges[cIndex] : null;
     if (!ch || getEffectiveStatus(ch) !== "open") {
         showPlayerTradeClosedMessage("Les mises sont closes pour cette question : vous ne pouvez plus parier ni faire de cash out.");
         return;
     }
 
-const player = (game.players || []).find(p => p.name === game.currentPlayerName) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === game.currentPlayerName ? window.localPlayerSnapshot : null);
+    const player =
+      (game.players || []).find(p => p.name === game.currentPlayerName) ||
+      (
+        window.localPlayerSnapshot &&
+        window.localPlayerSnapshot.name === game.currentPlayerName
+          ? window.localPlayerSnapshot
+          : null
+      );
+
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const displayIndices = typeof window.getPlayerDisplayIndices === "function"
       ? window.getPlayerDisplayIndices(player)
       : myIndices;
 
     const cardPos = displayIndices.indexOf(cIndex);
-    
-if (cardPos !== -1) {
-    window.isRebetting = true; // Mode "Retour Rapide" pour re-miser puis revenir au récap
-    window.currentCardIndex = cardPos;
-    window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, cardPos);
 
-    showScreen('play');
+    if (cardPos === -1) {
+      showPlayerTradeClosedMessage("Cette question n'est pas disponible dans votre session joueur.");
+      return;
+    }
+
+    // Mode retour rapide : après validation, on revient automatiquement au récap.
+    window.isRebetting = true;
+    window.returnToRecapAfterRebet = true;
+
+    // En mode re-mise, on n'affiche QUE cette question.
+    // Il n'y aura donc plus aucune carte derrière.
+    window.rebetSingleCardCIndex = cIndex;
+
+    // Verrouillage de la question exacte.
+    window.rebetTargetCIndex = cIndex;
+    window.rebetTargetCardPos = 0;
+    window.isFinishingRebet = false;
+
+    // Comme le paquet ne contient qu'une seule carte, son index local est forcément 0.
+    window.currentCardIndex = 0;
+    window.maxCardIndexSeen = 0;
+
+    if (typeof closeBetPanel === "function") closeBetPanel();
+    if (typeof closeSellPanel === "function") closeSellPanel();
 
     selectedAnswers = new Array(game.challenges.length).fill(null);
     selectedBets = new Array(game.challenges.length).fill(0);
+    if (typeof selectedBetTypes !== "undefined") {
+      selectedBetTypes = new Array(game.challenges.length).fill("YES");
+    }
+
+    showScreen('play', false, true);
+
+    const gameContent = document.getElementById("gameContent");
+    if (gameContent) gameContent.classList.remove("hidden");
 
     renderPlayChallenges();
 
-    setTimeout(() => {
-      window.currentCardIndex = cardPos;
+    requestAnimationFrame(() => {
+      // En mode re-mise, le paquet affiché ne contient qu'une seule carte.
+      window.currentCardIndex = 0;
+
       if (typeof window.updateCardStack === "function") {
         window.updateCardStack();
       }
-    }, 0);
-}
+    });
 };
 
 // NOUVEAU : Dérouler les détails d'une question (Mode Facile)
@@ -11133,7 +11798,7 @@ function toggleCustomCat(index) {
 }
 
 
-function getRandomCategoryImage(category) {
+function getCategoryImageSlug(category) {
   const fileName = String(category || "")
     .toLowerCase()
     .trim()
@@ -11142,6 +11807,23 @@ function getRandomCategoryImage(category) {
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+  const imageSlugs = {
+    live_traffic: "live_traffic",
+    future_spotlight: "future_spotlight",
+    trend_signals: "trend_signal",
+    trend_signal: "trend_signal",
+    innovation_arena: "innovation_arena",
+    fun_facts: "fun_fact",
+    fun_fact: "fun_fact",
+    funfact: "fun_fact"
+  };
+
+  return imageSlugs[fileName] || fileName;
+}
+
+function getRandomCategoryImage(category) {
+  const fileName = getCategoryImageSlug(category);
+
   return getAssetUrl(`${fileName}_realiste.png`);
 }
 function getRealisticCardImageUrl(imageUrl) {
@@ -11149,14 +11831,29 @@ function getRealisticCardImageUrl(imageUrl) {
 
   const raw = String(imageUrl).trim();
 
-  // Image normale : utilisée uniquement par l'écran d'affichage.
+  // Correction des anciens noms générés avec un "s"
+  if (
+    raw.includes("trend_signals") ||
+    raw.includes("trend_signal")
+  ) {
+    return "trend_signal_realiste.png";
+  }
+
+  if (
+    raw.includes("fun_facts") ||
+    raw.includes("fun_fact") ||
+    raw.includes("funfact")
+  ) {
+    return "fun_fact_realiste.png";
+  }
+
   // Si une ancienne session contient déjà *_realiste_question.png,
-  // on revient à *_realiste.png.
+  // on revient à *_realiste.png pour le grand écran.
   if (raw.includes("_realiste_question.")) {
     return raw.replace("_realiste_question.png", "_realiste.png");
   }
 
-  // Si l'image est déjà au bon format, on ne la modifie surtout pas.
+  // Si l'image est déjà au bon format, on ne la modifie pas.
   if (raw.includes("_realiste.")) {
     return raw;
   }
@@ -11267,7 +11964,7 @@ function directBigScreen(targetCode) {
               if (liveSnap.exists()) {
                   game = liveSnap.val().gameData;
                   if (!game.players) game.players = [];
-                  if (isBigScreenActive) renderBigScreen();
+                  if (isBigScreenActive) requestBigScreenDataRefresh();
               }
           });
       }
@@ -12052,6 +12749,149 @@ let bsToggle = 'left';
 
 let bsTrendRangeMs = 15 * 60 * 1000;
 let bsTrendFadeTimer = null;
+let bsRefreshRaf = null;
+let bsChartRefreshTimer = null;
+let bsLastLayoutKey = "";
+
+function getBigScreenLayoutKey() {
+  if (!game || !game.challenges || !sessionConfig) return "";
+
+  const now = Date.now();
+  const limit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
+  const isWaitingForResults = now >= limit && !game.isResolved;
+
+  const challengeStateKey = (game.challenges || []).map((ch, i) => {
+    return [
+      i,
+      getEffectiveStatus(ch),
+      (ch.answers || []).length,
+      ch.imageUrl || ""
+    ].join(":");
+  }).join("|");
+
+  return [
+    game.isResolved ? "resolved" : isWaitingForResults ? "waiting" : "live",
+    bsLeftIndex,
+    bsRightIndex,
+    bsTrendRangeMs,
+    sessionConfig.nextSessionCode || "",
+    challengeStateKey
+  ].join("::");
+}
+
+function requestBigScreenDataRefresh() {
+  if (!isBigScreenActive || !game || !game.challenges) return;
+
+  if (bsRefreshRaf) return;
+
+  bsRefreshRaf = requestAnimationFrame(() => {
+    bsRefreshRaf = null;
+
+    const nextLayoutKey = getBigScreenLayoutKey();
+
+    // Si la structure de l'écran a changé, on reconstruit.
+    // Sinon, on met à jour seulement les valeurs dynamiques.
+    if (!bsLastLayoutKey || nextLayoutKey !== bsLastLayoutKey) {
+      bsLastLayoutKey = nextLayoutKey;
+      renderBigScreen();
+      return;
+    }
+
+    updateBigScreenLiveValues();
+  });
+}
+
+function updateBigScreenLiveValues() {
+  if (!game || !game.challenges) return;
+
+  updateBsStatsOnly();
+
+  const currentIndex = bsLeftIndex;
+  const currentCh = game.challenges[currentIndex];
+
+  let trendIndex = bsRightIndex;
+  if (trendIndex === currentIndex || !game.challenges[trendIndex]) {
+    const fallbackTrendIndex = game.challenges.findIndex((ch, i) => i !== currentIndex);
+    trendIndex = fallbackTrendIndex >= 0 ? fallbackTrendIndex : currentIndex;
+  }
+
+  const trendCh = game.challenges[trendIndex];
+
+  const leftOptions = document.querySelector("#bsLeft .bs-options");
+  if (leftOptions && currentCh) {
+    leftOptions.innerHTML = renderBsProgress(currentCh);
+  }
+
+  const currentPredictionsCount = (game.players || []).reduce((sum, p) => {
+    return sum + ((p.portfolio || []).filter(b => b.cIndex === currentIndex && Number(b.bet || 0) > 0).length);
+  }, 0);
+
+  const currentFooter = document.querySelector("#bsLeft .bs-panel-footer-clean div");
+  if (currentFooter) {
+    currentFooter.textContent = `♙ ${currentPredictionsCount.toLocaleString('fr-FR')} prédictions`;
+  }
+
+  const trendLegend = document.querySelector("#bsMiddle .bs-trend-list");
+  if (trendLegend && trendCh) {
+    trendLegend.innerHTML = renderBsTrendLegend(trendCh);
+  }
+
+  const trendPredictionsCount = (game.players || []).reduce((sum, p) => {
+    return sum + ((p.portfolio || []).filter(b => b.cIndex === trendIndex && Number(b.bet || 0) > 0).length);
+  }, 0);
+
+  const trendFooter = document.querySelector("#bsMiddle .bs-panel-footer-clean div");
+  if (trendFooter) {
+    trendFooter.textContent = `♙ ${trendPredictionsCount.toLocaleString('fr-FR')} prédictions`;
+  }
+
+  const bsRight = document.getElementById("bsRight");
+  if (bsRight && bsRight.style.display !== "none") {
+    bsRight.innerHTML = renderBsLeaderboard();
+  }
+
+  clearTimeout(bsChartRefreshTimer);
+  bsChartRefreshTimer = setTimeout(() => {
+    const trendData = computeBsTimedHistory(trendIndex, bsTrendRangeMs);
+    if (trendData) {
+      drawBsTrendChart(trendData, "bsTrendChart", trendIndex);
+    }
+  }, 120);
+
+  updateBsTimers();
+}
+
+function updateBsStatsOnly() {
+  const bsStats = document.getElementById("bsStats");
+  if (!bsStats || !game) return;
+
+  const playersCount = (game.players || []).length;
+  const predictionsCount = (game.players || []).reduce((sum, p) => {
+    return sum + ((p.portfolio || []).filter(b => Number(b.bet || 0) > 0).length);
+  }, 0);
+
+  const poolTotal = (game.players || []).reduce((sum, p) => {
+    return sum + ((p.portfolio || []).reduce((s, b) => s + Number(b.bet || 0), 0));
+  }, 0);
+
+  bsStats.innerHTML = `
+    <div class="bs-stat">
+      <div class="bs-stat-icon">♙</div>
+      <strong>${playersCount.toLocaleString('fr-FR')}</strong>
+      <span>participants</span>
+    </div>
+    <div class="bs-stat">
+      <div class="bs-stat-icon">↗</div>
+      <strong>${predictionsCount.toLocaleString('fr-FR')}</strong>
+      <span>prédictions</span>
+    </div>
+    <div class="bs-stat">
+      <div class="bs-stat-icon">💰</div>
+      <strong>${poolTotal.toLocaleString('fr-FR')}</strong>
+      <span>pool total</span>
+    </div>
+  `;
+}
 
 const BS_TREND_BASE_RANGES = [
   { label: "1M", ms: 1 * 60 * 1000 },
@@ -12118,12 +12958,12 @@ function checkBigScreenAccess() {
     showScreen('bigScreen'); // Affichage uniquement quand tout est prêt !
     startBigScreenEngine();
 
-    // On relance l'écoute continue pour la mise à jour des jauges
+    // On relance l'écoute continue pour la mise à jour fluide des jauges
     sessionRef.on('value', (liveSnap) => {
       if (liveSnap.exists()) {
           game = liveSnap.val().gameData;
           if (!game.players) game.players = [];
-          if (isBigScreenActive) renderBigScreen();
+          if (isBigScreenActive) requestBigScreenDataRefresh();
       }
     });
   }).catch((error) => {
@@ -12140,6 +12980,7 @@ function startBigScreenEngine() {
   window.bsFinalRecapIndex = 0; // Initialisation du pointeur de fin
   window.bsScreenSwitchedToWaiting = false; // NOUVEAU : Réinitialisation du drapeau de basculement d'écran
   renderBigScreen();
+  bsLastLayoutKey = getBigScreenLayoutKey();
 
 let elapsedSeconds = 0;
 let trendElapsedSeconds = 0;
@@ -12163,6 +13004,7 @@ window.bsFinalRecapIndex = totalChallenges
   : 0;
 
 renderBigScreen();
+bsLastLayoutKey = getBigScreenLayoutKey();
 
 const newGridEl = document.getElementById("bsRecapContainer");
 if (newGridEl) newGridEl.classList.remove("bs-faded");
@@ -12189,6 +13031,7 @@ if (elapsedSeconds >= 30) {
   setTimeout(() => {
     updateBsIndices(false);
     renderBigScreen();
+    bsLastLayoutKey = getBigScreenLayoutKey();
 
     const newTargetEl = document.getElementById(targetId);
     if (newTargetEl) newTargetEl.classList.remove("bs-faded");
@@ -13889,7 +14732,13 @@ const maxScoreEl = document.getElementById("recap-max-score");
     // 3. MISE À JOUR DES CARTES DE JEU (Écran de jeu)
     const playEl = document.getElementById('play');
     if (!playEl || playEl.style.display === 'none') return;
-    
+
+    // Pendant une re-mise, on ne touche plus au DOM des cartes.
+    // Sinon le simulateur peut désynchroniser .active-card et window.currentCardIndex.
+    if (window.isRebetting || window.isFinishingRebet || window.returnToRecapAfterRebet) {
+      return;
+    }
+
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
