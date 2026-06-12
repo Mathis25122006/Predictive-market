@@ -764,10 +764,10 @@ button {
 #betPanel.bet-sheet {
   bottom: 0;
   transform: translateY(108%);
-  max-height: min(74svh, 560px);
+  max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
   min-height: auto;
-  padding: 10px 16px calc(env(safe-area-inset-bottom) + 14px);
-  border-radius: 30px 30px 0 0;
+  padding: 8px 14px calc(env(safe-area-inset-bottom) + 10px);
+  border-radius: 28px 28px 0 0;
   background:
     radial-gradient(circle at 50% 0%, rgba(168,85,247,0.20), transparent 42%),
     rgba(14, 8, 32, 0.96);
@@ -776,9 +776,44 @@ button {
     0 -18px 45px rgba(0,0,0,0.72),
     inset 0 1px 18px rgba(168,85,247,0.12);
   transition: transform 0.34s cubic-bezier(0.18, 0.9, 0.22, 1);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  box-sizing: border-box;
+}
+
+#betPanel .bet-sheet-handle {
+  margin-bottom: 8px;
+}
+
+#betPanel .bet-sheet-header {
+  margin-bottom: 9px;
+}
+
+#betPanel .bet-answer-card {
+  margin-bottom: 9px;
+}
+
+#betPanel .bet-balance-strip {
+  margin-bottom: 9px;
+  padding: 9px 11px;
+}
+
+#betPanel .bet-input-wrap {
+  margin-bottom: 8px;
+}
+
+#betPanel .bet-quick-row {
+  margin-bottom: 9px;
+}
+
+#betPanel .bet-result-card {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+}
+
+#betPanel .bet-actions {
+  margin-top: 2px;
 }
 
 body.bet-panel-open {
@@ -865,9 +900,100 @@ body.bet-panel-open #challengesPlay {
   color: #9ca3af;
 }
 
-.bet-answer-meta strong {
-  color: #fde047;
+.bet-odds-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 86px;
+  padding: 13px 15px 18px !important;
+  border-color: rgba(168,85,247,0.44) !important;
+  background: rgba(255,255,255,0.045);
+}
+
+/* Barre d'évolution fine en bas du cadre, comme un remplissage de carte */
+.bet-odds-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  margin: 0;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.075);
+  border: none;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.35);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.bet-odds-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7, #f97316);
+  box-shadow: 0 0 14px rgba(168,85,247,0.30);
+  transition: width 0.35s ease;
+}
+
+.bet-odds-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 3px;
+  height: 100%;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 0 12px rgba(255,255,255,0.65);
+}
+
+.bet-odds-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bet-odds-card > *:not(.bet-odds-bar) {
+  position: relative;
+  z-index: 1;
+}
+
+.bet-odds-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.bet-odds-label {
+  font-size: 11px;
+  color: #bfdbfe;
   font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  line-height: 1.1;
+}
+
+.bet-odds-value {
+  display: block;
+  color: #fde047;
+  font-size: clamp(26px, 6.5vw, 34px);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  text-align: right;
+  text-shadow: 0 0 16px rgba(253,224,71,0.22);
+  white-space: nowrap;
+}
+
+.bet-odds-scale {
+  display: none;
 }
 
 .bet-balance-strip {
@@ -989,14 +1115,14 @@ body.bet-panel-open #challengesPlay {
 }
 
 #betPanel #betInput {
-  height: 64px;
+  height: 56px;
   margin: 0;
-  padding: 12px 56px 12px 18px;
-  border-radius: 20px;
+  padding: 10px 52px 10px 16px;
+  border-radius: 18px;
   background: rgba(0,0,0,0.34);
   border: 1px solid rgba(255,255,255,0.12);
   color: #ffffff;
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1;
   font-weight: 950;
   text-align: left;
@@ -1096,7 +1222,7 @@ body.bet-panel-open #challengesPlay {
 .bet-actions .bet-cancel-btn {
   width: 38% !important;
   margin: 0 !important;
-  padding: 13px 10px !important;
+  padding: 11px 10px !important;
   background: rgba(255,255,255,0.04) !important;
   border: 1px solid rgba(255,255,255,0.10) !important;
   color: #9ca3af !important;
@@ -1106,7 +1232,7 @@ body.bet-panel-open #challengesPlay {
 .bet-actions .bet-confirm-btn {
   flex: 1;
   margin: 0 !important;
-  padding: 14px 16px !important;
+  padding: 12px 16px !important;
   border-radius: 999px !important;
   background: #ffffff !important;
   color: #05010d !important;
@@ -4448,13 +4574,24 @@ body.has-app-top-logo #playerAuth.join-card {
     <button class="bet-close-mini" onclick="closeBetPanel()" aria-label="Fermer">×</button>
   </div>
 
-  <div class="bet-answer-card">
-    <p id="betAnswerName" class="bet-answer-name">Réponse</p>
-    <div class="bet-answer-meta">
-      <span>Cote actuelle</span>
-      <strong id="betOdds">--%</strong>
-    </div>
+<div class="bet-answer-card bet-odds-card">
+  <p id="betAnswerName" class="bet-answer-name">Réponse</p>
+
+  <div class="bet-odds-head">
+    <div class="bet-odds-label">Cote actuelle</div>
+    <strong id="betOdds" class="bet-odds-value">--%</strong>
   </div>
+
+  <div class="bet-odds-bar" aria-hidden="true">
+    <div id="betOddsFill" class="bet-odds-fill"></div>
+  </div>
+
+  <div class="bet-odds-scale">
+    <span>0%</span>
+    <span>50%</span>
+    <span>100%</span>
+  </div>
+</div>
 
   <div id="tutoBetZone" style="border-radius:20px; transition:all 0.3s;">
     <div class="bet-balance-strip">
@@ -4851,6 +4988,37 @@ function showJoinDetailsStep() {
 
   const pseudoInput = document.getElementById("pseudo");
   if (pseudoInput) setTimeout(() => pseudoInput.focus(), 80);
+}
+
+function hidePlayerAuthPanel() {
+  const playerAuth = document.getElementById("playerAuth");
+  const codeStep = document.getElementById("joinCodeStep");
+  const detailsStep = document.getElementById("joinDetailsStep");
+  const appTopLogo = document.getElementById("appTopLogo");
+
+  if (document.activeElement && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
+
+  if (playerAuth) {
+    playerAuth.classList.add("hidden");
+    playerAuth.style.display = "none";
+  }
+
+  if (codeStep) codeStep.classList.add("hidden");
+  if (detailsStep) detailsStep.classList.add("hidden");
+
+  if (appTopLogo) {
+    appTopLogo.style.display = "none";
+
+    // Comme ton logo peut être déplacé dans #playerAuth,
+    // on le remet dans le body pour éviter qu'il reste lié au formulaire caché.
+    if (appTopLogo.parentElement !== document.body) {
+      document.body.insertBefore(appTopLogo, document.body.firstChild);
+    }
+  }
+
+  document.body.classList.remove("has-app-top-logo");
 }
 
 function getJoinModeFromCode(config, code) {
@@ -7694,11 +7862,22 @@ if (
 }
         };
     } else {
-        div.onclick = (e) => {
-            e.stopPropagation(); 
-            selectedAnswers[cIndex] = i; 
-            renderAnswersForChallenge(cIndex); 
-            openBetPanel(cIndex, i, 'YES');
+div.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (
+      window.suppressNextAnswerTapUntil &&
+      Date.now() < window.suppressNextAnswerTapUntil
+    ) {
+      return;
+    }
+
+    window.suppressNextAnswerTapUntil = 0;
+
+    selectedAnswers[cIndex] = i; 
+    renderAnswersForChallenge(cIndex); 
+    openBetPanel(cIndex, i, 'YES');
             
             // CORRECTION : On fait avancer le tutoriel seulement si le clic vient de la carte active verrouillée
             const activeTutoCIndex = typeof window.getActiveCardChallengeIndex === "function"
@@ -8367,7 +8546,31 @@ function showPlayerTradeClosedMessage(message) {
   }
 }
 
+function updateBetOddsDisplay(probability) {
+  const safeProb = Math.max(0, Math.min(1, Number(probability) || 0));
+  const pct = +(safeProb * 100).toFixed(1);
+
+  const betOddsEl = document.getElementById("betOdds");
+  if (betOddsEl) {
+    betOddsEl.textContent = pct.toFixed(1) + "%";
+  }
+
+  const betOddsFillEl = document.getElementById("betOddsFill");
+  if (betOddsFillEl) {
+    betOddsFillEl.style.width = pct + "%";
+  }
+}
+
 function openBetPanel(cIndex, ansIndex, betType) {
+  if (
+    window.suppressNextAnswerTapUntil &&
+    Date.now() < window.suppressNextAnswerTapUntil
+  ) {
+    return;
+  }
+
+  window.suppressNextAnswerTapUntil = 0;
+
   const ch = game.challenges[cIndex];
 
   if (!ch || getEffectiveStatus(ch) !== "open") {
@@ -8384,8 +8587,7 @@ function openBetPanel(cIndex, ansIndex, betType) {
   const pStartYes = probs[ansIndex];
   const pStart = betType === 'YES' ? pStartYes : (1 - pStartYes);
 
-  // 3. Affichage dynamique avec la cote actuelle
-  document.getElementById("betAnswerName").innerHTML = `${ch.answers[ansIndex]} <br><span style="font-size:12px; color:#9ca3af;">(Cote actuelle : ${(pStart*100).toFixed(2)}%)</span>`;
+
 
   // CORRECTION : En Mode Avancé, on NE REMBOURSE PLUS la mise précédente ! 
   // Le joueur a le droit d'ajouter de l'argent sur la même réponse ou de parier sur une nouvelle !
@@ -8403,8 +8605,7 @@ function openBetPanel(cIndex, ansIndex, betType) {
   const betAnswerNameEl = document.getElementById("betAnswerName");
   if (betAnswerNameEl) betAnswerNameEl.textContent = ch.answers[ansIndex];
 
-  const betOddsEl = document.getElementById("betOdds");
-  if (betOddsEl) betOddsEl.textContent = (pStart * 100).toFixed(1) + "%";
+  updateBetOddsDisplay(pStart);
 
   const betInputEl = document.getElementById("betInput");
   betInputEl.value = "";
@@ -10322,7 +10523,7 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
 
                     completePreviousSessionReconnect();
 
-                    document.getElementById("playerAuth").classList.add("hidden");
+                    hidePlayerAuthPanel();
             
             if (!window.hasSeenWelcomeCode) {
                 const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
@@ -10347,8 +10548,13 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
                 renderPlayerRecap(finalPseudo);
             } else {
                 // Le joueur a été déconnecté avant la fin -> Retour sur sa question
-                document.getElementById("gameContent").classList.remove("hidden");
-                document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
+            const gameContent = document.getElementById("gameContent");
+            if (gameContent) {
+              gameContent.classList.remove("hidden");
+              gameContent.style.display = "block";
+            }
+
+            document.getElementById("playerTitle").textContent = "Prédictions de " + finalPseudo;
                 
                 // CORRECTION : Restauration de sa progression LIEE À LA SESSION UNIQUEMENT
                 const saveKey = inputCode + '_' + finalPseudo;
@@ -10999,6 +11205,10 @@ window.rebetSingleCardCIndex = null;
 window.rebetTargetCIndex = null;
 window.rebetTargetCardPos = null;
 window.isFinishingRebet = false;
+
+// Empêche le tap du récap de déclencher immédiatement une réponse
+// sur la carte qui vient d'apparaître.
+window.suppressNextAnswerTapUntil = 0;
 
 function attachRecapJumpHandlers() {
   if (window.recapJumpHandlersAttached) return;
@@ -12206,12 +12416,15 @@ window.goToSpecificCard = function(cIndex) {
     // Comme le paquet ne contient qu'une seule carte, son index local est forcément 0.
     window.currentCardIndex = 0;
     window.maxCardIndexSeen = 0;
+if (typeof closeBetPanel === "function") closeBetPanel({ suppressTuto: true });
+if (typeof closeSellPanel === "function") closeSellPanel();
 
-    if (typeof closeBetPanel === "function") closeBetPanel();
-    if (typeof closeSellPanel === "function") closeSellPanel();
+// On arrive depuis le récap : le premier tap ne doit PAS ouvrir le panel de mise.
+// Sinon, après un cash out, "Cliquez pour parier" peut ouvrir directement le menu.
+window.suppressNextAnswerTapUntil = Date.now() + 650;
 
-    selectedAnswers = new Array(game.challenges.length).fill(null);
-    selectedBets = new Array(game.challenges.length).fill(0);
+selectedAnswers = new Array(game.challenges.length).fill(null);
+selectedBets = new Array(game.challenges.length).fill(0);
     if (typeof selectedBetTypes !== "undefined") {
       selectedBetTypes = new Array(game.challenges.length).fill("YES");
     }
@@ -15178,13 +15391,10 @@ const maxScoreEl = document.getElementById("recap-max-score");
             betAnswerNameEl.textContent = ch.answers[tempBetAnsIndex];
         }
 
-        const betOddsEl = document.getElementById("betOdds");
-        if (betOddsEl) {
-            betOddsEl.textContent = (pStart * 100).toFixed(1) + "%";
-        }
+        updateBetOddsDisplay(pStart);
 
-        if (typeof updatePotentialGain === 'function') updatePotentialGain(); 
-    }
+                if (typeof updatePotentialGain === 'function') updatePotentialGain(); 
+            }
 
     const sellPanel = document.getElementById("sellPanel");
     if (sellPanel && sellPanel.classList.contains("open") && typeof refreshOpenSellPanelValue === 'function') {
