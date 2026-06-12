@@ -1358,6 +1358,7 @@ body {
   max-width: 430px !important;
   padding: 0 20px !important;
   background: transparent !important;
+  position: relative !important;
 }
 
 .ui-screen {
@@ -1396,27 +1397,31 @@ body {
 }
 
 .app-top-logo {
-  position: fixed;
-  top: max(14px, env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
+  display: block;
+  position: relative;
   width: clamp(96px, 28vw, 128px);
   height: auto;
-  z-index: 12000;
+  margin: max(14px, env(safe-area-inset-top)) auto 24px;
+  z-index: 1;
   pointer-events: none;
   filter: drop-shadow(0 10px 26px rgba(0,0,0,0.42));
 }
 
 body.has-app-top-logo .card {
-  margin-top: max(86px, calc(env(safe-area-inset-top) + 64px)) !important;
+  margin-top: 16px !important;
 }
 
 body.has-app-top-logo #playerResult {
-  padding-top: max(96px, calc(env(safe-area-inset-top) + 74px)) !important;
+  padding-top: 0 !important;
 }
 
 body.has-app-top-logo #playerAuth.join-card {
-  padding-top: max(118px, calc(env(safe-area-inset-top) + 92px)) !important;
+  padding-top: max(18px, env(safe-area-inset-top)) !important;
+}
+
+#playerAuth.join-card > .app-top-logo {
+  margin-top: 0;
+  margin-bottom: 24px;
 }
 
 .ui-home-graph {
@@ -1538,6 +1543,7 @@ body.has-app-top-logo #playerAuth.join-card {
   max-height: 100dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 
 .join-title {
@@ -4462,7 +4468,7 @@ body.has-app-top-logo #playerAuth.join-card {
     type="range"
     min="0"
     max="0"
-    step="1"
+    step="0.01"
     value="0"
     oninput="updateBetFromSlider()"
     aria-label="Choisir le montant de la mise"
@@ -4473,16 +4479,14 @@ body.has-app-top-logo #playerAuth.join-card {
     </div>
 
     <div class="bet-input-wrap">
-      <input
-        type="number"
-        inputmode="numeric"
-        enterkeyhint="done"
-        id="betInput"
-        placeholder="0"
-        min="1"
-        step="1"
-        oninput="updatePotentialGain()"
-      >
+    <input
+      type="text"
+      inputmode="decimal"
+      enterkeyhint="done"
+      id="betInput"
+      placeholder="0"
+      oninput="updatePotentialGain()"
+    >
       <span class="bet-input-currency">💰</span>
     </div>
   </div>
@@ -5317,6 +5321,8 @@ function updateAppTopLogo(screenId) {
   if (!logo) return;
 
   const gameContent = document.getElementById("gameContent");
+  const playerAuth = document.getElementById("playerAuth");
+
   const isQuestionScreen =
     screenId === "play" &&
     gameContent &&
@@ -5329,6 +5335,20 @@ function updateAppTopLogo(screenId) {
     screenId !== "home" &&
     screenId !== "bigScreen" &&
     !isQuestionScreen;
+
+  if (shouldShow) {
+    const shouldAttachToPlayerAuth =
+      screenId === "play" &&
+      playerAuth &&
+      !playerAuth.classList.contains("hidden") &&
+      playerAuth.style.display !== "none";
+
+    const targetParent = shouldAttachToPlayerAuth ? playerAuth : document.body;
+
+    if (logo.parentElement !== targetParent) {
+      targetParent.insertBefore(logo, targetParent.firstChild);
+    }
+  }
 
   logo.style.display = shouldShow ? "block" : "none";
   document.body.classList.toggle("has-app-top-logo", shouldShow);
@@ -6966,12 +6986,19 @@ const scoreHtml = currentPlayerMode === 'easy'
          <span id="live-score-${cIndex}">${currentPlayerBalance}</span> 💰
       </div>`;
 
+const cardTimerText =
+  effStatus === "pending"
+    ? formatTimeDiff(Number(ch.startTime || 0) - Date.now())
+    : effStatus === "open"
+      ? formatTimeDiff(Number(ch.endTime || 0) - Date.now())
+      : "00:00";
+
 header.innerHTML = `
   <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(2px, 0.5vh, 6px);">
     ${scoreHtml}
     <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
        <span style="font-size:10px; opacity:0.8;">⏱️</span>
-       <div id="open-timer-${cIndex}" style="color:#fde047; font-size:13px; font-weight:900; font-family:monospace; margin-top:1px;">--:--</div>
+       <div id="open-timer-${cIndex}" style="color:#fde047; font-size:13px; font-weight:900; font-family:monospace; margin-top:1px;">${cardTimerText}</div>
     </div>
   </div>
   <div style="font-size:clamp(14px, 2.5vh, 20px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
@@ -7041,7 +7068,7 @@ const btnHtml = window.isRebetting
             
             <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; pointer-events:none;">
                 <div style="font-size:20px; font-weight:800; color:#ffffff; text-shadow:0 4px 15px rgba(0,0,0,1); text-align:center; padding:0 20px; letter-spacing:1px;">La question ouvre dans</div>
-                <div id="pending-timer-${cIndex}" style="font-size:55px; font-weight:900; color:#3b82f6; font-family:monospace; margin-top:15px; text-shadow:0 0 25px rgba(59,130,246,1), 0 4px 10px rgba(0,0,0,0.8);">--:--</div>
+                <div id="pending-timer-${cIndex}" style="font-size:55px; font-weight:900; color:#3b82f6; font-family:monospace; margin-top:15px; text-shadow:0 0 25px rgba(59,130,246,1), 0 4px 10px rgba(0,0,0,0.8);">${cardTimerText}</div>
             </div>
         `;
     }
@@ -8371,7 +8398,7 @@ function openBetPanel(cIndex, ansIndex, betType) {
   }
 
   const betAvailableEl = document.getElementById("betAvailable");
-  if (betAvailableEl) betAvailableEl.textContent = currentPlayerBalance + " 💰";
+  if (betAvailableEl) betAvailableEl.textContent = formatBetAmount(currentPlayerBalance) + " 💰";
 
   const betAnswerNameEl = document.getElementById("betAnswerName");
   if (betAnswerNameEl) betAnswerNameEl.textContent = ch.answers[ansIndex];
@@ -8395,8 +8422,8 @@ if (betBalanceFillEl) betBalanceFillEl.style.width = "0%";
 const betSliderEl = document.getElementById("betSlider");
 if (betSliderEl) {
   betSliderEl.min = "0";
-  betSliderEl.max = String(Math.max(0, Math.floor(currentPlayerBalance)));
-  betSliderEl.step = "1";
+  betSliderEl.max = String(Math.max(0, roundBetAmount(currentPlayerBalance)));
+  betSliderEl.step = "0.01";
   betSliderEl.value = "0";
 }
 
@@ -8562,19 +8589,45 @@ if (betSliderGuardEl) {
 }
 // ---------------------------------------------------------------------------
 
+function roundBetAmount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function parseBetAmount(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/,/g, ".");
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? roundBetAmount(n) : 0;
+}
+
+function formatBetAmount(value) {
+  const n = roundBetAmount(value);
+
+  return n
+    .toFixed(2)
+    .replace(".", ",")
+    .replace(/,00$/, "")
+    .replace(/(\,\d)0$/, "$1");
+}
+
 function updateBetFromSlider() {
   const slider = document.getElementById("betSlider");
   const input = document.getElementById("betInput");
 
   if (!slider || !input) return;
 
-  input.value = parseInt(slider.value) || 0;
+  input.value = formatBetAmount(parseBetAmount(slider.value));
   updatePotentialGain(true);
 }
 
 function updatePotentialGain(fromSlider = false) {
   const input = document.getElementById("betInput");
-  let val = parseInt(input.value) || 0;
+  let val = parseBetAmount(input.value);
 
   const err = document.getElementById("betError");
   const potentialEl = document.getElementById("betPotential");
@@ -8583,10 +8636,11 @@ function updatePotentialGain(fromSlider = false) {
   const fillEl = document.getElementById("betBalanceFill");
   const sliderEl = document.getElementById("betSlider");
 
-  const maxBalance = Math.max(0, Math.floor(currentPlayerBalance));
+  const maxBalance = Math.max(0, roundBetAmount(currentPlayerBalance));
 
   if (sliderEl) {
     sliderEl.max = String(maxBalance);
+    sliderEl.step = "0.01";
 
     if (!fromSlider) {
       sliderEl.value = String(Math.min(maxBalance, Math.max(0, val)));
@@ -8624,16 +8678,16 @@ function updatePotentialGain(fromSlider = false) {
   const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
 
   if (potentialEl) potentialEl.textContent = shares.toFixed(2) + " 💰";
-  if (hintEl) hintEl.textContent = "Pour " + val + " 💰 misés";
+  if (hintEl) hintEl.textContent = "Pour " + formatBetAmount(val) + " 💰 misés";
 }
 
 function setBetMax() {
-  const amount = Math.max(0, Math.floor(currentPlayerBalance));
+  const amount = Math.max(0, roundBetAmount(currentPlayerBalance));
 
-  document.getElementById("betInput").value = amount;
+  document.getElementById("betInput").value = formatBetAmount(amount);
 
   const slider = document.getElementById("betSlider");
-  if (slider) slider.value = amount;
+  if (slider) slider.value = String(amount);
 
   updatePotentialGain();
 }
@@ -8656,7 +8710,7 @@ function getStartingCapital() {
 
 function getBetFractionAmount(fraction) {
   const startingCapital = getStartingCapital();
-  return Math.max(1, Math.floor(startingCapital * fraction));
+  return Math.max(0.01, roundBetAmount(startingCapital * fraction));
 }
 
 function addBetFraction(fraction) {
@@ -8668,17 +8722,17 @@ function addBetAmount(amount) {
   const input = document.getElementById("betInput");
   if (!input) return;
 
-  let currentVal = parseInt(input.value, 10) || 0;
-  let newVal = currentVal + amount;
-  
-  if (newVal > currentPlayerBalance) {
-    newVal = Math.floor(currentPlayerBalance);
-  }
+let currentVal = parseBetAmount(input.value);
+let newVal = roundBetAmount(currentVal + Number(amount || 0));
 
-  input.value = newVal;
+if (newVal > currentPlayerBalance) {
+  newVal = roundBetAmount(currentPlayerBalance);
+}
 
-  const slider = document.getElementById("betSlider");
-  if (slider) slider.value = newVal;
+input.value = formatBetAmount(newVal);
+
+const slider = document.getElementById("betSlider");
+if (slider) slider.value = String(newVal);
 
   updatePotentialGain();
 }
@@ -8695,18 +8749,18 @@ function updateBetQuickButtons() {
     if (!btn) return;
 
     const amount = getBetFractionAmount(fraction);
-    btn.textContent = "+" + amount;
+    btn.textContent = "+" + formatBetAmount(amount);
   });
 }
 
 function confirmBet() {
-  const val = parseInt(document.getElementById("betInput").value) || 0;
+  const val = parseBetAmount(document.getElementById("betInput").value);
   const err = document.getElementById("betError");
   
   if (val <= 0) { err.textContent = "Veuillez saisir une mise valide."; return; }
   if (val > currentPlayerBalance) { err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital."; return; }
 
-  currentPlayerBalance -= val;
+  currentPlayerBalance = roundBetAmount(currentPlayerBalance - val);
   updateGlobalBalance();
 
 const ch = game.challenges[tempBetCIndex];
@@ -8746,8 +8800,8 @@ const ch = game.challenges[tempBetCIndex];
            }];
          }
 
-         existingBet.bet += val;
-         existingBet.pts += pointsPotentiels;
+          existingBet.bet = roundBetAmount(Number(existingBet.bet || 0) + val);
+          existingBet.pts = Number(existingBet.pts || 0) + pointsPotentiels;
          existingBet.pctAtBet = pctAtBet;
          existingBet.validatedAt = betTime;
          existingBet.events.push({
@@ -11063,8 +11117,10 @@ function getQuestionBettorStats(cIndex) {
   const answersCount = ch && Array.isArray(ch.answers) ? ch.answers.length : 0;
 
   const answerCounts = new Array(answersCount).fill(0);
-  const questionPlayers = new Set();
+  const answerBetTotals = new Array(answersCount).fill(0);
+  let questionBetTotal = 0;
 
+  const questionPlayers = new Set();
   const players = game && Array.isArray(game.players) ? game.players : [];
 
   players.forEach((p, pIndex) => {
@@ -11073,13 +11129,19 @@ function getQuestionBettorStats(cIndex) {
 
     (p.portfolio || []).forEach(snap => {
       if (Number(snap.cIndex) !== Number(cIndex)) return;
-      if (!(Number(snap.bet || 0) > 0)) return;
+
+      const betAmount = Number(snap.bet || 0);
+      if (!(betAmount > 0)) return;
       if (snap.cashedOut) return;
 
       const ansIndex = Number(snap.ansIndex);
       if (!Number.isInteger(ansIndex) || ansIndex < 0 || ansIndex >= answersCount) return;
 
       answersPlayedByThisPlayer.add(ansIndex);
+
+      // Montant total engagé sur cette réponse, tous joueurs confondus.
+      answerBetTotals[ansIndex] += betAmount;
+      questionBetTotal += betAmount;
     });
 
     if (answersPlayedByThisPlayer.size > 0) {
@@ -11093,10 +11155,143 @@ function getQuestionBettorStats(cIndex) {
 
   return {
     totalBettors: questionPlayers.size,
-    answerCounts
+    answerCounts,
+    answerBetTotals,
+    questionBetTotal
   };
 }
 
+function buildAdvancedQuestionDetailsHtml(cIndex, ch, probs, snaps = []) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+
+const stats = typeof getQuestionBettorStats === "function"
+  ? getQuestionBettorStats(cIndex)
+  : {
+      totalBettors: 0,
+      answerCounts: new Array((ch.answers || []).length).fill(0),
+      answerBetTotals: new Array((ch.answers || []).length).fill(0),
+      questionBetTotal: 0
+    };
+
+  const totalBettors = Number(stats.totalBettors || 0);
+  const totalBettorText =
+    `${totalBettors} ${totalBettors > 1 ? "personnes ont misé" : "personne a misé"} sur cette question`;
+
+  const totalBetOnQuestion = Number(stats.questionBetTotal || 0);
+
+  const activeSnaps = (snaps || []).filter(s =>
+    Number(s.bet || 0) > 0 &&
+    !s.cashedOut
+  );
+
+  const myPositionsHtml = activeSnaps.length > 0
+    ? activeSnaps.map(snap => {
+        const ans = ch.answers && ch.answers[snap.ansIndex] !== undefined
+          ? ch.answers[snap.ansIndex]
+          : "Réponse inconnue";
+
+        const typeLabel = snap.type === "NO" ? "NON" : "OUI";
+        const currentValue = typeof window.getAMMValue === "function"
+          ? window.getAMMValue(ch, snap)
+          : 0;
+
+        const pctAtBet = Number(snap.pctAtBet);
+        const pctAtBetHtml = Number.isFinite(pctAtBet)
+          ? `<div style="font-size:10px; color:#94a3b8; margin-top:2px;">Marché à votre mise : ${pctAtBet.toFixed(1)}%</div>`
+          : "";
+
+        return `
+          <div style="background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.10); border-radius:10px; padding:9px 10px; margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+              <div style="min-width:0;">
+                <div style="font-size:11px; color:#a78bfa; font-weight:900;">${typeLabel} · ${safe(ans)}</div>
+                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Mise : ${Number(snap.bet || 0).toFixed(0)} 💰</div>
+                ${pctAtBetHtml}
+              </div>
+
+              <div style="text-align:right; color:#fde047; font-size:12px; font-weight:950; white-space:nowrap;">
+                ${Number(currentValue || 0).toFixed(2)} 💰
+                <div style="font-size:9px; color:#94a3b8; font-weight:700;">maintenant</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `<div style="font-size:11px; color:#94a3b8; font-style:italic;">Vous n'avez pas encore misé sur cette question.</div>`;
+
+  const answersHtml = (ch.answers || []).map((ans, aIdx) => {
+    const pct = ((probs[aIdx] || 0) * 100).toFixed(1);
+    const count = stats.answerCounts && stats.answerCounts[aIdx]
+      ? stats.answerCounts[aIdx]
+      : 0;
+
+    const countLabel = `${count} ${count > 1 ? "personnes" : "personne"}`;
+
+    const answerBetTotal = Number(
+      stats.answerBetTotals && stats.answerBetTotals[aIdx]
+        ? stats.answerBetTotals[aIdx]
+        : 0
+    );
+
+    const answerBetTotalLabel =
+      `${answerBetTotal.toFixed(0)} ${answerBetTotal > 1 ? "misés" : "misé"}`;
+
+
+    const isMyYes = activeSnaps.some(snap =>
+      Number(snap.ansIndex) === aIdx &&
+      (snap.type === "YES" || !snap.type)
+    );
+
+    const isMyNo = activeSnaps.some(snap =>
+      Number(snap.ansIndex) === aIdx &&
+      snap.type === "NO"
+    );
+
+    const badge = isMyYes
+      ? `<span style="font-size:9px; color:#22c55e; font-weight:900;">Votre réponse</span>`
+      : isMyNo
+        ? `<span style="font-size:9px; color:#f97316; font-weight:900;">Votre NON</span>`
+        : "";
+
+    return `
+      <div style="background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px 10px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="font-size:12px; color:#fff; min-width:0; line-height:1.2;">
+          ${safe(ans)}
+          <div>${badge}</div>
+        </div>
+
+      <div style="text-align:right; min-width:96px;">
+        <div style="font-size:14px; color:#fde047; font-weight:950;">${pct}%</div>
+        <div style="font-size:10px; color:#94a3b8; font-weight:800;">👥 ${countLabel}</div>
+        <div style="font-size:10px; color:#93c5fd; font-weight:900;">💰 ${answerBetTotalLabel}</div>
+      </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div style="background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.10)); border:1px solid rgba(96,165,250,0.26); border-radius:14px; padding:12px; margin-top:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+        <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:900; letter-spacing:0.08em;">Vos positions</div>
+        <div style="font-size:10px; color:#94a3b8; text-align:right;">
+          ${totalBettorText}
+          <div style="margin-top:2px; color:#c4b5fd;">
+            Total misé : <strong style="color:#fde047;">${totalBetOnQuestion.toFixed(0)} 💰</strong>
+          </div>
+        </div>
+      </div>
+
+      ${myPositionsHtml}
+
+      <div style="font-size:11px; color:#a855f7; margin:12px 0 8px; font-weight:bold;">Marché par réponse :</div>
+      ${answersHtml}
+    </div>
+  `;
+}
+
+// Fonction interne pour mettre à jour les chiffres en temps réel
+// Fonction interne pour mettre à jour les chiffres en temps réel
+// Fonction interne pour mettre à jour les chiffres en temps réel
 function updateRecapUI(pseudo) {
   let player = (game.players || []).find(p => p.name === pseudo) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === pseudo ? window.localPlayerSnapshot : null);
   if (!player) {
@@ -11467,6 +11662,14 @@ const selectedValueColor = isResolvedQuestion
 
 const canTradeQuestion = effStatus === "open" && !sessionClosedForRecap;
 
+const advancedIsDetailsOpen = openDetails.includes(cIndex.toString());
+const advancedDetailsClass = advancedIsDetailsOpen ? "" : "hidden";
+const advancedSummaryClass = advancedIsDetailsOpen ? "hidden" : "";
+const advancedDetailsHtml =
+  typeof buildAdvancedQuestionDetailsHtml === "function"
+    ? buildAdvancedQuestionDetailsHtml(cIndex, ch, probs, snaps)
+    : "";
+
         const lockTitle =
           effStatus === "pending"
             ? "Question pas encore ouverte"
@@ -11515,21 +11718,31 @@ const canTradeQuestion = effStatus === "open" && !sessionClosedForRecap;
 
           finalHtml += `
             <div class="challenge-block" ${activeCardAttrs}>
-              <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-              <div class="challenge-title">${ch.question}</div>
-
-              <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
-                  ${betsListHtml}
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+                <button onclick="event.stopPropagation(); toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
               </div>
 
-              <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
-              ${
-                canTradeQuestion
-                  ? `<div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>`
-                  : sessionClosedForRecap
-                    ? ``
-                    : `<div style="font-size:11px; color:#94a3b8; font-weight:bold;">🔒 Mises closes : re-mise et cash out indisponibles</div>`
-              }
+              <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+
+              <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
+                <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
+                    ${betsListHtml}
+                </div>
+
+                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center;">
+                ${
+                  canTradeQuestion
+                    ? `<div style="font-size:11px; color:#a855f7; font-weight:bold;">👆 Cliquez pour re-miser</div>`
+                    : sessionClosedForRecap
+                      ? ``
+                      : `<div style="font-size:11px; color:#94a3b8; font-weight:bold;">🔒 Mises closes : re-mise et cash out indisponibles</div>`
+                }
+                </div>
+              </div>
+
+              <div id="details-ch-${cIndex}" class="${advancedDetailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
+                ${advancedDetailsHtml}
               </div>
             </div>
           `;
@@ -11537,23 +11750,33 @@ const canTradeQuestion = effStatus === "open" && !sessionClosedForRecap;
         const emptyCardAttrs = canTradeQuestion
           ? `data-recap-jump-cindex="${cIndex}" style="border-left: 3px solid #64748b; opacity:0.85; cursor:pointer;"`
           : `style="border-left: 3px solid #64748b; opacity:0.65; cursor:default;"`;
-
           finalHtml += `
             <div class="challenge-block" ${emptyCardAttrs}>
-              <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-              <div class="challenge-title">${ch.question}</div>
-              <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
+                <button onclick="event.stopPropagation(); toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
+              </div>
 
-              ${
-                canTradeQuestion
-                  ? `<div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>`
-                  : `
-                    <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
-                      <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
-                      <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Vous ne pouvez plus parier sur cette question.</div>
-                    </div>
-                  `
-              }
+              <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+
+              <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
+                <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
+
+                ${
+                  canTradeQuestion
+                    ? `<div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>`
+                    : `
+                      <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Vous ne pouvez plus parier sur cette question.</div>
+                      </div>
+                    `
+                }
+              </div>
+
+              <div id="details-ch-${cIndex}" class="${advancedDetailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
+                ${advancedDetailsHtml}
+              </div>
             </div>
           `;
       }
