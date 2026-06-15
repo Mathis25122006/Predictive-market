@@ -3826,11 +3826,25 @@ body.has-app-top-logo #playerAuth.join-card {
   font-weight: 750;
 }
 
-.fake-odds-row b {
-  color: #fde047;
-  font-size: 24px;
-  font-weight: 950;
+.fake-odds-market {
+  text-align: right;
   white-space: nowrap;
+}
+
+.fake-odds-market strong {
+  display: block;
+  color: #fde047;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.fake-odds-market span {
+  display: block;
+  margin-top: 3px;
+  color: #a7adc8;
+  font-size: 10px;
+  font-weight: 850;
 }
 
 .fake-odds-row.popular {
@@ -4434,21 +4448,27 @@ body.has-app-top-logo #playerAuth.join-card {
     </div>
 
     <div class="fake-odds-list">
-      <div class="fake-odds-row popular">
-        <div>
-          <strong>Réponse très jouée</strong>
-          <span>74% des mises</span>
-        </div>
-        <b>x1.15</b>
-      </div>
+<div class="fake-odds-row popular">
+  <div>
+    <strong>Réponse très jouée</strong>
+    <span>Probabilité élevée, gain plus faible</span>
+  </div>
+  <div class="fake-odds-market">
+    <strong>74%</strong>
+    <span>(x1.15)</span>
+  </div>
+</div>
 
-      <div class="fake-odds-row outsider">
-        <div>
-          <strong>Réponse moins jouée</strong>
-          <span>26% des mises</span>
-        </div>
-        <b>x2.80</b>
-      </div>
+<div class="fake-odds-row outsider">
+  <div>
+    <strong>Réponse moins jouée</strong>
+    <span>Probabilité plus basse, gain plus fort</span>
+  </div>
+  <div class="fake-odds-market">
+    <strong>26%</strong>
+    <span>(x2.80)</span>
+  </div>
+</div>
     </div>
 
     <div class="fake-card-caption">
@@ -4458,8 +4478,8 @@ body.has-app-top-logo #playerAuth.join-card {
 
   <h1 class="join-tuto-title">Repérez les bonnes cotes</h1>
   <p class="join-tuto-text">
-    Une réponse populaire rapporte moins.
-    Une réponse moins choisie peut rapporter davantage si elle s’avère correcte.
+    Le pourcentage indique la probabilité actuelle du marché basée sur les mises des autres joueurs
+    La cote entre parenthèses indique combien cette réponse peut rapporter.
   </p>
 </section>
 
@@ -4467,7 +4487,8 @@ body.has-app-top-logo #playerAuth.join-card {
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Votre solde</span>
-      <strong>100 💰</strong>
+      <strong><span class="join-tuto-capital">100</span> 💰</strong>
+
     </div>
 
     <div class="fake-bet-box">
@@ -4493,11 +4514,12 @@ body.has-app-top-logo #playerAuth.join-card {
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Capital</span>
-      <strong>100 💰</strong>
+      <strong><span class="join-tuto-capital">100</span> 💰</strong>
     </div>
 
     <div class="fake-card-question">
-      Répartissez vos crédits entre vos questions.
+      Chaque joueur démarre avec exactement
+      <strong style="color:#fde047;"><span class="join-tuto-capital">100</span> crédits</strong>.
     </div>
 
     <div class="fake-capital-list">
@@ -4522,8 +4544,9 @@ body.has-app-top-logo #playerAuth.join-card {
 
   <h1 class="join-tuto-title">Gérez votre capital</h1>
   <p class="join-tuto-text">
-    Vous disposez d’un capital de crédits.
-    À vous de décider comment le répartir entre toutes vos questions.
+    Tout le monde démarre avec le même capital :
+    <strong><span class="join-tuto-capital">100</span> crédits</strong>.
+    Chaque mise est retirée de ce capital.
   </p>
 </section>
 
@@ -5653,6 +5676,16 @@ function updateJoinQuestionCount() {
   document.querySelectorAll(".join-questions-per-player").forEach(el => {
     el.textContent = count;
   });
+
+  const capital = Number(sessionConfig && sessionConfig.initialBalance)
+    ? Number(sessionConfig.initialBalance)
+    : 100;
+
+  document.querySelectorAll(".join-tuto-capital").forEach(el => {
+    el.textContent = typeof formatBetAmount === "function"
+      ? formatBetAmount(capital)
+      : String(capital);
+  });
 }
 
 function resetJoinTuto() {
@@ -6371,6 +6404,36 @@ function getEffectiveStatus(ch) {
   if (now < ch.startTime) return "pending";
   if (now >= ch.startTime && now < ch.endTime) return "open";
   return "closed";
+}
+
+function showQuestionNotOpenMessage(ch) {
+  const msgEl = document.getElementById("playMsg");
+  if (!msgEl) return;
+
+  const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+
+  if (effStatus === "pending") {
+    msgEl.textContent = "Cette question n'est pas encore ouverte. Attendez la fin du décompte.";
+  } else {
+    msgEl.textContent = "Cette question n'est plus ouverte aux mises.";
+  }
+
+  msgEl.className = "msg err show";
+  setTimeout(() => msgEl.classList.remove("show"), 2500);
+}
+
+function clearUnopenedQuestionDraft(cIndex) {
+  if (selectedAnswers && selectedAnswers[cIndex] !== undefined) {
+    selectedAnswers[cIndex] = null;
+  }
+
+  if (selectedBets && selectedBets[cIndex] !== undefined) {
+    selectedBets[cIndex] = 0;
+  }
+
+  if (typeof selectedBetTypes !== "undefined" && selectedBetTypes[cIndex] !== undefined) {
+    selectedBetTypes[cIndex] = null;
+  }
 }
 
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
@@ -8014,9 +8077,86 @@ window.swipePrevCard = function() {
   };
 
 // --- Moteur Tactile (Touch Events) ---
-  let startY = 0; let startX = 0;
-  window.isCardDragging = false; 
-  window.hasMovedCard = false; // NOUVEAU : Détecteur d'intention de mouvement
+let startY = 0; let startX = 0;
+window.isCardDragging = false; 
+window.hasMovedCard = false; // NOUVEAU : Détecteur d'intention de mouvement
+
+function resetSwipePrevPreview() {
+  document.querySelectorAll('#challengesPlay .challenge-block[data-prev-preview="1"]').forEach(card => {
+    card.dataset.prevPreview = "0";
+    card.style.transition = "";
+    card.style.transform = "";
+    card.style.opacity = "";
+    card.style.zIndex = "";
+    card.style.pointerEvents = "";
+  });
+}
+
+function renderSwipePrevPreview(activeCard, deltaY, deltaX) {
+  const prevCard = cardsElements[window.currentCardIndex - 1];
+  if (!prevCard || !activeCard) return;
+
+  const progress = Math.min(1, Math.max(0, deltaY / 170));
+  const easedProgress = 1 - Math.pow(1 - progress, 2.2);
+
+  // La carte précédente descend vraiment depuis le haut de l’écran.
+  const enterFromTop = Math.min(window.innerHeight * 0.78, 620);
+  const prevY = -enterFromTop + easedProgress * enterFromTop;
+
+  prevCard.dataset.prevPreview = "1";
+  prevCard.style.transition = "none";
+  prevCard.style.zIndex = "12";
+  prevCard.style.pointerEvents = "none";
+  prevCard.style.opacity = String(0.18 + easedProgress * 0.82);
+  prevCard.style.transform = `translateY(${prevY}px) scale(${0.965 + easedProgress * 0.035})`;
+
+  // La carte actuelle descend un peu, pour libérer visuellement la précédente.
+  activeCard.style.zIndex = "10";
+  activeCard.style.opacity = String(1 - easedProgress * 0.30);
+  activeCard.style.transform = `translate(${deltaX * 0.18}px, ${deltaY * 0.22}px) scale(${1 - easedProgress * 0.045})`;
+}
+
+function finishSwipePrevWithPreview(activeCard) {
+  const prevCard = cardsElements[window.currentCardIndex - 1];
+
+  if (!prevCard) {
+    resetSwipePrevPreview();
+    swipePrevCard();
+    return;
+  }
+
+  if (window.isFinishingPrevSwipe) return;
+  window.isFinishingPrevSwipe = true;
+
+  prevCard.dataset.prevPreview = "1";
+  prevCard.style.transition = "transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease-out";
+  prevCard.style.zIndex = "12";
+  prevCard.style.opacity = "1";
+  prevCard.style.transform = "translateY(0) scale(1)";
+
+  if (activeCard) {
+    activeCard.style.transition = "transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease-out";
+    activeCard.style.opacity = "0.62";
+    activeCard.style.transform = "translateY(34px) scale(0.955)";
+  }
+
+  setTimeout(() => {
+    swipePrevCard();
+
+    requestAnimationFrame(() => {
+      resetSwipePrevPreview();
+
+      if (activeCard) {
+        activeCard.style.transition = "";
+        activeCard.style.transform = "";
+        activeCard.style.opacity = "";
+        activeCard.style.zIndex = "";
+      }
+
+      window.isFinishingPrevSwipe = false;
+    });
+  }, 210);
+}
 
 containerEl.addEventListener('touchstart', (e) => {
     const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
@@ -8051,8 +8191,16 @@ const deltaY = e.touches[0].clientY - startY;
         window.hasMovedCard = true;
     }
     
-    const rotate = deltaY * 0.05; 
+const rotate = deltaY * 0.05;
+
+if (deltaY > 0 && window.currentCardIndex > 0 && currentPlayerMode !== 'easy') {
+    renderSwipePrevPreview(activeCard, deltaY, deltaX);
+} else {
+    resetSwipePrevPreview();
+    activeCard.style.opacity = "";
+    activeCard.style.zIndex = "";
     activeCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotate}deg)`;
+}
   }, {passive: false});
 
   containerEl.addEventListener('touchend', (e) => {
@@ -8068,15 +8216,16 @@ const realCardIndex = cardsElements.indexOf(activeCard);
 if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
     window.currentCardIndex = realCardIndex;
 }
-
-activeCard.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease-out';
     
     const deltaY = e.changedTouches[0].clientY - startY;
     const deltaX = e.changedTouches[0].clientX - startX;
 
     // CORRECTION DU BUG : On exige que le doigt n'ait PAS voyagé (hasMovedCard === false) pour considérer ça comme un Clic !
-    if (!window.hasMovedCard && Math.abs(deltaY) < 15 && Math.abs(deltaX) < 15) {
+if (!window.hasMovedCard && Math.abs(deltaY) < 15 && Math.abs(deltaX) < 15) {
+        resetSwipePrevPreview();
         activeCard.style.transform = ''; 
+        activeCard.style.opacity = "";
+        activeCard.style.zIndex = "";
         
         // Si on a tapé dans le vide (pas sur un bouton ni sur une réponse), on désélectionne !
         if (!e.target.closest('button') && !e.target.closest('.answer-btn')) {
@@ -8097,8 +8246,11 @@ if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !
         return; 
     }
 
-    if (Math.abs(deltaY) < 30) {
+if (Math.abs(deltaY) < 30) {
+        resetSwipePrevPreview();
         activeCard.style.transform = ''; 
+        activeCard.style.opacity = "";
+        activeCard.style.zIndex = "";
         return; 
     }
 
@@ -8140,14 +8292,19 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
       }
 } else if (deltaY > 80 && window.currentCardIndex > 0) { // Glissement vers le bas (Précédent)
   if (currentPlayerMode === 'easy') {
+      resetSwipePrevPreview();
       activeCard.style.transform = '';
+      activeCard.style.opacity = "";
+      activeCard.style.zIndex = "";
       return;
   }
 
-  // CORRECTION : Pareil ici, on laisse swipePrevCard gérer la logique
-  swipePrevCard(); 
+  finishSwipePrevWithPreview(activeCard);
 } else {
+  resetSwipePrevPreview();
   activeCard.style.transform = ''; 
+  activeCard.style.opacity = "";
+  activeCard.style.zIndex = "";
 }
   });
 
@@ -8235,6 +8392,13 @@ function renderAnswersForChallenge(cIndex){
   const ch = game.challenges[cIndex];
   const box = document.getElementById("answers-ch"+cIndex);
   if (!box) return;
+
+  const answerCardStatus = getEffectiveStatus(ch);
+  const answersAreTradeable = answerCardStatus === "open";
+
+  if (!answersAreTradeable) {
+    clearUnopenedQuestionDraft(cIndex);
+  }
   
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
@@ -8402,8 +8566,15 @@ ptsSpan.innerHTML = `<strong>${Number(pts).toFixed(2)} 💰</strong><span>${(pct
     // Les événements de clic (Attachés dynamiquement)
     if (currentPlayerMode === 'easy') {
         div.style.cursor = "pointer";
-        div.onclick = (e) => {
-            e.stopPropagation();
+div.onclick = (e) => {
+    e.stopPropagation();
+
+    if (!answersAreTradeable) {
+        clearUnopenedQuestionDraft(cIndex);
+        showQuestionNotOpenMessage(ch);
+        renderAnswersForChallenge(cIndex);
+        return;
+    }
 
             const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
             if (alreadyValidated) {
@@ -8449,6 +8620,13 @@ if (
 div.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (!answersAreTradeable) {
+        clearUnopenedQuestionDraft(cIndex);
+        showQuestionNotOpenMessage(ch);
+        renderAnswersForChallenge(cIndex);
+        return;
+    }
 
     if (
       window.suppressNextAnswerTapUntil &&
@@ -8497,11 +8675,16 @@ if (window.currentTutoStep === 3 && Number(activeTutoCIndex) === Number(cIndex))
 if (currentPlayerMode === 'easy') {
     ptsSpan.innerHTML = `<div style="text-align:right;">${pts} 💰<br><span style="font-size:10px; font-weight:normal; color:#9ca3af;">${(pct*100) < 1 ? '&lt;1%' : (pct*100).toFixed(1) + '%'}</span></div>`;
 } else {
-    if (snapForThisAns) {
-        ptsSpan.innerHTML = `<span style="color:#fde047; font-size:12px;">Mise: ${snapForThisAns.bet}u</span>`;
-    } else {
-        ptsSpan.innerHTML = `${(pct*100) < 1 ? '&lt;1' : (pct*100).toFixed(0)}<span style="font-size:12px; font-weight:normal; color:#9ca3af;">%</span>`;
-    }
+    const pctNumber = (pct * 100) < 1 ? "&lt;1" : (pct * 100).toFixed(0);
+
+    // En mode avancé, la barre affiche toujours le nouveau pourcentage.
+    // La mise reste uniquement dans le bloc Cash out au-dessus.
+    ptsSpan.innerHTML = `
+      <div style="display:inline-flex; align-items:baseline; justify-content:flex-end; gap:2px; white-space:nowrap;">
+        <strong style="font-size:1em; color:#ffffff; line-height:1;">${pctNumber}</strong>
+        <em style="font-style:normal; font-size:0.68em; color:#cbd5e1; font-weight:850;">%</em>
+      </div>
+    `;
 }
   });
 }
@@ -9312,10 +9495,11 @@ function openBetPanel(cIndex, ansIndex, betType) {
 
   const ch = game.challenges[cIndex];
 
-  if (!ch || getEffectiveStatus(ch) !== "open") {
-    showPlayerTradeClosedMessage("Les mises sont closes pour cette question : vous ne pouvez plus parier.");
-    return;
-  }
+if (!ch || getEffectiveStatus(ch) !== "open") {
+  showQuestionNotOpenMessage(ch);
+  clearUnopenedQuestionDraft(cIndex);
+  return;
+}
 
   tempBetCIndex = cIndex;
   tempBetAnsIndex = ansIndex;
@@ -9741,13 +9925,20 @@ function confirmBet() {
   const val = parseBetAmount(document.getElementById("betInput").value);
   const err = document.getElementById("betError");
   
-  if (val <= 0) { err.textContent = "Veuillez saisir une mise valide."; return; }
-  if (val > currentPlayerBalance) { err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital."; return; }
+if (val <= 0) { err.textContent = "Veuillez saisir une mise valide."; return; }
+if (val > currentPlayerBalance) { err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital."; return; }
 
-  currentPlayerBalance = roundBetAmount(currentPlayerBalance - val);
+const betQuestion = game && game.challenges ? game.challenges[tempBetCIndex] : null;
+if (!betQuestion || getEffectiveStatus(betQuestion) !== "open") {
+  err.textContent = "Cette question n'est pas encore ouverte aux mises.";
+  clearUnopenedQuestionDraft(tempBetCIndex);
+  return;
+}
+
+currentPlayerBalance = roundBetAmount(currentPlayerBalance - val);
   updateGlobalBalance();
 
-const ch = game.challenges[tempBetCIndex];
+const ch = betQuestion;
 
 // CALCUL EXACT AMM : L'investissement permet d'acheter un nombre exact de parts (shares)
   const shares = window.PredictiveMath.calcSharesToBuy(ch.votes, tempBetAnsIndex, val);
@@ -10113,12 +10304,11 @@ function adminNext(){
 
 function finish() {
   // On vérifie que toutes les questions ont bien reçu un résultat
-  const allResolved = game.challenges.every(ch => ch.status === "resolved");
-  if (!allResolved) {
-     if (!confirm("Attention, certaines questions n'ont pas encore de résultat publié. Voulez-vous vraiment clôturer le jeu définitivement ?")) {
-         return;
-     }
-  }
+const allResolved = game.challenges.every(ch => ch.status === "resolved");
+if (!allResolved) {
+   alert("Impossible de clôturer la session : tous les résultats doivent d'abord être promulgués.");
+   return;
+}
 
 // On verrouille le jeu
   game.isResolved = true;
@@ -11000,6 +11190,12 @@ function normalizePseudoValue(value) {
 
 function normalizeEmailValue(value) {
   return String(value || "").trim().toLowerCase();
+  
+}
+
+function isValidEmailValue(value) {
+  const email = normalizeEmailValue(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
 function getPlayerList(players) {
@@ -11150,11 +11346,12 @@ function checkAccess() {
     return;
   }
   
-  if(!emailInput.includes("@")) {
-    msg.textContent = "Veuillez entrer une adresse e-mail valide.";
-    msg.className = "msg err";
-    return;
-  }
+if (!isValidEmailValue(emailInput)) {
+  msg.textContent = "Adresse e-mail invalide. Vérifiez le format avant de rejoindre le jeu.";
+  msg.className = "msg err show";
+  setTimeout(() => msg.classList.remove("show"), 3000);
+  return;
+}
 
   msg.textContent = "Connexion au serveur...";
   msg.className = "msg ok";
@@ -12803,7 +13000,19 @@ const advancedDetailsHtml =
         if (snaps.length > 0) {
           let betsListHtml = '';
 
-          snaps.forEach(snap => {
+snaps.forEach(snap => {
+             const originalStake = Array.isArray(snap.events) && snap.events.length
+               ? snap.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0)
+               : Number(snap.bet || 0);
+
+             const currentResaleValue = typeof window.getAMMValue === "function"
+               ? Number(window.getAMMValue(ch, snap) || 0)
+               : 0;
+
+             const valueDelta = currentResaleValue - originalStake;
+             const valueDeltaColor = valueDelta >= 0 ? "#4ade80" : "#f87171";
+             const valueDeltaText = `${valueDelta >= 0 ? "+" : ""}${valueDelta.toFixed(2)} 💰`;
+
              betsListHtml += `
              <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
                 <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
@@ -12813,10 +13022,27 @@ const advancedDetailsHtml =
             ${
               canTradeQuestion
                 ? `
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:6px 10px; border-radius:8px;">
-                    <div style="font-size:12px; color:#fdba74; font-weight:600;">Revente : <strong id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="color:#f97316; font-size:14px;">${window.getAMMValue(ch, snap)} 💰</strong></div>
+                <div style="margin-top:6px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:8px 10px; border-radius:10px;">
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <div>
+                      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:850;">Mise initiale</div>
+                      <div style="font-size:13px; color:#fde047; font-weight:950;">${originalStake.toFixed(2)} 💰</div>
+                    </div>
+
+                    <div style="text-align:right;">
+                      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:850;">Valeur actuelle</div>
+                      <div id="cashout-val-${snap.cIndex}-${snap.ansIndex}" style="font-size:13px; color:#f97316; font-weight:950;">${currentResaleValue.toFixed(2)} 💰</div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <div style="font-size:11px; color:${valueDeltaColor}; font-weight:900;">
+                      ${valueDelta >= 0 ? "Gain latent" : "Perte latente"} : ${valueDeltaText}
+                    </div>
+
                     <button onclick="event.stopPropagation(); openSellPanel(${snap.cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 10px; font-size:11px; margin:0; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important;">Cash out</button>
                   </div>
+                </div>
                 `
                 : sessionClosedForRecap
                   ? ``
@@ -13891,28 +14117,94 @@ function resolveChallenge(index) {
   }
 }
 
-// Fonction interne qui gère la distribution des gains (l'ancien code de resolveChallenge)
+function roundCreditValue(value) {
+  return parseFloat((Number(value) || 0).toFixed(2));
+}
+
+function isWinningBetForResolution(b, correctIdx) {
+  return (
+    (b.type === 'YES' && Number(b.ansIndex) === Number(correctIdx)) ||
+    (b.type === 'NO' && Number(b.ansIndex) !== Number(correctIdx)) ||
+    (!b.type && Number(b.ansIndex) === Number(correctIdx))
+  );
+}
+
+function getResolutionCreditDeltaForBet(b, correctIdx) {
+  if (!b || b.cashedOut) return 0;
+  return isWinningBetForResolution(b, correctIdx)
+    ? Number(b.pts || 0)
+    : 0;
+}
+
+function applyResolutionToPlayers(players, cIndex, correctIdx) {
+  if (!players) return;
+
+  players.forEach(p => {
+    if (!p || !p.portfolio) return;
+
+    p.portfolio.forEach(b => {
+      if (Number(b.cIndex) !== Number(cIndex)) return;
+      if (b.cashedOut) return;
+      if (b.paidOut && Number(b.resolutionCorrect) === Number(correctIdx)) return;
+
+      const delta = roundCreditValue(getResolutionCreditDeltaForBet(b, correctIdx));
+
+      p.balance = roundCreditValue(Number(p.balance || 0) + delta);
+
+      // On mémorise la transaction exacte de publication.
+      // Gagnant : delta positif.
+      // Perdant : delta = 0, mais le ticket est bien marqué comme réglé.
+      b.paidOut = true;
+      b.resolutionCorrect = Number(correctIdx);
+      b.resolutionCreditDelta = delta;
+      b.resolutionWasWinning = delta > 0;
+    });
+  });
+}
+
+function undoResolutionOnPlayers(players, cIndex, previousCorrectIdx) {
+  if (!players) return;
+
+  players.forEach(p => {
+    if (!p || !p.portfolio) return;
+
+    p.portfolio.forEach(b => {
+      if (Number(b.cIndex) !== Number(cIndex)) return;
+      if (b.cashedOut) return;
+
+      const storedDelta = Number(b.resolutionCreditDelta);
+      const hasStoredDelta = Number.isFinite(storedDelta);
+
+      // Fallback pour les anciens tickets publiés avant ce patch.
+      const fallbackDelta =
+        b.paidOut && isWinningBetForResolution(b, previousCorrectIdx)
+          ? Number(b.pts || 0)
+          : 0;
+
+      const deltaToRemove = roundCreditValue(hasStoredDelta ? storedDelta : fallbackDelta);
+
+      // Les gagnants rendent exactement ce qui leur avait été crédité.
+      if (deltaToRemove !== 0) {
+        p.balance = roundCreditValue(Number(p.balance || 0) - deltaToRemove);
+      }
+
+      // Les perdants sont “remboursés” en pratique parce que leur ticket redevient actif :
+      // il n'est plus considéré comme réglé/perdu.
+      b.paidOut = false;
+
+      delete b.resolutionCorrect;
+      delete b.resolutionCreditDelta;
+      delete b.resolutionWasWinning;
+    });
+  });
+}
+
+// Fonction interne qui gère la distribution des gains
 function executeResolution(index, ansIndex) {
   game.challenges[index].status = "resolved";
   game.challenges[index].correct = ansIndex;
   
-  if (game.players) {
-    game.players.forEach(p => {
-      if (p.portfolio) {
-        p.portfolio.forEach(b => {
-          if (b.cIndex === index && !b.paidOut) {
-            const isWin = (b.type === 'YES' && b.ansIndex === ansIndex) ||
-                          (b.type === 'NO' && b.ansIndex !== ansIndex) ||
-                          (!b.type && b.ansIndex === ansIndex);
-            if (isWin) {
-              p.balance += b.pts;
-            }
-            b.paidOut = true;
-          }
-        });
-      }
-    });
-  }
+  applyResolutionToPlayers(game.players, index, ansIndex);
   saveToCloud();
 
   // Synchronisation avec l'autre session si on est en gestion commune
@@ -13925,23 +14217,7 @@ function executeResolution(index, ansIndex) {
                otherData.gameData.challenges[index].status = "resolved";
                otherData.gameData.challenges[index].correct = ansIndex;
                
-               if (otherData.gameData.players) {
-                   otherData.gameData.players.forEach(p => {
-                       if (p.portfolio) {
-                           p.portfolio.forEach(b => {
-                               if (b.cIndex === index && !b.paidOut) {
-                                   const isWin = (b.type === 'YES' && b.ansIndex === ansIndex) ||
-                                                 (b.type === 'NO' && b.ansIndex !== ansIndex) ||
-                                                 (!b.type && b.ansIndex === ansIndex);
-                                   if (isWin) {
-                                       p.balance += b.pts;
-                                   }
-                                   b.paidOut = true;
-                               }
-                           });
-                       }
-                   });
-               }
+               applyResolutionToPlayers(otherData.gameData.players, index, ansIndex);
                db.ref('sessions/' + otherCode).set(otherData);
            }
         });
@@ -13958,25 +14234,10 @@ function undoResolveChallenge(index) {
   const ch = game.challenges[index];
   const previousCorrectIdx = ch.correct; // NOUVEAU : Sauvegarde du bon index
   
-// 1. REPRISE DES GAINS : On annule les paiements effectués
-  if (game.players) {
-    game.players.forEach(p => {
-      if (p.portfolio) {
-        const winningBets = p.portfolio.filter(b => b.cIndex === index && (
-          (b.type === 'YES' && b.ansIndex === ch.correct) ||
-          (b.type === 'NO' && b.ansIndex !== ch.correct) ||
-          (!b.type && b.ansIndex === ch.correct)
-        ));
-        
-        winningBets.forEach(winningBet => {
-          if (winningBet.paidOut) {
-            p.balance = parseFloat((p.balance - winningBet.pts).toFixed(2));
-            winningBet.paidOut = false; 
-          }
-        });
-      }
-    });
-  }
+// 1. ANNULATION EXACTE DE LA PUBLICATION :
+// les gagnants rendent le crédit reçu,
+// les perdants récupèrent leur ticket actif.
+undoResolutionOnPlayers(game.players, index, previousCorrectIdx);
   
 // 2. RETOUR AU STATUT PRÉCÉDENT
   ch.correct = null;
@@ -13996,23 +14257,7 @@ function undoResolveChallenge(index) {
                  otherGame.challenges[index].correct = null;
                  otherGame.challenges[index].status = "closed";
                  
-                 if (otherGame.players) {
-                     otherGame.players.forEach(p => {
-                         if (p.portfolio) {
-                             const winningBets = p.portfolio.filter(b => b.cIndex === index && (
-                                 (b.type === 'YES' && b.ansIndex === previousCorrectIdx) ||
-                                 (b.type === 'NO' && b.ansIndex !== previousCorrectIdx) ||
-                                 (!b.type && b.ansIndex === previousCorrectIdx)
-                             ));
-                             winningBets.forEach(wBet => {
-                                 if (wBet.paidOut) {
-                                     p.balance = parseFloat((p.balance - wBet.pts).toFixed(2));
-                                     wBet.paidOut = false; 
-                                 }
-                             });
-                         }
-                     });
-                 }
+undoResolutionOnPlayers(otherGame.players, index, previousCorrectIdx);
                  db.ref('sessions/' + otherCode).set(otherData);
              }
          });
