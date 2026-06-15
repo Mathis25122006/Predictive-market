@@ -934,7 +934,7 @@ body.bet-panel-open #challengesPlay {
   border-radius: inherit;
   background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7, #f97316);
   box-shadow: 0 0 14px rgba(168,85,247,0.30);
-  transition: width 0.35s ease;
+  transition: width 3.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .bet-odds-fill::after {
@@ -4600,7 +4600,7 @@ body.has-app-top-logo #playerAuth.join-card {
       <input id="pseudo" class="join-input" placeholder="Ex : Renaud" oninput="checkPseudoAvailability()">
       <div id="pseudoFeedback" style="font-size:11.5px; font-weight:bold; margin-top:-16px; min-height:18px; padding-left:5px;"></div>
 
-      <label class="join-label">Adresse e-mail (optionnel)</label>
+      <label class="join-label">Adresse e-mail</label>
       <input id="playerEmail" class="join-input" type="email" placeholder="Ex : joueur@email.com" oninput="checkPseudoAvailability()">
 
       <div class="join-info" style="margin-top:26px;">
@@ -4919,6 +4919,92 @@ body.has-app-top-logo #playerAuth.join-card {
 let screenHistory = [];
 let currentScreenId = 'home';
 
+const PAGE_RESTORE_KEY = "predinnoCurrentPageState";
+
+function getVisiblePlaySubscreen() {
+  const playerAuth = document.getElementById("playerAuth");
+  const gameContent = document.getElementById("gameContent");
+  const joinCodeStep = document.getElementById("joinCodeStep");
+  const joinDetailsStep = document.getElementById("joinDetailsStep");
+
+  if (
+    gameContent &&
+    !gameContent.classList.contains("hidden") &&
+    gameContent.style.display !== "none"
+  ) {
+    return "questions";
+  }
+
+  if (
+    playerAuth &&
+    !playerAuth.classList.contains("hidden") &&
+    playerAuth.style.display !== "none"
+  ) {
+    if (joinDetailsStep && !joinDetailsStep.classList.contains("hidden")) return "details";
+    if (joinCodeStep && !joinCodeStep.classList.contains("hidden")) return "code";
+  }
+
+  return "";
+}
+
+function saveCurrentPageState(screenId = currentScreenId) {
+  try {
+    const accessCode = document.getElementById("accessCode");
+    const pseudo = document.getElementById("pseudo");
+    const email = document.getElementById("playerEmail");
+
+    const state = {
+      screenId,
+      playSubscreen: screenId === "play" ? getVisiblePlaySubscreen() : "",
+      accessCode: accessCode ? accessCode.value.trim().toUpperCase() : "",
+      pseudo: pseudo ? pseudo.value.trim() : "",
+      email: email ? email.value.trim() : "",
+      activeCode: window.currentActiveSessionCode || "",
+      currentCardIndex: Number.isFinite(Number(window.currentCardIndex))
+        ? Number(window.currentCardIndex)
+        : 0,
+      savedAt: Date.now()
+    };
+
+    sessionStorage.setItem(PAGE_RESTORE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn("Sauvegarde page ignorée :", e);
+  }
+}
+
+function getSavedPageState() {
+  try {
+    const raw = sessionStorage.getItem(PAGE_RESTORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function restoreFormFromPageState(state) {
+  if (!state) return;
+
+  const accessCode = document.getElementById("accessCode");
+  const pseudo = document.getElementById("pseudo");
+  const email = document.getElementById("playerEmail");
+
+  if (accessCode && state.accessCode) accessCode.value = state.accessCode;
+  if (pseudo && state.pseudo) pseudo.value = state.pseudo;
+  if (email && state.email) email.value = state.email;
+
+  if (state.activeCode) {
+    window.currentActiveSessionCode = state.activeCode;
+  }
+
+  if (Number.isFinite(Number(state.currentCardIndex))) {
+    window.currentCardIndex = Number(state.currentCardIndex);
+  }
+}
+
+window.addEventListener("beforeunload", () => {
+  saveCurrentPageState(currentScreenId);
+});
+
 const ROUTE_BY_SCREEN = {
   home: "/",
   onboarding: "/tutoriel",
@@ -5054,6 +5140,7 @@ function showJoinCodeStep() {
 
   const codeInput = document.getElementById("accessCode");
   if (codeInput) setTimeout(() => codeInput.focus(), 80);
+  saveCurrentPageState("play");
 }
 
 function showJoinDetailsStep() {
@@ -5066,6 +5153,7 @@ function showJoinDetailsStep() {
 
   const pseudoInput = document.getElementById("pseudo");
   if (pseudoInput) setTimeout(() => pseudoInput.focus(), 80);
+  saveCurrentPageState("play");
 }
 
 function hidePlayerAuthPanel() {
@@ -5617,7 +5705,8 @@ function showScreen(screenId, isBack = false, skipUrlUpdate = false) {
     if (screenId === 'home') {
       screenHistory = []; 
     }
-    currentScreenId = screenId;
+currentScreenId = screenId;
+saveCurrentPageState(screenId);
 
 if (!skipUrlUpdate) {
   try {
@@ -5755,6 +5844,7 @@ if (screenId === 'play') {
 window.addEventListener("popstate", () => {
   const screenId = getScreenFromCurrentUrl();
   showScreen(screenId, true, true);
+  saveCurrentPageState(screenId);
 });
 
 
@@ -7846,7 +7936,7 @@ const c = colors[i % colors.length];
         // La Jauge de pourcentage en arrière-plan
         gauge = document.createElement("div");
         gauge.className = "answer-gauge";
-        gauge.style.cssText = `position:absolute; top:0; left:0; height:100%; width:0%; background:${c}; opacity:0.25; transition:width 0.72s cubic-bezier(0.18, 0.9, 0.22, 1); will-change:width; transform:translateZ(0); z-index:0;`;
+        gauge.style.cssText = `position:absolute; top:0; left:0; height:100%; width:0%; background:${c}; opacity:0.25; transition:width 0.5s ease-out; will-change:width; transform:translateZ(0); z-index:0;`;
 
         // Le Texte
         label = document.createElement("div");
@@ -8525,42 +8615,14 @@ function refreshChallengeBarsLikeFirstBet(cIndex, ansIndex = null) {
     return false;
   }
 
-  const oldWidths = Array.from(box.querySelectorAll(".answer-gauge"))
-    .map(g => g.style.width || "0%");
-
-  // 1. On calcule/rend le nouvel état.
-  renderAnswersForChallenge(cIndex);
-
-  const gauges = Array.from(box.querySelectorAll(".answer-gauge"));
-  const targetWidths = gauges.map(g => g.style.width || "0%");
-
-  // 2. On remet visuellement les jauges à leur ancienne largeur.
-  gauges.forEach((g, i) => {
-    g.style.transition = "none";
-    g.style.width = oldWidths[i] || "0%";
-  });
-
-  // Force le navigateur à enregistrer l'état de départ.
-  void box.offsetWidth;
-
-  // 3. Puis on anime vers la nouvelle largeur.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      gauges.forEach((g, i) => {
-        g.style.transition = "width 0.72s cubic-bezier(0.18, 0.9, 0.22, 1)";
-        g.style.width = targetWidths[i] || "0%";
-      });
-
-      if (ansIndex !== null && ansIndex !== undefined) {
-        animateBetConfirmationOnCard(cIndex, ansIndex);
-      }
-    });
-  });
-
+  // Même chemin que les updates live venant des autres joueurs :
+  // aucune transition forcée, aucun reset manuel des widths.
   const scoreEl = document.getElementById("live-score-" + cIndex);
   if (scoreEl && typeof currentPlayerBalance !== "undefined") {
     scoreEl.innerHTML = `${currentPlayerBalance}`;
   }
+
+  renderAnswersForChallenge(cIndex);
 
   const betInfoEl = document.getElementById("bet-info-" + cIndex);
   if (betInfoEl && typeof window.generateBetInfoHtml === "function") {
@@ -8568,6 +8630,12 @@ function refreshChallengeBarsLikeFirstBet(cIndex, ansIndex = null) {
     if (betInfoEl.innerHTML !== newBetHtml) {
       betInfoEl.innerHTML = newBetHtml;
     }
+  }
+
+  if (ansIndex !== null && ansIndex !== undefined) {
+    requestAnimationFrame(() => {
+      animateBetConfirmationOnCard(cIndex, ansIndex);
+    });
   }
 
   return true;
@@ -8604,15 +8672,15 @@ function refreshSingleChallengeBarsSmoothly(cIndex, ansIndex = null) {
 }
 
 function refreshCardAfterBetSmoothly(cIndex, ansIndex) {
-  // Même sensation que la première mise :
-  // on anime explicitement les jauges de leur ancienne largeur vers la nouvelle.
+  // On laisse le panel commencer à descendre,
+  // puis on applique exactement le même rendu que les updates live.
   setTimeout(() => {
     const didRefresh = refreshChallengeBarsLikeFirstBet(cIndex, ansIndex);
 
     if (!didRefresh && typeof updatePlayChallengesLive === "function") {
       updatePlayChallengesLive();
     }
-  }, 90);
+  }, 180);
 }
 
 function finishRebetAndReturnToRecap(activeCard) {
@@ -10874,6 +10942,7 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
                 }
                 
                 renderPlayChallenges();
+                saveCurrentPageState("play");
             }
         } else {
             // Mise à jour visuelle en temps réel (Après le premier chargement)
@@ -12732,17 +12801,90 @@ window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
 }
 }
 function goToPlayScreen() {
-  window.isRebetting = false; // CORRECTION : On réinitialise le mode "Retour Rapide"
+  if (!game || !game.challenges || !game.currentPlayerName) return;
+
+  // On revient au mode normal : toutes les cartes, pas une seule carte de re-mise.
+  window.isRebetting = false;
   window.returnToRecapAfterRebet = false;
   window.isFinishingRebet = false;
   window.rebetSingleCardCIndex = null;
   window.rebetTargetCIndex = null;
   window.rebetTargetCardPos = null;
-  window.currentCardIndex = 0; // On repart toujours de la première question
+
+  // On repart toujours de la première carte du paquet joueur.
+  window.currentCardIndex = 0;
+  window.maxCardIndexSeen = 0;
+
   selectedAnswers = new Array(game.challenges.length).fill(null);
   selectedBets = new Array(game.challenges.length).fill(0);
-  showScreen('play');
+
+  if (typeof selectedBetTypes !== "undefined") {
+    selectedBetTypes = new Array(game.challenges.length).fill("YES");
+  }
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  if (player) {
+    currentPlayerBalance = Number(player.balance || currentPlayerBalance || 0);
+    if (typeof updateGlobalBalance === "function") updateGlobalBalance();
+  }
+
+  // Important : on affiche directement l'écran questions.
+  // On ne passe PAS par showScreen('play'), car cette fonction réouvre le formulaire code/pseudo.
+  const playScreen = document.getElementById("play");
+  const playerAuth = document.getElementById("playerAuth");
+  const gameContent = document.getElementById("gameContent");
+  const playerRecap = document.getElementById("playerRecap");
+  const playerResult = document.getElementById("playerResult");
+  const results = document.getElementById("results");
+
+  if (playerRecap) playerRecap.style.display = "none";
+  if (playerResult) playerResult.style.display = "none";
+  if (results) results.style.display = "none";
+
+  if (playScreen) playScreen.style.display = "block";
+
+  if (playerAuth) {
+    playerAuth.classList.add("hidden");
+    playerAuth.style.display = "none";
+  }
+
+  if (gameContent) {
+    gameContent.classList.remove("hidden");
+    gameContent.style.display = "block";
+  }
+
+  const playerTitle = document.getElementById("playerTitle");
+  if (playerTitle) {
+    playerTitle.textContent = "Prédictions de " + game.currentPlayerName;
+  }
+
+  if (typeof closeBetPanel === "function") closeBetPanel({ suppressTuto: true });
+  if (typeof closeSellPanel === "function") closeSellPanel({ force: true });
+
+  document.body.classList.add("play-mode-active");
+  currentScreenId = "play";
+
+  if (typeof updateUrlForScreen === "function") {
+    updateUrlForScreen("play", true);
+  }
+
   renderPlayChallenges();
+
+  requestAnimationFrame(() => {
+    window.currentCardIndex = 0;
+
+    if (typeof window.updateCardStack === "function") {
+      window.updateCardStack();
+    }
+
+    if (typeof updatePlayChallengesLive === "function") {
+      updatePlayChallengesLive();
+    }
+
+    if (typeof saveCurrentPageState === "function") {
+      saveCurrentPageState("play");
+    }
+  });
 }
 
 window.goToSpecificCard = function(cIndex) {
@@ -15875,16 +16017,56 @@ window.copyCodeToClipboard = function(code, btn) {
 function initRouteOnLoad() {
   const params = new URLSearchParams(window.location.search);
   const sessionCode = params.get("session");
+  const savedPageState = getSavedPageState();
 
-  // Si une URL contient ?session=XXXX, c'est forcément une entrée joueur,
-  // même si l'ancien QR pointe vers /session ou /grand-ecran/live.
-  const screenId = sessionCode ? "play" : getScreenFromCurrentUrl();
+  // On recharge tout de suite les données locales pour que les pages admin/récap
+  // ne s'affichent pas vides après refresh.
+  try {
+    const savedConfig = localStorage.getItem("savedSessionConfig");
+    const savedGame = localStorage.getItem("savedGameData");
 
-  // On remplace l’état initial du navigateur par l’écran actuel.
+    if (savedConfig && savedGame) {
+      sessionConfig = JSON.parse(savedConfig);
+      game = JSON.parse(savedGame);
+    }
+  } catch (e) {
+    console.warn("Restauration locale ignorée :", e);
+  }
+
+  const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+  const isKnownExplicitRoute =
+    Object.values(ROUTE_BY_SCREEN).includes(currentPath) &&
+    currentPath !== "/";
+
+  // Priorité :
+  // 1. QR / lien session => page joueur
+  // 2. URL explicite actuelle => page de l'URL
+  // 3. sinon, dernier écran de l'onglet => utile en local/file ou après refresh neutre
+  const screenId = sessionCode
+    ? "play"
+    : isKnownExplicitRoute
+      ? getScreenFromCurrentUrl()
+      : (savedPageState && savedPageState.screenId) || "home";
+
+  restoreFormFromPageState(savedPageState);
+
+  const shouldReconnectPlayerPage =
+    ["play", "playerRecap", "playerResult"].includes(screenId) &&
+    savedPageState &&
+    savedPageState.accessCode &&
+    savedPageState.pseudo &&
+    savedPageState.email;
+
+  // Si le joueur était déjà sur les questions / récap / résultat,
+  // on évite de réafficher le formulaire pendant le refresh.
+  if (shouldReconnectPlayerPage) {
+    window.isReconnectingPreviousSession = true;
+    window.hasSeenWelcomeCode = true;
+  }
+
   updateUrlForScreen(screenId, true);
-
-  // On affiche la bonne page.
   showScreen(screenId, true, true);
+  restoreFormFromPageState(savedPageState);
 
   if (sessionCode) {
     setTimeout(() => {
@@ -15893,6 +16075,23 @@ function initRouteOnLoad() {
         accessCodeInput.value = sessionCode.toUpperCase();
       }
     }, 100);
+
+    return;
+  }
+
+  // Restauration complète des pages joueur après refresh.
+  // checkAccess reconstruit automatiquement :
+  // - les questions si la session est ouverte,
+  // - le récap si le joueur avait fini,
+  // - le résultat si la session est résolue.
+  if (shouldReconnectPlayerPage) {
+    setTimeout(() => {
+      restoreFormFromPageState(savedPageState);
+
+      if (typeof checkAccess === "function") {
+        checkAccess();
+      }
+    }, 120);
   }
 }
 
