@@ -6769,11 +6769,11 @@ function generateSetupFields() {
       <div id="ans-container-${i}">
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse 1" style="flex:3;">
-          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" min="0.1" max="99.9" step="0.1" inputmode="decimal" style="flex:1;" oninput="updateNextPct(${i}, this)">
         </div>
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse 2" style="flex:3;">
-          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+          <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" min="0.1" max="99.9" step="0.1" inputmode="decimal" style="flex:1;" oninput="updateNextPct(${i}, this)">
         </div>
       </div>
       <div style="display:flex; gap:5px;">
@@ -6805,59 +6805,174 @@ function updateNextPct(chIndex, currentInput) {
   const pcts = Array.from(document.querySelectorAll(`.dynamic-pct[data-ch="${chIndex}"]`));
   if (pcts.length < 2) return;
 
-  // 1. On compte combien de cases sont encore vides
-  let emptyCount = 0;
-  pcts.forEach(input => {
-    if (input.value === "" || isNaN(parseFloat(input.value))) {
-      emptyCount++;
-    }
-  });
+  const MIN_UNIT = 1;      // 0.1%
+  const TOTAL_UNIT = 1000; // 100.0%
+  const maxSingleUnit = TOTAL_UNIT - ((pcts.length - 1) * MIN_UNIT);
 
-  // Si plus d'une case est vide, on arrête le calcul ici pour vous laisser saisir
-  if (emptyCount > 1) {
-    pctModificationCounter++;
-    currentInput.dataset.modOrder = pctModificationCounter;
-    return; 
-  }
+  const parseUnit = (input) => {
+    const raw = String(input.value || "").replace(",", ".").trim();
+    if (raw === "") return null;
 
-  // 2. On marque la case actuelle comme la plus récemment modifiée
+    const value = parseFloat(raw);
+    if (!Number.isFinite(value)) return null;
+
+    return Math.round(value * 10);
+  };
+
+  const formatUnit = (unit) => (unit / 10).toFixed(1);
+
+  // On marque la case actuelle comme la plus récemment modifiée.
   pctModificationCounter++;
   currentInput.dataset.modOrder = pctModificationCounter;
 
-  // 3. On cherche la case la PLUS ANCIENNEMENT modifiée (ou la dernière case vide)
-  let targetInput = null;
-  let oldestOrder = Infinity;
+  const currentRaw = String(currentInput.value || "").replace(",", ".").trim();
+  const currentParsed = parseFloat(currentRaw);
 
-  pcts.forEach(input => {
-    if (input !== currentInput) {
-      // Si la case est vide, on force son ordre à 0 pour être sûr de la cibler
-      const order = (input.value === "" || isNaN(parseFloat(input.value))) ? 0 : (parseInt(input.dataset.modOrder) || 0); 
-      if (order < oldestOrder) {
-        oldestOrder = order;
-        targetInput = input;
-      }
+  // Si l'utilisateur efface temporairement la case, on ne force pas encore le recalcul.
+  if (currentRaw === "" || !Number.isFinite(currentParsed)) {
+    if (window.markSetupChanged) window.markSetupChanged();
+    return;
+  }
+
+  // Sécurité : impossible de mettre 100% ou plus.
+  // Et avec 3 réponses, 4 réponses, etc., on garde au moins 0.1% pour les autres.
+  let currentUnit = Math.round(currentParsed * 10);
+  let currentWasCorrected = false;
+
+  if (currentUnit >= TOTAL_UNIT || currentUnit > maxSingleUnit) {
+    currentUnit = maxSingleUnit;
+    currentInput.value = formatUnit(currentUnit);
+    currentWasCorrected = true;
+  }
+
+  if (currentUnit < MIN_UNIT) {
+    currentUnit = MIN_UNIT;
+    currentInput.value = formatUnit(currentUnit);
+    currentWasCorrected = true;
+  }
+
+  const emptyCount = pcts.filter(input => {
+    const unit = parseUnit(input);
+    return unit === null;
+  }).length;
+
+  // Si plusieurs cases sont vides, on laisse l'utilisateur finir sa saisie.
+  if (emptyCount > 1) {
+    if (window.markSetupChanged) window.markSetupChanged();
+    return;
+  }
+
+  const currentIndex = pcts.indexOf(currentInput);
+
+  let values = pcts.map((input, idx) => {
+    let unit = parseUnit(input);
+
+    // S'il reste une seule case vide, elle devient la case de compensation.
+    if (unit === null) unit = MIN_UNIT;
+
+    if (unit < MIN_UNIT) unit = MIN_UNIT;
+    if (unit >= TOTAL_UNIT || unit > maxSingleUnit) unit = maxSingleUnit;
+
+    // On synchronise les autres champs, mais on évite de gêner la frappe dans le champ courant.
+    if (idx !== currentIndex) {
+      input.value = formatUnit(unit);
     }
+
+    return unit;
   });
 
-  // 4. On calcule la somme de toutes les autres cases
-  let sumOthers = 0;
-  for (let i = 0; i < pcts.length; i++) {
-    if (pcts[i] !== targetInput) {
-      let val = parseFloat(pcts[i].value);
-      if (isNaN(val) || val < 0) val = 0; // Si vide, on compte pour 0
-      sumOthers += val;
+  values[currentIndex] = currentUnit;
+
+  // Ordre de compensation :
+  // 1. réponse la plus anciennement modifiée
+  // 2. puis la deuxième plus ancienne
+  // 3. etc.
+  // La réponse en cours de saisie est protégée autant que possible.
+  const compensationTargets = pcts
+    .map((input, idx) => ({
+      input,
+      idx,
+      order: idx === currentIndex ? Infinity : (parseInt(input.dataset.modOrder) || 0)
+    }))
+    .filter(item => item.idx !== currentIndex)
+    .sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.idx - b.idx;
+    });
+
+  let total = values.reduce((a, b) => a + b, 0);
+
+  if (total > TOTAL_UNIT) {
+    let excess = total - TOTAL_UNIT;
+
+    for (const target of compensationTargets) {
+      if (excess <= 0) break;
+
+      const reducible = Math.max(0, values[target.idx] - MIN_UNIT);
+      const reduction = Math.min(reducible, excess);
+
+      values[target.idx] -= reduction;
+      excess -= reduction;
+    }
+
+    // Sécurité ultime : si même toutes les autres réponses à 0.1% ne suffisent pas,
+    // on réduit la réponse en cours.
+    if (excess > 0) {
+      values[currentIndex] = Math.max(MIN_UNIT, values[currentIndex] - excess);
+      currentWasCorrected = true;
     }
   }
 
-// 5. On ajuste la case cible (la dernière vide, ou la plus ancienne) pour arriver à 100
-  let remaining = 100 - sumOthers;
-  if (remaining < 0.1) remaining = 0.1; // Sécurité pour éviter les zéros absolus
+  if (total < TOTAL_UNIT) {
+    let missing = TOTAL_UNIT - total;
 
-  targetInput.value = parseFloat(remaining).toFixed(1);
+    for (const target of compensationTargets) {
+      if (missing <= 0) break;
 
-  // CORRECTION : On NE MET PLUS à jour l'ordre de la case compensée automatiquement.
-  // Ainsi, elle reste la "poubelle de compensation" qui absorbe toute votre frappe 
-  // (le '3' puis le '0' de '30') sans jamais se rabattre par erreur sur la 1ère case !
+      const addable = Math.max(0, maxSingleUnit - values[target.idx]);
+      const addition = Math.min(addable, missing);
+
+      values[target.idx] += addition;
+      missing -= addition;
+    }
+
+    if (missing > 0) {
+      values[currentIndex] = Math.min(maxSingleUnit, values[currentIndex] + missing);
+      currentWasCorrected = true;
+    }
+  }
+
+  // Petite correction d'arrondi pour rester exactement à 100.0%.
+  let finalTotal = values.reduce((a, b) => a + b, 0);
+  let diff = TOTAL_UNIT - finalTotal;
+
+  if (diff !== 0) {
+    const correctionTargets = [...compensationTargets, { idx: currentIndex }];
+
+    for (const target of correctionTargets) {
+      if (diff === 0) break;
+
+      if (diff > 0) {
+        const addable = maxSingleUnit - values[target.idx];
+        const addition = Math.min(addable, diff);
+        values[target.idx] += addition;
+        diff -= addition;
+      } else {
+        const reducible = values[target.idx] - MIN_UNIT;
+        const reduction = Math.min(reducible, Math.abs(diff));
+        values[target.idx] -= reduction;
+        diff += reduction;
+      }
+    }
+  }
+
+  pcts.forEach((input, idx) => {
+    if (idx !== currentIndex || currentWasCorrected) {
+      input.value = formatUnit(values[idx]);
+    }
+  });
+
+  if (window.markSetupChanged) window.markSetupChanged();
 }
 
 function setEquitable(chIndex) {
@@ -11481,7 +11596,7 @@ function addAnswerField(chIndex) {
   
  div.innerHTML = `
     <input class="dynamic-ans" data-ch="${chIndex}" placeholder="Réponse ${count}" style="flex:3;">
-    <input type="number" class="dynamic-pct" data-ch="${chIndex}" placeholder="%" style="flex:1;" oninput="updateNextPct(${chIndex}, this)">
+    <input type="number" class="dynamic-pct" data-ch="${chIndex}" placeholder="%" min="0.1" max="99.9" step="0.1" inputmode="decimal" style="flex:1;" oninput="updateNextPct(${chIndex}, this)">
   `;
   container.appendChild(div);
   if(window.markSetupChanged) window.markSetupChanged(); // NOUVEAU
@@ -14014,7 +14129,7 @@ function fillTestGame() {
           div.style.marginBottom = "8px";
           div.innerHTML = `
             <input class="dynamic-ans" data-ch="${i}" placeholder="Réponse ${ansIdx+1}" style="flex:3;" value="${ansText}">
-            <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" style="flex:1;" oninput="updateNextPct(${i}, this)">
+            <input type="number" class="dynamic-pct" data-ch="${i}" placeholder="%" min="0.1" max="99.9" step="0.1" inputmode="decimal" style="flex:1;" oninput="updateNextPct(${i}, this)">
           `;
           container.appendChild(div);
        });
