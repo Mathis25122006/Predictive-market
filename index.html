@@ -639,6 +639,273 @@ button {
    box-shadow: 0 18px 45px rgba(0,0,0,0.55), inset 0 0 20px rgba(251,191,36,0.08);
 }
 
+.final-results-card {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 18px 28px !important;
+  border-radius: 30px !important;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(168,85,247,0.24), transparent 34%),
+    radial-gradient(circle at 82% 8%, rgba(59,130,246,0.18), transparent 30%),
+    linear-gradient(180deg, rgba(15,23,42,0.98), rgba(5,10,24,0.98)) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow:
+    0 24px 70px rgba(0,0,0,0.62),
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    inset 0 0 38px rgba(168,85,247,0.10) !important;
+}
+
+.final-results-card::before {
+  content: "";
+  position: absolute;
+  inset: -80px -60px auto;
+  height: 180px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent);
+  transform: rotate(-10deg);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.final-results-hero {
+  position: relative;
+  margin-bottom: 20px;
+  padding: 18px 16px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.035)),
+    radial-gradient(circle at 15% 20%, rgba(251,191,36,0.18), transparent 34%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: inset 0 0 22px rgba(255,255,255,0.04);
+}
+
+.final-results-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(168,85,247,0.18);
+  border: 1px solid rgba(168,85,247,0.38);
+  color: #d8b4fe;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.final-results-title {
+  margin: 14px 0 7px !important;
+  font-size: 28px !important;
+  line-height: 1.05 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.05em;
+}
+
+.final-results-subtitle {
+  margin: 0 !important;
+  color: #b7bdcc !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.final-dropdown {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 16px !important;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.028)),
+    rgba(15,23,42,0.78);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 16px 38px rgba(0,0,0,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.final-dropdown[open] {
+  border-color: rgba(168,85,247,0.55);
+  box-shadow:
+    0 18px 46px rgba(0,0,0,0.48),
+    0 0 30px rgba(168,85,247,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+.final-dropdown-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 16px 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  user-select: none;
+}
+
+.final-dropdown-summary::-webkit-details-marker {
+  display: none;
+}
+
+.final-dropdown-left {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+
+.final-dropdown-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 16px;
+  font-size: 21px;
+  background:
+    radial-gradient(circle at 40% 25%, rgba(255,255,255,0.30), transparent 34%),
+    linear-gradient(135deg, #fbbf24, #f97316);
+  box-shadow: 0 10px 24px rgba(249,115,22,0.25);
+}
+
+.final-dropdown-icon.results {
+  background:
+    radial-gradient(circle at 40% 25%, rgba(255,255,255,0.26), transparent 34%),
+    linear-gradient(135deg, #3b82f6, #a855f7);
+  box-shadow: 0 10px 24px rgba(59,130,246,0.25);
+}
+
+.final-dropdown-title {
+  display: block;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.final-dropdown-desc {
+  display: block;
+  margin-top: 4px;
+  color: #9ca3af;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.final-dropdown-chevron {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.075);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #ffffff;
+  font-size: 18px;
+  transition: transform 0.28s ease, background 0.28s ease;
+}
+
+.final-dropdown[open] .final-dropdown-chevron {
+  transform: rotate(180deg);
+  background: rgba(168,85,247,0.18);
+  border-color: rgba(168,85,247,0.35);
+}
+
+.final-dropdown-content {
+  padding: 0 14px 15px;
+  animation: finalDropdownReveal 0.32s ease-out both;
+}
+
+@keyframes finalDropdownReveal {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.final-dropdown-note {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #9ca3af;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.final-leader-entry {
+  position: relative;
+  overflow: hidden;
+  padding: 13px 14px !important;
+  border-radius: 18px !important;
+  margin-bottom: 9px !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.030)),
+    rgba(10,15,32,0.88) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+.final-leader-entry::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, #a855f7, #3b82f6);
+  opacity: 0.9;
+}
+
+.final-leader-entry.highlight {
+  background:
+    radial-gradient(circle at 12% 50%, rgba(251,191,36,0.20), transparent 34%),
+    linear-gradient(135deg, rgba(251,191,36,0.16), rgba(168,85,247,0.16)) !important;
+  border-color: rgba(251,191,36,0.72) !important;
+  box-shadow:
+    0 0 26px rgba(251,191,36,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+.final-rank-pill {
+  min-width: 38px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.075);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #ffffff;
+  font-weight: 950;
+}
+
+.final-score-pill {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.11);
+  border: 1px solid rgba(34,197,94,0.22);
+  color: #bbf7d0;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.final-dropdown-content details.challenge-block {
+  border-radius: 18px !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.070), rgba(255,255,255,0.025)),
+    rgba(9,14,30,0.88) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+.final-dropdown-content details.challenge-block summary {
+  padding: 14px !important;
+}
+
+.final-dropdown-content details.challenge-block[open] {
+  border-color: rgba(96,165,250,0.45) !important;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.28),
+    0 0 22px rgba(96,165,250,0.10) !important;
+}
+
 
  .msg {
    font-size: 12px;
@@ -4814,31 +5081,58 @@ body.has-app-top-logo #playerAuth.join-card {
   <button onclick="showFullResultsForPlayer(window.lastFinalPseudo || game.currentPlayerName)" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); box-shadow:0 10px 20px rgba(59,130,246,0.3); font-size:16px;">Voir tous les résultats</button>
 </div>
 
-<div id="results" class="card" style="display:none">
-  <h2>Tous les résultats</h2>
-  <p class="subtitle" id="finalResultsSubtitle">Consultez le récapitulatif des questions et le classement final.</p>
+<div id="results" class="card final-results-card" style="display:none">
+  <div class="final-results-hero">
+    <div class="final-results-kicker">✨ Résultats publiés</div>
+    <h2 class="final-results-title">Tous les résultats</h2>
+    <p class="final-results-subtitle" id="finalResultsSubtitle">
+      Consultez le classement final, puis le détail des réponses question par question.
+    </p>
+  </div>
 
-  <details class="final-dropdown" style="margin-bottom:14px;">
-    <summary style="cursor:pointer; font-weight:900; font-size:16px; padding:14px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.35);">
-      Résultats
+  <details id="finalLeaderboardDropdown" class="final-dropdown" open>
+    <summary class="final-dropdown-summary">
+      <span class="final-dropdown-left">
+        <span class="final-dropdown-icon">🏆</span>
+        <span>
+          <span class="final-dropdown-title">Classement</span>
+          <span class="final-dropdown-desc">Top joueurs, score final et votre position</span>
+        </span>
+      </span>
+      <span class="final-dropdown-chevron">⌄</span>
     </summary>
-    <div id="finalQuestionsResults" style="margin-top:12px;"></div>
+
+    <div class="final-dropdown-content">
+      <div id="leaderboard"></div>
+      <div class="final-dropdown-note">
+        Score calculé sur la valeur finale de vos prédictions.
+      </div>
+    </div>
   </details>
 
-  <details class="final-dropdown" style="margin-bottom:14px;">
-    <summary style="cursor:pointer; font-weight:900; font-size:16px; padding:14px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.35);">
-      Classement
+  <details id="finalResultsDropdown" class="final-dropdown">
+    <summary class="final-dropdown-summary">
+      <span class="final-dropdown-left">
+        <span class="final-dropdown-icon results">📊</span>
+        <span>
+          <span class="final-dropdown-title">Résultats</span>
+          <span class="final-dropdown-desc">Bonnes réponses, vos choix et votes des joueurs</span>
+        </span>
+      </span>
+      <span class="final-dropdown-chevron">⌄</span>
     </summary>
-    <div id="leaderboard" style="margin-top:12px;"></div>
-    <div class="msg">Score calculé sur la valeur actuelle de vos prédictions.</div>
+
+    <div class="final-dropdown-content">
+      <div id="finalQuestionsResults"></div>
+    </div>
   </details>
 
   <div id="chartsContainer"></div>
 
-<div style="display:flex; gap:10px; margin-top:20px;">
-  <button onclick="goBack()" style="margin:0;">Retour</button>
-  <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
-</div>
+  <div style="display:flex; gap:10px; margin-top:20px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
 </div>
 <div id="playerRecap" class="card" style="display:none; padding-bottom: 100px;">
   <h2>Vos Prédictions</h2>
@@ -9763,24 +10057,22 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
     const displayName = isMe
       ? `<strong style="font-weight:900; color:#ffffff;">${safeName}</strong>`
       : safeName;
-
     const row = document.createElement("div");
     row.className = `leader-entry final-leader-entry ${isMe ? "highlight" : ""}`;
-    row.style.cssText = `
-      padding:12px 14px;
-      border-radius:16px;
-      background:${isMe ? "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(168,85,247,0.18))" : "rgba(15,23,42,0.98)"};
-      border:${isMe ? "1px solid #fbbf24" : "1px solid rgba(55,65,81,0.9)"};
-      box-shadow:${isMe ? "0 0 22px rgba(251,191,36,0.22)" : "none"};
-      ${extraStyle}
-    `;
+    row.style.cssText = extraStyle || "";
+
+    const rankLabel =
+      idx === 0 ? "🥇" :
+      idx === 1 ? "🥈" :
+      idx === 2 ? "🥉" :
+      `#${idx + 1}`;
 
     row.innerHTML = `
       <div class="leader-left">
-        <span class="rank-pill">#${idx + 1}</span>
+        <span class="rank-pill final-rank-pill">${rankLabel}</span>
         <span>${displayName}</span>
       </div>
-      <div style="font-weight:900;">${Number(p.pts).toFixed(2)} 💰</div>
+      <div class="final-score-pill">${Number(p.pts).toFixed(2)} 💰</div>
     `;
 
     return row;
@@ -10343,6 +10635,12 @@ function showAdminFinalResults() {
   if (questionsContainer) questionsContainer.innerHTML = renderAdminFinalQuestionResults();
 
   displayLeaderboard(null, false);
+
+  const leaderboardDropdown = document.getElementById("finalLeaderboardDropdown");
+const resultsDropdown = document.getElementById("finalResultsDropdown");
+
+if (leaderboardDropdown) leaderboardDropdown.open = true;
+if (resultsDropdown) resultsDropdown.open = false;
   showScreen("results");
 }
 
@@ -10371,6 +10669,12 @@ function showFullResultsForPlayer(pseudo) {
   // Vue joueur uniquement :
   // pseudo en gras + ligne du joueur hors Top 10 autorisés ici.
   displayLeaderboard(finalPseudo, true);
+
+  const leaderboardDropdown = document.getElementById("finalLeaderboardDropdown");
+  const resultsDropdown = document.getElementById("finalResultsDropdown");
+
+  if (leaderboardDropdown) leaderboardDropdown.open = true;
+  if (resultsDropdown) resultsDropdown.open = false;
 
   showScreen("results");
 }
@@ -10422,7 +10726,7 @@ showScreen('playerResult');
       const resultsTitleNormal = document.querySelector("#results h2");
       const resultsMsgNormal = document.querySelector("#results .msg");
       if (resultsTitleNormal) resultsTitleNormal.innerHTML = "Classement Final";
-      if (resultsMsgNormal) resultsMsgNormal.innerHTML = "Score calculé sur vos gains potentiels (100 - p) cumulés.";
+      if (resultsMsgNormal) resultsMsgNormal.innerHTML = "Score calculé sur vos gains cumulés.";
 
       const myRank = myRankIndex + 1;
   const medalEl = document.getElementById("medalDisplay");
@@ -10476,11 +10780,6 @@ rankEl.innerHTML = `
       </div>
     </div>
 
-    <div style="font-size:12px; color:#9ca3af; line-height:1.4;">
-      ${myRank <= 10
-        ? "Votre pseudo apparaît en gras dans le Top 10."
-        : "Vous n’êtes pas dans le Top 10 : votre ligne apparaîtra sous le classement avec votre pseudo en gras."}
-    </div>
   </div>
 `;
 
@@ -10576,7 +10875,54 @@ window.saveLocalProgress = function() {
 
 // --- NOUVEAU : Vérification du pseudo en temps réel ---
 let currentSessionPlayersForCheck = null;
+let currentSessionIsResolvedForCheck = false;
 let lastCheckedCode = "";
+let lastCheckedIdentityKey = "";
+
+function normalizePseudoValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeEmailValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getPlayerList(players) {
+  if (!players) return [];
+  return Array.isArray(players)
+    ? players.filter(Boolean)
+    : Object.values(players).filter(Boolean);
+}
+
+function findPlayerByPseudoAndEmail(players, pseudo, email) {
+  const wantedPseudo = normalizePseudoValue(pseudo);
+  const wantedEmail = normalizeEmailValue(email);
+
+  if (!wantedPseudo || !wantedEmail) return null;
+
+  return getPlayerList(players).find(p =>
+    normalizePseudoValue(p.name) === wantedPseudo &&
+    normalizeEmailValue(p.email) === wantedEmail
+  ) || null;
+}
+
+function findPlayerByPseudo(players, pseudo) {
+  const wantedPseudo = normalizePseudoValue(pseudo);
+  if (!wantedPseudo) return null;
+
+  return getPlayerList(players).find(p =>
+    normalizePseudoValue(p.name) === wantedPseudo
+  ) || null;
+}
+
+function findPlayerByEmail(players, email) {
+  const wantedEmail = normalizeEmailValue(email);
+  if (!wantedEmail) return null;
+
+  return getPlayerList(players).find(p =>
+    normalizeEmailValue(p.email) === wantedEmail
+  ) || null;
+}
 
 window.checkPseudoAvailability = function() {
     const pseudo = document.getElementById("pseudo").value.trim();
@@ -10593,45 +10939,85 @@ window.checkPseudoAvailability = function() {
 
     if (code.length !== 6) {
         feedback.textContent = "Entrez un code de session pour vérifier que le pseudo est disponible";
-        feedback.style.color = "#9ca3af"; // Gris
+        feedback.style.color = "#9ca3af";
         return;
     }
 
-    // Requête Firebase en arrière-plan (si le code a changé)
-    if (lastCheckedCode !== code) {
-        feedback.textContent = "Vérification...";
-        feedback.style.color = "#9ca3af";
-        
-        db.ref('sessions/' + code + '/gameData/players').once('value').then(snap => {
-            lastCheckedCode = code;
-            currentSessionPlayersForCheck = snap.exists() ? snap.val() : [];
-            evaluatePseudo(pseudo, email, feedback);
-        }).catch(() => {
-            feedback.textContent = "";
-        });
-    } else {
+    const identityKey = [
+      code,
+      normalizePseudoValue(pseudo),
+      normalizeEmailValue(email)
+    ].join("|");
+
+    // On évite les requêtes inutiles seulement si le couple pseudo/e-mail/code
+    // est strictement le même. Sinon on recharge la session.
+    if (
+      lastCheckedIdentityKey === identityKey &&
+      currentSessionPlayersForCheck !== null
+    ) {
         evaluatePseudo(pseudo, email, feedback);
+        return;
     }
+
+    feedback.textContent = "Vérification...";
+    feedback.style.color = "#9ca3af";
+
+    window.pendingPseudoCheckKey = identityKey;
+
+    db.ref('sessions/' + code).once('value').then(snap => {
+        if (window.pendingPseudoCheckKey !== identityKey) return;
+
+        if (!snap.exists()) {
+            currentSessionPlayersForCheck = [];
+            currentSessionIsResolvedForCheck = false;
+            feedback.textContent = "Code de session introuvable";
+            feedback.style.color = "#ef4444";
+            return;
+        }
+
+        const data = snap.val();
+        const gameData = data.gameData || {};
+
+        lastCheckedCode = code;
+        lastCheckedIdentityKey = identityKey;
+
+        currentSessionPlayersForCheck = gameData.players || [];
+        currentSessionIsResolvedForCheck = gameData.isResolved === true;
+
+        evaluatePseudo(pseudo, email, feedback);
+    }).catch(() => {
+        feedback.textContent = "";
+    });
 };
 
 function evaluatePseudo(pseudo, email, feedback) {
-    if (!currentSessionPlayersForCheck) currentSessionPlayersForCheck = [];
-    
-    const existingPlayer = currentSessionPlayersForCheck.find(p => p.name && p.name.toLowerCase() === pseudo.toLowerCase());
-    
-    if (existingPlayer) {
-        // Le pseudo existe. Est-ce le mien (même email) ?
-        if (email && existingPlayer.email && existingPlayer.email.toLowerCase() === email) {
-            feedback.textContent = "Pseudo reconnu (Reconnexion possible) ✅";
-            feedback.style.color = "#4ade80"; // Vert
-        } else {
-            feedback.textContent = "Ce pseudo est déjà utilisé ❌";
-            feedback.style.color = "#ef4444"; // Rouge
-        }
-    } else {
-        feedback.textContent = "Pseudo disponible ✅";
-        feedback.style.color = "#4ade80"; // Vert
+    const players = getPlayerList(currentSessionPlayersForCheck);
+
+    const sameIdentityPlayer = findPlayerByPseudoAndEmail(players, pseudo, email);
+    if (sameIdentityPlayer) {
+        feedback.textContent = currentSessionIsResolvedForCheck
+          ? "Reconnexion possible — résultats disponibles ✅"
+          : "Reconnexion possible ✅";
+        feedback.style.color = "#4ade80";
+        return;
     }
+
+    const samePseudoPlayer = findPlayerByPseudo(players, pseudo);
+    if (samePseudoPlayer) {
+        feedback.textContent = "Ce pseudo est déjà utilisé ❌";
+        feedback.style.color = "#ef4444";
+        return;
+    }
+
+    const sameEmailPlayer = findPlayerByEmail(players, email);
+    if (sameEmailPlayer) {
+        feedback.textContent = "Cette adresse e-mail est déjà liée à un autre pseudo ❌";
+        feedback.style.color = "#ef4444";
+        return;
+    }
+
+    feedback.textContent = "Pseudo disponible ✅";
+    feedback.style.color = "#4ade80";
 }
 // ------------------------------------------------------
 
@@ -10696,16 +11082,17 @@ function checkAccess() {
     const checkTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
     
     if (now > checkTime || game.isResolved === true) {
-      const existingPlayer = game.players.find(p => p.email && p.email.toLowerCase() === emailInput.toLowerCase());
+      const playersForIdentity = getPlayerList(game.players);
+const existingPlayer = findPlayerByPseudoAndEmail(playersForIdentity, pseudoInput, emailInput);
+const pseudoOwner = findPlayerByPseudo(playersForIdentity, pseudoInput);
+const emailOwner = findPlayerByEmail(playersForIdentity, emailInput);
       
       if (game.isResolved === true) {
   currentPlayerMode = modeToPlay;
 
-  const finalPlayer = existingPlayer || game.players.find(p =>
-    p.name && p.name.toLowerCase() === pseudoInput.toLowerCase()
-  );
+const finalPlayer = existingPlayer;
 
-  if (finalPlayer) {
+if (finalPlayer) {
     game.currentPlayerName = finalPlayer.name;
     window.lastFinalPseudo = finalPlayer.name;
     currentPlayerBalance = finalPlayer.balance || 0;
@@ -10718,11 +11105,25 @@ function checkAccess() {
     completePreviousSessionReconnect();
 
     showPlayerResult(finalPlayer.name);
-  } else {
+} else {
+    if (pseudoOwner) {
+      msg.textContent = "Ce pseudo existe déjà, mais pas avec cette adresse e-mail.";
+      msg.className = "msg err show";
+      setTimeout(() => msg.classList.remove("show"), 3000);
+      return;
+    }
+
+    if (emailOwner) {
+      msg.textContent = "Cette adresse e-mail existe déjà, mais pas avec ce pseudo.";
+      msg.className = "msg err show";
+      setTimeout(() => msg.classList.remove("show"), 3000);
+      return;
+    }
+
     game.currentPlayerName = pseudoInput;
     window.lastFinalPseudo = pseudoInput;
     showPlayerResult(pseudoInput);
-  }
+}
 } else {
        if (existingPlayer) {
     currentPlayerMode = modeToPlay; 
@@ -10772,6 +11173,20 @@ function checkAccess() {
 
     } else {
         completePreviousSessionReconnect();
+
+        if (pseudoOwner) {
+          msg.textContent = "Ce pseudo existe déjà, mais pas avec cette adresse e-mail.";
+          msg.className = "msg err show";
+          setTimeout(() => msg.classList.remove("show"), 3000);
+          return;
+        }
+
+        if (emailOwner) {
+          msg.textContent = "Cette adresse e-mail existe déjà, mais pas avec ce pseudo.";
+          msg.className = "msg err show";
+          setTimeout(() => msg.classList.remove("show"), 3000);
+          return;
+        }
 
         msg.textContent = "Les prédictions sont closes. Le classement arrivera très prochainement.";
         msg.className = "msg ok";
