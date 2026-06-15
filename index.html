@@ -13013,11 +13013,59 @@ snaps.forEach(snap => {
              const valueDeltaColor = valueDelta >= 0 ? "#4ade80" : "#f87171";
              const valueDeltaText = `${valueDelta >= 0 ? "+" : ""}${valueDelta.toFixed(2)} 💰`;
 
+             const snapType = snap.type || "YES";
+             const snapIsResolved = isResolvedQuestion && correctIdx !== null;
+
+             const snapIsWinning = snapIsResolved && (
+               (snapType === "YES" && Number(snap.ansIndex) === Number(correctIdx)) ||
+               (snapType === "NO" && Number(snap.ansIndex) !== Number(correctIdx)) ||
+               (!snap.type && Number(snap.ansIndex) === Number(correctIdx))
+             );
+
+             const snapStatusColor = snapIsWinning ? "#4ade80" : "#f87171";
+             const snapStatusBg = snapIsWinning ? "rgba(34,197,94,0.12)" : "rgba(248,113,113,0.12)";
+             const snapStatusBorder = snapIsWinning ? "rgba(34,197,94,0.35)" : "rgba(248,113,113,0.35)";
+             const snapStatusLabel = snapIsWinning ? "GAGNÉ" : "PERDU";
+             const snapStatusIcon = snapIsWinning ? "✅" : "❌";
+
+             const correctAnswerLabel =
+               snapIsResolved && ch.answers && ch.answers[correctIdx]
+                 ? ch.answers[correctIdx]
+                 : "";
+
+             const snapMainValueLabel = snapIsResolved
+               ? (snapIsWinning ? `+${Number(snap.pts || 0).toFixed(2)} 💰 encaissés` : "Perdu")
+               : `+${Number(snap.pts || 0).toFixed(2)} 💰 pot.`;
+
+             const snapMainValueColor = snapIsResolved ? snapStatusColor : "#3b82f6";
+
+             const resolvedStatusHtml = snapIsResolved
+               ? `
+                 <div style="margin-top:7px; padding:9px 10px; border-radius:10px; background:${snapStatusBg}; border:1px solid ${snapStatusBorder};">
+                   <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                     <div style="font-size:11px; color:${snapStatusColor}; font-weight:950; text-transform:uppercase;">
+                       ${snapStatusIcon} ${snapStatusLabel}
+                     </div>
+                     <div style="font-size:11px; color:${snapStatusColor}; font-weight:900;">
+                       ${snapMainValueLabel}
+                     </div>
+                   </div>
+                   <div style="font-size:10px; color:#cbd5e1; margin-top:4px;">
+                     Résultat promulgué : <strong style="color:#ffffff;">${correctAnswerLabel}</strong>
+                   </div>
+                 </div>
+               `
+               : "";
+
              betsListHtml += `
              <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
                 <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ch.answers[snap.ansIndex]}</div>
-                <div style="color:#3b82f6; font-size:13px; font-weight:bold;">+${snap.pts.toFixed(2)} 💰 pot.</div>
+                <div style="color:${snapMainValueColor}; font-size:13px; font-weight:bold;">
+                  ${snapIsResolved ? snapStatusLabel : snapMainValueLabel}
+                </div>
              </div>
+
+             ${resolvedStatusHtml}
 
             ${
               canTradeQuestion
@@ -13044,14 +13092,16 @@ snaps.forEach(snap => {
                   </div>
                 </div>
                 `
-                : sessionClosedForRecap
+                : snapIsResolved
                   ? ``
-                  : `
-                    <div style="margin-top:4px; margin-bottom:8px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
-                      <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
-                      <div style="font-size:11px; color:#94a3b8; margin-top:3px;">${lockText}</div>
-                    </div>
-                  `
+                  : sessionClosedForRecap
+                    ? ``
+                    : `
+                      <div style="margin-top:4px; margin-bottom:8px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
+                        <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:3px;">${lockText}</div>
+                      </div>
+                    `
             }
              `;
           });
