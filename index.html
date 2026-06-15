@@ -3955,7 +3955,7 @@ body.has-app-top-logo #playerAuth.join-card {
   <h1 class="ui-title">Bienvenue dans<br>FDJ Predinno</h1>
   <p class="ui-subtitle">Prédisez, suivez les tendances<br>et placez-vous en tête.</p>
 
-  <button onclick="askJoinGameChoice()" class="ui-btn-white">Rejoindre le jeu</button>
+  <button onclick="startFreshJoinSession()" class="ui-btn-white">Rejoindre le jeu</button>
   <button onclick="checkAdminPassword()" class="ui-btn-outline">Connection administrateur</button>
 
 </div>
@@ -5447,14 +5447,21 @@ function startFreshJoinSession() {
     game.currentPlayerName = "";
   }
 
-  const accessCode = document.getElementById("accessCode");
-  const playMsg = document.getElementById("playMsg");
-  const playerAuth = document.getElementById("playerAuth");
-  const gameContent = document.getElementById("gameContent");
-  const challengesPlay = document.getElementById("challengesPlay");
-  const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
+const accessCode = document.getElementById("accessCode");
+const pseudoInput = document.getElementById("pseudo");
+const emailInput = document.getElementById("playerEmail");
+const playMsg = document.getElementById("playMsg");
+const playerAuth = document.getElementById("playerAuth");
+const gameContent = document.getElementById("gameContent");
+const challengesPlay = document.getElementById("challengesPlay");
+const welcomeOverlay = document.getElementById("welcomeCodeOverlay");
 
-  if (accessCode) accessCode.value = "";
+if (accessCode) accessCode.value = "";
+if (pseudoInput) pseudoInput.value = "";
+if (emailInput) emailInput.value = "";
+
+window.localPlayerSnapshot = null;
+window.lastFinalPseudo = "";
 
   if (playMsg) {
     playMsg.textContent = "";
