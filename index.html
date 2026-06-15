@@ -1001,8 +1001,8 @@ body.bet-panel-open #challengesPlay {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.18);
+  border: none;
   border-radius: 16px;
   padding: 10px 12px;
   margin-bottom: 12px;
@@ -1026,7 +1026,7 @@ body.bet-panel-open #challengesPlay {
   width: 100%;
   margin-top: 12px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: transparent;
   overflow: visible;
 }
 
@@ -1050,9 +1050,16 @@ body.bet-panel-open #challengesPlay {
   transform: translateY(-50%);
   width: calc(100% + 4px);
   height: 42px;
-  margin: 0;
-  padding: 0;
-  background: transparent;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  /* Important : neutralise le style global des input */
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -1060,7 +1067,19 @@ body.bet-panel-open #challengesPlay {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
+.bet-balance-slider:focus,
+.bet-balance-slider:focus-visible,
+.bet-balance-slider:active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+
 
 .bet-balance-slider::-webkit-slider-runnable-track {
   height: 8px;
@@ -1414,26 +1433,85 @@ body.play-mode-active {
   pointer-events: none;
 }
 
+@keyframes betConfirmedAnswerGlow {
+  0% {
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: none;
+    background: rgba(255,255,255,0.045);
+  }
+  45% {
+    border-color: rgba(96,165,250,0.95);
+    box-shadow:
+      inset 0 0 18px rgba(96,165,250,0.16),
+      0 0 22px rgba(96,165,250,0.24);
+    background: rgba(96,165,250,0.10);
+  }
+  100% {
+    border-color: rgba(255,255,255,0.08);
+    box-shadow: none;
+    background: rgba(255,255,255,0.045);
+  }
+}
+
+/* La carte ne bouge jamais lors d'une action interne */
+#challengesPlay .challenge-block.bet-confirming {
+  animation: none !important;
+}
+
+#challengesPlay .answer-btn.bet-confirmed-answer {
+  animation: betConfirmedAnswerGlow 0.46s ease-out both !important;
+  transform: none !important;
+}
+
 /* On cache l'ancienne barre du bas pour l'écran de jeu */
 #gameContent .sticky-action-bar { display: none !important; }
 
 /* --- NOUVEAU : DESIGN DU TUTORIEL INTERACTIF --- */
 /* --- NOUVEAU : DESIGN DU TUTORIEL INTERACTIF --- */
 .card-tuto-bg {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(2,6,23,0.7); backdrop-filter: blur(6px);
-  z-index: 50; border-radius: inherit; pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  background: rgba(2,6,23,0.74);
+  backdrop-filter: blur(9px) brightness(0.7);
+  -webkit-backdrop-filter: blur(9px) brightness(0.7);
+  z-index: 10000;
+  border-radius: inherit;
+  pointer-events: auto;
 }
+
+/* Floute réellement tout ce qui n'est pas la zone mise en avant */
+.tuto-card-blur-active > *:not(.tuto-highlight):not(#cardTutoBackdrop):not(#panelTutoBackdrop) {
+  filter: blur(4px) brightness(0.55) saturate(0.75) !important;
+  opacity: 0.58 !important;
+  pointer-events: none !important;
+}
+
+/* La zone en surbrillance garde son intérieur normal : seulement un cadre lumineux */
 .tuto-highlight {
   position: relative !important;
-  z-index: 10005 !important; /* CORRECTION : Z-index très élevé pour passer par-dessus le panneau de mise */
+  z-index: 10005 !important;
   pointer-events: auto !important;
-  background: rgba(15,23,42,0.95) !important;
-  box-shadow: 0 0 0 5px #a855f7, 0 0 30px 12px rgba(168,85,247,0.65) !important;
+  filter: none !important;
+  opacity: 1 !important;
+
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+
   border-radius: 16px !important;
-  padding: 8px !important;
-  margin: -8px !important; 
+  box-shadow:
+    0 0 0 4px #a855f7,
+    0 0 28px 10px rgba(168,85,247,0.65) !important;
+  outline: 1px solid rgba(255,255,255,0.42);
+  outline-offset: 3px;
 }
+
+.tuto-highlight * {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+
 
 /* Animation des mains Swipe */
 @keyframes swipeHandAnim {
@@ -3840,7 +3918,7 @@ body.has-app-top-logo #playerAuth.join-card {
 
 <img id="appTopLogo" src="FDJ_Predinno-3.png" alt="FDJ Predinno" class="app-top-logo" style="display:none;">
 
-<div id="sellPanelOverlay" class="side-panel-overlay" onclick="closeSellPanel()"></div>
+<div id="sellPanelOverlay" class="side-panel-overlay" onclick="closeSellPanel({ fromOverlay: true })"></div>
 <div id="sellPanel" class="side-panel">
   <h2 style="margin-bottom:5px;">Revendre (Cash out)</h2>
   <p class="subtitle" id="sellAnswerName" style="margin-bottom:20px;">Réponse</p>
@@ -4605,7 +4683,7 @@ body.has-app-top-logo #playerAuth.join-card {
     type="range"
     min="0"
     max="0"
-    step="0.01"
+    step="1"
     value="0"
     oninput="updateBetFromSlider()"
     aria-label="Choisir le montant de la mise"
@@ -6999,7 +7077,7 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
        snaps.forEach(snap => {
            // CORRECTION : Le bouton Cash Out est maintenant aligné sur la même ligne (flexbox) pour économiser la moitié de la hauteur !
           const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open" && !isSessionTradingClosed()) 
-            ? `<button onclick="event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}')" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
+            ? `<button onclick="event.preventDefault(); event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}'); return false;" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
             : "";
            
            let ansText = ch.answers[snap.ansIndex];
@@ -7761,7 +7839,7 @@ const c = colors[i % colors.length];
         // La Jauge de pourcentage en arrière-plan
         gauge = document.createElement("div");
         gauge.className = "answer-gauge";
-        gauge.style.cssText = `position:absolute; top:0; left:0; height:100%; width:0%; background:${c}; opacity:0.25; transition:width 0.5s ease-out; z-index:0;`;
+        gauge.style.cssText = `position:absolute; top:0; left:0; height:100%; width:0%; background:${c}; opacity:0.25; transition:width 0.72s cubic-bezier(0.18, 0.9, 0.22, 1); will-change:width; transform:translateZ(0); z-index:0;`;
 
         // Le Texte
         label = document.createElement("div");
@@ -8115,15 +8193,64 @@ function safeRemoveElement(el) {
   }
 }
 
+function removeTutoStep1TapInterceptor() {
+  if (!window.tutoStep1TapInterceptor) return;
+
+  document.removeEventListener("click", window.tutoStep1TapInterceptor, true);
+  document.removeEventListener("touchend", window.tutoStep1TapInterceptor, true);
+  window.tutoStep1TapInterceptor = null;
+  window.tutoStep1TapConsumed = false;
+}
+
+function enableTutoStep1TapInterceptor() {
+  removeTutoStep1TapInterceptor();
+
+  window.tutoStep1TapConsumed = false;
+
+  window.tutoStep1TapInterceptor = function(e) {
+    if (window.currentTutoStep !== 1) return;
+
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation();
+
+    if (typeof e.stopImmediatePropagation === "function") {
+      e.stopImmediatePropagation();
+    }
+
+    if (window.tutoStep1TapConsumed) return;
+    window.tutoStep1TapConsumed = true;
+
+    removeTutoStep1TapInterceptor();
+
+    setTimeout(() => {
+      if (window.currentTutoStep === 1) {
+        nextTuto(3);
+      }
+    }, 0);
+  };
+
+  document.addEventListener("click", window.tutoStep1TapInterceptor, true);
+  document.addEventListener("touchend", window.tutoStep1TapInterceptor, {
+    capture: true,
+    passive: false
+  });
+}
+
 function clearTutoHighlights() {
   try {
     document
       .querySelectorAll('.tuto-highlight')
       .forEach(el => el.classList.remove('tuto-highlight'));
 
-    safeRemoveElement(document.getElementById("cardTutoBackdrop"));
-    safeRemoveElement(document.getElementById("panelTutoBackdrop"));
-    safeRemoveElement(document.getElementById("tutoDismissOverlay"));
+safeRemoveElement(document.getElementById("cardTutoBackdrop"));
+safeRemoveElement(document.getElementById("panelTutoBackdrop"));
+safeRemoveElement(document.getElementById("tutoDismissOverlay"));
+
+removeTutoStep1TapInterceptor();
+
+document
+  .querySelectorAll(".tuto-card-blur-active")
+  .forEach(el => el.classList.remove("tuto-card-blur-active"));
   } catch (e) {
     console.warn("Nettoyage tuto ignoré :", e);
   }
@@ -8191,17 +8318,22 @@ if (step === 5) {
     return;
   }
 
-  // Création du fond flou pour les étapes 1, 2 et 3
-  if (step >= 1 && step <= 3) {
-     let backdrop = document.getElementById("cardTutoBackdrop");
-     if (!backdrop) {
-         backdrop = document.createElement("div");
-         backdrop.id = "cardTutoBackdrop";
-         backdrop.className = "card-tuto-bg";
-         activeCard.appendChild(backdrop);
-     }
-  }
+// Création du fond flou pour les étapes 1, 2 et 3
+if (step >= 1 && step <= 3) {
+   activeCard.classList.add("tuto-card-blur-active");
 
+   let backdrop = document.getElementById("cardTutoBackdrop");
+   if (!backdrop) {
+       backdrop = document.createElement("div");
+       backdrop.id = "cardTutoBackdrop";
+       backdrop.className = "card-tuto-bg";
+       activeCard.appendChild(backdrop);
+   }
+
+   if (step === 1) {
+       enableTutoStep1TapInterceptor();
+   }
+}
   // Éclairage de la zone ciblée et textes dynamiques
   if (step === 1) {
     const header = activeCard.querySelector('.challenge-header');
@@ -8223,13 +8355,17 @@ if (step === 5) {
     // ÉTAPE 4 : LA GESTION DES PARIS (DANS LE PANNEAU DE MISE)
     
     // CORRECTION : On ajoute le fond flou sur le panneau pour bloquer TOUS les autres boutons (Valider, MAX, etc.)
-    const betPanel = document.getElementById("betPanel");
-    if (betPanel && !document.getElementById("panelTutoBackdrop")) {
+const betPanel = document.getElementById("betPanel");
+if (betPanel) {
+    betPanel.classList.add("tuto-card-blur-active");
+
+    if (!document.getElementById("panelTutoBackdrop")) {
         let panelBackdrop = document.createElement("div");
         panelBackdrop.id = "panelTutoBackdrop";
-        panelBackdrop.className = "card-tuto-bg"; // Réutilise la magnifique classe de flou des cartes
+        panelBackdrop.className = "card-tuto-bg";
         betPanel.appendChild(panelBackdrop);
     }
+}
 
     // CORRECTION : On illumine la grande zone qui contient le solde ET le champ de saisie (elle passe par-dessus le flou !)
     const tutoBetZone = document.getElementById('tutoBetZone');
@@ -8356,6 +8492,122 @@ function resetRebetLock() {
   window.currentCardIndex = 0;
 }
 
+function animateBetConfirmationOnCard(cIndex, ansIndex) {
+  const answersBox = document.getElementById("answers-ch" + cIndex);
+  const answerBtn = answersBox
+    ? answersBox.querySelectorAll(".answer-btn")[ansIndex]
+    : null;
+
+  if (!answerBtn) return;
+
+  // Feedback uniquement sur la réponse : la carte reste parfaitement stable.
+  answerBtn.classList.remove("bet-confirmed-answer");
+  void answerBtn.offsetWidth;
+  answerBtn.classList.add("bet-confirmed-answer");
+
+  setTimeout(() => {
+    answerBtn.classList.remove("bet-confirmed-answer");
+  }, 520);
+}
+
+function refreshChallengeBarsLikeFirstBet(cIndex, ansIndex = null) {
+  const box = document.getElementById("answers-ch" + cIndex);
+  const ch = game && game.challenges ? game.challenges[cIndex] : null;
+
+  if (!box || !ch || typeof renderAnswersForChallenge !== "function") {
+    return false;
+  }
+
+  const oldWidths = Array.from(box.querySelectorAll(".answer-gauge"))
+    .map(g => g.style.width || "0%");
+
+  // 1. On calcule/rend le nouvel état.
+  renderAnswersForChallenge(cIndex);
+
+  const gauges = Array.from(box.querySelectorAll(".answer-gauge"));
+  const targetWidths = gauges.map(g => g.style.width || "0%");
+
+  // 2. On remet visuellement les jauges à leur ancienne largeur.
+  gauges.forEach((g, i) => {
+    g.style.transition = "none";
+    g.style.width = oldWidths[i] || "0%";
+  });
+
+  // Force le navigateur à enregistrer l'état de départ.
+  void box.offsetWidth;
+
+  // 3. Puis on anime vers la nouvelle largeur.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      gauges.forEach((g, i) => {
+        g.style.transition = "width 0.72s cubic-bezier(0.18, 0.9, 0.22, 1)";
+        g.style.width = targetWidths[i] || "0%";
+      });
+
+      if (ansIndex !== null && ansIndex !== undefined) {
+        animateBetConfirmationOnCard(cIndex, ansIndex);
+      }
+    });
+  });
+
+  const scoreEl = document.getElementById("live-score-" + cIndex);
+  if (scoreEl && typeof currentPlayerBalance !== "undefined") {
+    scoreEl.innerHTML = `${currentPlayerBalance}`;
+  }
+
+  const betInfoEl = document.getElementById("bet-info-" + cIndex);
+  if (betInfoEl && typeof window.generateBetInfoHtml === "function") {
+    const newBetHtml = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+    if (betInfoEl.innerHTML !== newBetHtml) {
+      betInfoEl.innerHTML = newBetHtml;
+    }
+  }
+
+  return true;
+}
+
+function refreshSingleChallengeBarsSmoothly(cIndex, ansIndex = null) {
+  const ch = game && game.challenges ? game.challenges[cIndex] : null;
+  if (!ch) return;
+
+  const scoreEl = document.getElementById("live-score-" + cIndex);
+  if (scoreEl && typeof currentPlayerBalance !== "undefined") {
+    scoreEl.innerHTML = `${currentPlayerBalance}`;
+  }
+
+  // Important : renderAnswersForChallenge conserve les boutons existants.
+  // Donc les .answer-gauge changent de width avec transition, sans secouer la carte.
+  if (typeof renderAnswersForChallenge === "function") {
+    renderAnswersForChallenge(cIndex);
+  }
+
+  const betInfoEl = document.getElementById("bet-info-" + cIndex);
+  if (betInfoEl && typeof window.generateBetInfoHtml === "function") {
+    const newBetHtml = window.generateBetInfoHtml(cIndex, ch, getEffectiveStatus(ch));
+    if (betInfoEl.innerHTML !== newBetHtml) {
+      betInfoEl.innerHTML = newBetHtml;
+    }
+  }
+
+  if (ansIndex !== null && ansIndex !== undefined) {
+    requestAnimationFrame(() => {
+      animateBetConfirmationOnCard(cIndex, ansIndex);
+    });
+  }
+}
+
+function refreshCardAfterBetSmoothly(cIndex, ansIndex) {
+  // Même sensation que la première mise :
+  // on anime explicitement les jauges de leur ancienne largeur vers la nouvelle.
+  setTimeout(() => {
+    const didRefresh = refreshChallengeBarsLikeFirstBet(cIndex, ansIndex);
+
+    if (!didRefresh && typeof updatePlayChallengesLive === "function") {
+      updatePlayChallengesLive();
+    }
+  }, 90);
+}
+
 function finishRebetAndReturnToRecap(activeCard) {
   // Protection anti double-swipe / double-clic.
   if (window.isFinishingRebet) return;
@@ -8383,10 +8635,13 @@ window.currentCardIndex = 0;
   window.isRebetting = true;
   window.returnToRecapAfterRebet = true;
 
-  if (cardToAnimate) {
-    cardToAnimate.style.transform = "";
-    cardToAnimate.classList.add("fly-away");
-  }
+if (cardToAnimate) {
+  cardToAnimate.style.transform = "";
+  cardToAnimate.classList.remove("bet-confirming");
+
+  // Pas de pulsation de carte : transition directe et stable vers le récap.
+  cardToAnimate.classList.add("fly-away");
+}
 
   setTimeout(() => {
     if (typeof validate === "function") {
@@ -8623,9 +8878,9 @@ if (betBalanceFillEl) betBalanceFillEl.style.width = "0%";
 const betSliderEl = document.getElementById("betSlider");
 if (betSliderEl) {
   betSliderEl.min = "0";
-  betSliderEl.max = String(Math.max(0, roundBetAmount(currentPlayerBalance)));
-  betSliderEl.step = "0.01";
-  betSliderEl.value = "0";
+betSliderEl.max = String(getBetSliderMaxValue());
+betSliderEl.step = "1";
+betSliderEl.value = "0";
 }
 
 // Met à jour les boutons rapides avec les vraies valeurs : +20, +50, +100, etc.
@@ -8651,13 +8906,32 @@ if (betConfirmBtn) betConfirmBtn.disabled = true;
   });
 }
 
+function clearUnconfirmedAdvancedSelection() {
+  if (currentPlayerMode !== "advanced") return;
+  if (tempBetCIndex === null || tempBetCIndex === undefined) return;
+
+  if (selectedAnswers[tempBetCIndex] === tempBetAnsIndex) {
+    selectedAnswers[tempBetCIndex] = null;
+    selectedBets[tempBetCIndex] = 0;
+    selectedBetTypes[tempBetCIndex] = null;
+  }
+
+  if (typeof renderAnswersForChallenge === "function") {
+    renderAnswersForChallenge(tempBetCIndex);
+  }
+}
+
 function closeBetPanel(options = {}) {
   const panel = document.getElementById("betPanel");
   const overlay = document.getElementById("betPanelOverlay");
 
-  document.body.classList.remove("bet-panel-open");
+document.body.classList.remove("bet-panel-open");
 
-  if (overlay) overlay.classList.remove("open");
+if (!options || options.betConfirmed !== true) {
+  clearUnconfirmedAdvancedSelection();
+}
+
+if (overlay) overlay.classList.remove("open");
   if (panel) {
     panel.classList.remove("open");
     panel.style.transform = '';
@@ -8806,6 +9080,8 @@ function parseBetAmount(value) {
   return Number.isFinite(n) ? roundBetAmount(n) : 0;
 }
 
+
+
 function formatBetAmount(value) {
   const n = roundBetAmount(value);
 
@@ -8816,14 +9092,33 @@ function formatBetAmount(value) {
     .replace(/(\,\d)0$/, "$1");
 }
 
+function getBetSliderMaxValue() {
+  const balance = Math.max(0, roundBetAmount(currentPlayerBalance));
+  return Math.ceil(balance);
+}
+
+function getAmountFromBetSlider(sliderValue) {
+  const balance = Math.max(0, roundBetAmount(currentPlayerBalance));
+  const sliderMax = getBetSliderMaxValue();
+  const raw = Number(sliderValue) || 0;
+
+  // Exception demandée : si le joueur va tout au bout,
+  // on mise exactement tout le solde, même avec virgule.
+  if (raw >= sliderMax) {
+    return balance;
+  }
+
+  return Math.min(Math.floor(raw), Math.floor(balance));
+}
+
 function updateBetFromSlider() {
   const slider = document.getElementById("betSlider");
   const input = document.getElementById("betInput");
 
   if (!slider || !input) return;
 
-  input.value = formatBetAmount(parseBetAmount(slider.value));
-  updatePotentialGain(true);
+input.value = formatBetAmount(getAmountFromBetSlider(slider.value));
+updatePotentialGain(true);
 }
 
 function updatePotentialGain(fromSlider = false) {
@@ -8840,12 +9135,16 @@ function updatePotentialGain(fromSlider = false) {
   const maxBalance = Math.max(0, roundBetAmount(currentPlayerBalance));
 
   if (sliderEl) {
-    sliderEl.max = String(maxBalance);
-    sliderEl.step = "0.01";
+const sliderMax = getBetSliderMaxValue();
 
-    if (!fromSlider) {
-      sliderEl.value = String(Math.min(maxBalance, Math.max(0, val)));
-    }
+sliderEl.max = String(sliderMax);
+sliderEl.step = "1";
+
+if (!fromSlider) {
+  sliderEl.value = val >= maxBalance
+    ? String(sliderMax)
+    : String(Math.min(sliderMax, Math.max(0, Math.floor(val))));
+}
   }
 
   if (fillEl) {
@@ -8991,27 +9290,34 @@ const ch = game.challenges[tempBetCIndex];
 
       const betTime = Date.now();
 
-      if (existingBet) {
-         if (!existingBet.events) {
-           existingBet.events = [{
-             bet: Number(existingBet.bet || 0),
-             pts: Number(existingBet.pts || 0),
-             type: existingBet.type || tempBetType,
-             validatedAt: Number(existingBet.validatedAt || sessionConfig.gameStartTime || betTime)
-           }];
-         }
+if (existingBet) {
+   // Important : si ce ticket avait été totalement cashout,
+   // une nouvelle mise doit le rendre à nouveau actif dans la valeur de marché.
+   existingBet.cashedOut = false;
+   existingBet.paidOut = false;
 
-          existingBet.bet = roundBetAmount(Number(existingBet.bet || 0) + val);
-          existingBet.pts = Number(existingBet.pts || 0) + pointsPotentiels;
-         existingBet.pctAtBet = pctAtBet;
-         existingBet.validatedAt = betTime;
-         existingBet.events.push({
-           bet: val,
-           pts: pointsPotentiels,
-           type: tempBetType,
-           validatedAt: betTime
-         });
-      } else {
+   if (!existingBet.events) {
+     existingBet.events = [{
+       bet: Number(existingBet.bet || 0),
+       pts: Number(existingBet.pts || 0),
+       type: existingBet.type || tempBetType,
+       validatedAt: Number(existingBet.validatedAt || sessionConfig.gameStartTime || betTime)
+     }];
+   }
+
+   existingBet.bet = roundBetAmount(Number(existingBet.bet || 0) + val);
+   existingBet.pts = Number(existingBet.pts || 0) + pointsPotentiels;
+   existingBet.type = tempBetType;
+   existingBet.pctAtBet = pctAtBet;
+   existingBet.validatedAt = betTime;
+
+   existingBet.events.push({
+     bet: val,
+     pts: pointsPotentiels,
+     type: tempBetType,
+     validatedAt: betTime
+   });
+} else {
          player.portfolio.push({
            cIndex: tempBetCIndex,
            ansIndex: tempBetAnsIndex,
@@ -9055,10 +9361,13 @@ if (window.tutoPendingStepTimer) {
     window.tutoPendingStepTimer = null;
 }
 
-closeBetPanel({ suppressTuto: true });
+const confirmedBetCIndex = tempBetCIndex;
+const confirmedBetAnsIndex = tempBetAnsIndex;
 
-// On rafraîchit visuellement la carte pour afficher le pari ajouté.
-if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
+closeBetPanel({ suppressTuto: true, betConfirmed: true });
+
+// Rafraîchissement plus doux : feedback immédiat, puis mise à jour après la descente du panel.
+refreshCardAfterBetSmoothly(confirmedBetCIndex, confirmedBetAnsIndex);
 
 // Après validation d'une mise pendant le tuto,
 // on passe directement à l'étape suivante au lieu de revenir au début.
@@ -9717,11 +10026,6 @@ function renderFinalQuestionResults(pseudo) {
       }
     }
 
-    // Pourcentages marché : si le résultat est promulgué, bonne réponse = 100%, autres = 0%.
-    const marketProbs = typeof getChallengeDisplayProbs === "function"
-      ? getChallengeDisplayProbs(ch)
-      : getLMSRProbs(ch.votes || ch.answers.map(() => 0));
-
     // Pourcentages de vote joueurs : on compte les joueurs ayant choisi chaque réponse.
     const playerVoteCounts = new Array(ch.answers.length).fill(0);
     let totalPlayersWhoPlayedQuestion = 0;
@@ -9760,7 +10064,6 @@ function renderFinalQuestionResults(pseudo) {
       const playerVotePct = totalPlayersWhoPlayedQuestion > 0
         ? (playerVotes / totalPlayersWhoPlayedQuestion) * 100
         : 0;
-      const marketPct = (marketProbs[aIdx] || 0) * 100;
 
       let lineBorder = "rgba(255,255,255,0.08)";
       let lineBg = "rgba(255,255,255,0.04)";
@@ -9795,11 +10098,6 @@ function renderFinalQuestionResults(pseudo) {
             <div style="height:7px; border-radius:999px; background:rgba(15,23,42,0.9); overflow:hidden;">
               <div style="height:100%; width:${playerVotePct}%; background:#a855f7;"></div>
             </div>
-          </div>
-
-          <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1;">
-            <span>Pourcentage marché</span>
-            <strong>${marketPct.toFixed(1)}%</strong>
           </div>
         </div>
       `;
@@ -12207,16 +12505,17 @@ function refreshOpenSellPanelValue() {
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
   if (!player || !player.portfolio) return;
 
-  const freshSnap = player.portfolio.find(b =>
-    b.cIndex === tempSellCIndex &&
-    b.ansIndex === tempSellAnsIndex &&
-    (b.type === tempSellType || (!b.type && tempSellType === 'YES'))
-  );
+const freshSnap = findActivePortfolioSnapForTrade(
+  player,
+  tempSellCIndex,
+  tempSellAnsIndex,
+  tempSellType
+);
 
-  if (!freshSnap || freshSnap.cashedOut || freshSnap.pts <= 0) {
-    closeSellPanel();
-    return;
-  }
+if (!freshSnap) {
+  closeSellPanel({ force: true });
+  return;
+}
 
   tempSellSnap = freshSnap;
 
@@ -12242,6 +12541,21 @@ function refreshOpenSellPanelValue() {
   if (typeof updateSellPotential === 'function') updateSellPotential();
 }
 
+function findActivePortfolioSnapForTrade(player, cIndex, ansIndex, type = "YES") {
+  if (!player || !Array.isArray(player.portfolio)) return null;
+
+  const wantedType = type || "YES";
+
+  return player.portfolio.find(b =>
+    Number(b.cIndex) === Number(cIndex) &&
+    Number(b.ansIndex) === Number(ansIndex) &&
+    ((b.type || "YES") === wantedType) &&
+    !b.cashedOut &&
+    Number(b.bet || 0) > 0 &&
+    Number(b.pts || 0) > 0
+  ) || null;
+}
+
 function openSellPanel(cIndex, ansIndex, type) {
   const ch = game.challenges[cIndex];
 
@@ -12250,9 +12564,13 @@ function openSellPanel(cIndex, ansIndex, type) {
     return;
   }
 
-  const player = game.players.find(p => p.name === game.currentPlayerName);
-  tempSellSnap = player.portfolio.find(b => b.cIndex === cIndex && b.ansIndex === ansIndex && (b.type === type || (!b.type && type === 'YES')));
-  if(!tempSellSnap) return;
+const player = game.players.find(p => p.name === game.currentPlayerName);
+tempSellSnap = findActivePortfolioSnapForTrade(player, cIndex, ansIndex, type);
+
+if (!tempSellSnap) {
+  showPlayerTradeClosedMessage("Aucune position active à cash out sur cette réponse.");
+  return;
+}
 
   tempSellCIndex = cIndex;
   tempSellAnsIndex = ansIndex;
@@ -12269,12 +12587,22 @@ function openSellPanel(cIndex, ansIndex, type) {
   document.getElementById("sellInput").placeholder = `Ex: ${Math.floor(tempSellMaxMoney / 2)}`;
   document.getElementById("sellPotential").textContent = "Saisissez un montant...";
   document.getElementById("sellError").textContent = "";
+  window.sellPanelJustOpenedAt = Date.now();
 
   document.getElementById("sellPanelOverlay").classList.add("open");
   document.getElementById("sellPanel").classList.add("open");
 }
 
-function closeSellPanel() {
+function closeSellPanel(options = {}) {
+  const justOpened =
+    window.sellPanelJustOpenedAt &&
+    Date.now() - window.sellPanelJustOpenedAt < 320;
+
+  // Évite le cas où le tap qui ouvre le panel est aussi capté par l'overlay.
+  if (options.fromOverlay && justOpened && !options.force) {
+    return;
+  }
+
   document.getElementById("sellPanelOverlay").classList.remove("open");
   document.getElementById("sellPanel").classList.remove("open");
 }
@@ -12296,47 +12624,78 @@ function updateSellPotential() {
 
 if (desiredMoney <= 0) { document.getElementById("sellPotential").textContent = "---"; return; }
 
-  // CORRECTION AMM : Calcul exact du pourcentage de parts à liquider pour obtenir ce montant précis
-  const ch = game.challenges[tempSellCIndex];
-  const sharesToSell = window.PredictiveMath.calcSharesToSellForMoney(ch.votes, tempSellAnsIndex, desiredMoney);
-  const fraction = sharesToSell / tempSellSnap.pts;
-  
-  document.getElementById("sellPotential").textContent = `Liquidation de ${(fraction * 100).toFixed(0)}% de vos parts`;
+// On affiche le pourcentage de valeur liquidée, pas le pourcentage de parts AMM.
+// Exemple : valeur 50, cash out 25 => 50%.
+const maxMoney = Math.max(0, roundBetAmount(tempSellMaxMoney));
+const fraction = maxMoney > 0 ? Math.min(1, desiredMoney / maxMoney) : 0;
+
+document.getElementById("sellPotential").textContent =
+  `Liquidation de ${(fraction * 100).toFixed(0)}% de votre valeur`;
 }
 function confirmSell() {
-  const desiredMoney = parseFloat(document.getElementById("sellInput").value) || 0;
-  if (desiredMoney <= 0 || desiredMoney > tempSellMaxMoney) return;
+  const desiredMoney = roundBetAmount(parseFloat(document.getElementById("sellInput").value) || 0);
+  const maxMoneyBeforeSell = Math.max(0, roundBetAmount(tempSellMaxMoney));
+
+  if (desiredMoney <= 0 || desiredMoney > maxMoneyBeforeSell) return;
 
   const ch = game.challenges[tempSellCIndex];
 
-// 1. CORRECTION AMM : On calcule le nombre EXACT de parts à détruire
-  const quantiteAVendre = window.PredictiveMath.calcSharesToSellForMoney(ch.votes, tempSellAnsIndex, desiredMoney);
-  const fraction = quantiteAVendre / tempSellSnap.pts;
-  const betToSell = tempSellSnap.bet * fraction;
+  // Valeur restante exacte voulue.
+  // Exemple : valeur actuelle 50, cash out 25 => valeur restante 25 pile.
+  const isFullCashOut = desiredMoney >= maxMoneyBeforeSell - 0.01;
+  const remainingMoney = isFullCashOut
+    ? 0
+    : roundBetAmount(maxMoneyBeforeSell - desiredMoney);
 
-  // 2. Retrait de l'ARGENT du marché public (Proportionnel)
+  // Retrait exact de l'argent du marché public
   let simulatedVotes = [...ch.votes];
-  simulatedVotes[tempSellAnsIndex] = Math.max(0.001, simulatedVotes[tempSellAnsIndex] - desiredMoney);
+  simulatedVotes[tempSellAnsIndex] = Math.max(
+    0.001,
+    roundBetAmount((Number(simulatedVotes[tempSellAnsIndex]) || 0) - desiredMoney)
+  );
   ch.votes[tempSellAnsIndex] = simulatedVotes[tempSellAnsIndex];
 
-  // 3. Le joueur récupère EXACTEMENT l'argent qu'il a demandé
-  currentPlayerBalance = parseFloat((currentPlayerBalance + desiredMoney).toFixed(2));
+  // Le joueur récupère exactement l'argent demandé
+  currentPlayerBalance = roundBetAmount(currentPlayerBalance + desiredMoney);
   updateGlobalBalance();
 
-  // 4. Mise à jour de son portefeuille (On le prive des points liquidés)
-  tempSellSnap.cashedOutAmount = (tempSellSnap.cashedOutAmount || 0) + desiredMoney; 
-  tempSellSnap.bet -= betToSell;
-  tempSellSnap.pts -= quantiteAVendre;
+  // Mise à jour du portefeuille :
+  // on force la valeur restante à être exactement la valeur monétaire restante.
+  tempSellSnap.cashedOutAmount = roundBetAmount((tempSellSnap.cashedOutAmount || 0) + desiredMoney);
 
-  // CORRECTION : On ne clôture la position que s'il reste de véritables poussières (moins de 0.01 unité)
-  if (tempSellSnap.bet <= 0.01 || tempSellSnap.pts <= 0.01 || fraction >= 0.999) {
-     tempSellSnap.bet = 0;
-     tempSellSnap.pts = 0;
-     tempSellSnap.cashedOut = true; 
+  if (remainingMoney > 0) {
+    tempSellSnap.bet = remainingMoney;
+    tempSellSnap.pts = window.PredictiveMath.calcSharesToSellForMoney(
+      ch.votes,
+      tempSellAnsIndex,
+      remainingMoney
+    );
+    tempSellSnap.cashedOut = false;
+
+    if (selectedAnswers[tempSellCIndex] === tempSellAnsIndex) {
+      selectedBets[tempSellCIndex] = remainingMoney;
+    }
+  } else {
+    tempSellSnap.bet = 0;
+    tempSellSnap.pts = 0;
+    tempSellSnap.cashedOut = true;
+
+    if (selectedAnswers[tempSellCIndex] === tempSellAnsIndex) {
+      selectedAnswers[tempSellCIndex] = null;
+      selectedBets[tempSellCIndex] = 0;
+
+      if (typeof selectedBetTypes !== "undefined") {
+        selectedBetTypes[tempSellCIndex] = null;
+      }
+    }
   }
+
 
   const player = game.players.find(p => p.name === game.currentPlayerName);
   player.balance = currentPlayerBalance;
+
+  player.lastLocalUpdate = Date.now();
+window.localPlayerSnapshot = JSON.parse(JSON.stringify(player));
 
   // CORRECTION : Sauvegarde ciblée 
   const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
@@ -12349,9 +12708,21 @@ function confirmSell() {
   
   if (document.getElementById("playerRecap") && document.getElementById("playerRecap").style.display === "block") {
       renderPlayerRecap(game.currentPlayerName); 
-  } else {
-      if (typeof updatePlayChallengesLive === 'function') updatePlayChallengesLive();
-  }
+} else {
+    const refreshedSellCIndex = tempSellCIndex;
+    const refreshedSellAnsIndex = tempSellAnsIndex;
+
+    setTimeout(() => {
+      const didRefresh = refreshChallengeBarsLikeFirstBet(
+        refreshedSellCIndex,
+        refreshedSellAnsIndex
+      );
+
+      if (!didRefresh && typeof updatePlayChallengesLive === "function") {
+        updatePlayChallengesLive();
+      }
+    }, 90);
+}
 }
 function goToPlayScreen() {
   window.isRebetting = false; // CORRECTION : On réinitialise le mode "Retour Rapide"
