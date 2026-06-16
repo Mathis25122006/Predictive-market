@@ -17039,28 +17039,33 @@ const marginMs = 60 * 1000;
         let poolPendingSoon = simGame.challenges.map((ch, idx) => ({idx, ch}))
           .filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) < marginMs);
 
-        let poolOpenUrgent = simGame.challenges.map((ch, idx) => ({idx, ch}))
-          .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
+let poolOpenUrgent = simGame.challenges.map((ch, idx) => ({idx, ch}))
+            .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
+            
+          let poolPendingFar = simGame.challenges.map((ch, idx) => ({idx, ch}))
+            .filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) >= marginMs);
 
-        const golden = poolOpenSafe.find(item => item.ch.isGolden) || poolPendingSoon.find(item => item.ch.isGolden) || poolOpenUrgent.find(item => item.ch.isGolden);
+          const golden = poolOpenSafe.find(item => item.ch.isGolden) || poolPendingSoon.find(item => item.ch.isGolden) || poolOpenUrgent.find(item => item.ch.isGolden) || poolPendingFar.find(item => item.ch.isGolden);
 
-        let finalSelection = [];
-        if (golden) {
-          finalSelection.push(golden.idx);
-          poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
-          poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
-          poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
-        }
+          let finalSelection = [];
+          if (golden) {
+            finalSelection.push(golden.idx);
+            poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
+            poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
+            poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
+            poolPendingFar = poolPendingFar.filter(item => item.idx !== golden.idx);
+          }
 
-        poolOpenSafe.sort(() => 0.5 - Math.random());
-        poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime);
-        poolOpenUrgent.sort(() => 0.5 - Math.random());
+          poolOpenSafe.sort(() => 0.5 - Math.random());
+          poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime);
+          poolOpenUrgent.sort(() => 0.5 - Math.random());
+          poolPendingFar.sort((a,b) => a.ch.startTime - b.ch.startTime);
 
-        let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent];
+          let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent, ...poolPendingFar];
 
-        while (finalSelection.length < n && prioritizedIndices.length > 0) {
-          finalSelection.push(prioritizedIndices.shift().idx);
-        }
+          while (finalSelection.length < n && prioritizedIndices.length > 0) {
+            finalSelection.push(prioritizedIndices.shift().idx);
+          }
         
         newBot.assignedIndices = finalSelection;
         // On attribue un délai de réaction aléatoire (entre 0 et 5 secondes) pour chaque question
@@ -17126,8 +17131,24 @@ const marginMs = 60 * 1000;
           
           if (!bot.portfolio) bot.portfolio = [];
           const pctAtBet = (pStart * 100).toFixed(1);
-bot.portfolio.push({ cIndex, ansIndex, bet: betAmount, pts, type: 'YES', pctAtBet: pctAtBet, validatedAt: Date.now() });
-          
+const betTime = Date.now();
+          bot.portfolio.push({
+            cIndex,
+            ansIndex,
+            bet: betAmount,
+            originalStake: betAmount,
+            pts,
+            type: 'YES',
+            pctAtBet: pctAtBet,
+            validatedAt: betTime,
+            events: [{
+              bet: betAmount,
+              pts: pts,
+              type: 'YES',
+              validatedAt: betTime
+            }]
+          });
+
           let isEasySim = (simConfig.mode === 'easy') || (simConfig.mode === 'both' && code === simConfig.code);
           if (!isEasySim) {
               bot.balance -= betAmount;
