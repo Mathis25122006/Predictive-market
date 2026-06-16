@@ -146,6 +146,671 @@
   grid-column: 2 / 3 !important;
 }
 
+/* --- ANIMATION GRAND ÉCRAN : RÉVÉLATION DU CLASSEMENT FINAL --- */
+.bs-final-reveal-stage {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(16px, 2vh, 28px);
+  overflow: hidden;
+}
+
+.bs-final-reveal-title {
+  text-align: center;
+  font-size: clamp(28px, 2.6vw, 48px);
+  font-weight: 950;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.05;
+}
+
+.bs-final-reveal-title span {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(14px, 1.05vw, 20px);
+  color: #a7adc8;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.bs-final-reveal-spotlight {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(168,85,247,0.26), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,0.065), rgba(255,255,255,0.025)),
+    rgba(9,14,32,0.86);
+  border: 1px solid rgba(168,85,247,0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 24px 70px rgba(0,0,0,0.50);
+  overflow: hidden;
+}
+
+.bs-final-reveal-card {
+  width: min(92%, 760px);
+  transform: scale(0.82) translateY(30px);
+  opacity: 0;
+  transition:
+    opacity 0.45s ease,
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bs-final-reveal-card.show {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.bs-final-reveal-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(88px, 8vw, 140px);
+  height: clamp(66px, 6vw, 105px);
+  padding: 0 clamp(18px, 2vw, 34px);
+  margin-bottom: clamp(18px, 2.2vh, 30px);
+  border-radius: 999px;
+  font-size: clamp(34px, 4vw, 72px);
+  font-weight: 950;
+  color: #ffffff;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 16px 42px rgba(0,0,0,0.38);
+}
+
+.bs-final-reveal-name {
+  font-size: clamp(44px, 5.2vw, 92px);
+  font-weight: 950;
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+  color: #ffffff;
+  text-shadow: 0 12px 34px rgba(0,0,0,0.48);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-final-reveal-score {
+  margin-top: clamp(14px, 1.8vh, 26px);
+  font-size: clamp(26px, 2.7vw, 48px);
+  font-weight: 950;
+  color: #bfdbfe;
+}
+
+.bs-final-reveal-list {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  gap: clamp(8px, 1vh, 13px);
+  overflow: hidden;
+}
+
+.bs-final-reveal-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 0;
+  padding: clamp(10px, 1.2vh, 16px) clamp(13px, 1.2vw, 20px);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.070);
+  border: 1px solid rgba(255,255,255,0.11);
+  transform: translateY(-18px) scale(1.04);
+  opacity: 0;
+  animation: bsRevealRowSettle 0.52s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bsRevealRowSettle {
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.bs-final-reveal-row-rank {
+  font-size: clamp(18px, 1.7vw, 28px);
+  font-weight: 950;
+  color: #c4b5fd;
+}
+
+.bs-final-reveal-row-name {
+  min-width: 0;
+  font-size: clamp(18px, 1.55vw, 28px);
+  font-weight: 950;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-final-reveal-row-score {
+  font-size: clamp(15px, 1.25vw, 22px);
+  font-weight: 950;
+  color: #bfdbfe;
+  white-space: nowrap;
+}
+
+.bs-podium-reveal-stage {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(18px, 2.4vh, 34px);
+  overflow: hidden;
+}
+
+.bs-podium-reveal-grid {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: clamp(16px, 2vw, 30px);
+}
+
+.bs-podium-column {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateY(34px) scale(0.88);
+  transition:
+    opacity 0.55s ease,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bs-podium-column.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.bs-podium-player {
+  width: 100%;
+  padding: clamp(15px, 1.5vw, 26px);
+  box-sizing: border-box;
+  text-align: center;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035)),
+    rgba(13,18,40,0.92);
+  border: 1px solid rgba(255,255,255,0.13);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.46);
+}
+
+.bs-podium-medal {
+  font-size: clamp(42px, 4.5vw, 86px);
+  line-height: 1;
+  margin-bottom: clamp(10px, 1.3vh, 18px);
+}
+
+.bs-podium-name {
+  font-size: clamp(22px, 2.3vw, 44px);
+  font-weight: 950;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-podium-score {
+  margin-top: 8px;
+  font-size: clamp(17px, 1.45vw, 26px);
+  font-weight: 950;
+  color: #bfdbfe;
+}
+
+.bs-podium-block {
+  width: 100%;
+  margin-top: clamp(12px, 1.4vh, 20px);
+  border-radius: 22px 22px 10px 10px;
+  display: grid;
+  place-items: center;
+  color: #05010d;
+  font-size: clamp(28px, 3.2vw, 58px);
+  font-weight: 950;
+}
+
+.bs-podium-block.first {
+  height: 42vh;
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  box-shadow: 0 0 46px rgba(251,191,36,0.35);
+}
+
+.bs-podium-block.second {
+  height: 32vh;
+  background: linear-gradient(180deg, #f8fafc, #94a3b8);
+}
+
+.bs-podium-block.third {
+  height: 24vh;
+  background: linear-gradient(180deg, #fdba74, #b45309);
+}
+
+.bs-confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bs-confetti-piece {
+  position: absolute;
+  top: -24px;
+  width: var(--w, 10px);
+  height: var(--h, 16px);
+  border-radius: 4px;
+  background: var(--c, #ffffff);
+  opacity: 0.95;
+  transform: translate3d(0, 0, 0) rotate(0deg);
+  animation: bsConfettiFall var(--d, 2.8s) cubic-bezier(0.18, 0.78, 0.38, 1) forwards;
+}
+
+@keyframes bsConfettiFall {
+  0% {
+    transform: translate3d(0, -30px, 0) rotate(0deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate3d(var(--x, 0px), 110vh, 0) rotate(var(--r, 360deg));
+    opacity: 0;
+  }
+}
+
+/* --- GRAND ÉCRAN : ÉCRAN FINAL PROFESSIONNEL / HOMOGÈNE --- */
+.bs-final-board {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(14px, 1.6vh, 22px);
+  overflow: hidden;
+}
+
+.bs-final-board-head {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(18px, 1.55vw, 26px);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(251,191,36,0.18), transparent 30%),
+    radial-gradient(circle at 88% 12%, rgba(96,165,250,0.18), transparent 30%),
+    linear-gradient(135deg, rgba(255,255,255,0.085), rgba(255,255,255,0.03)),
+    rgba(7, 12, 28, 0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 18px 48px rgba(0,0,0,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.bs-final-board-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(168,85,247,0.16);
+  border: 1px solid rgba(168,85,247,0.30);
+  color: #d8b4fe;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.bs-final-board-title {
+  margin-top: 12px;
+  font-size: clamp(24px, 2.1vw, 36px);
+  line-height: 1.02;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+}
+
+/* Version compacte uniquement pour le classement final à gauche */
+.bs-final-board--ranking {
+  gap: clamp(9px, 1vh, 14px);
+}
+
+.bs-final-board--ranking .bs-final-board-head {
+  padding: clamp(12px, 1vw, 17px);
+  border-radius: 22px;
+}
+
+.bs-final-board--ranking .bs-final-board-title {
+  margin-top: 8px;
+  font-size: clamp(22px, 1.75vw, 30px);
+  line-height: 1;
+}
+
+.bs-final-board--ranking .bs-final-board-subtitle {
+  margin-top: 5px;
+  font-size: clamp(10px, 0.78vw, 13px);
+  line-height: 1.28;
+}
+
+.bs-final-board--ranking .bs-final-board-kicker {
+  padding: 5px 9px;
+  font-size: 9px;
+}
+
+.bs-final-rank-list {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: repeat(10, minmax(0, 1fr));
+  gap: clamp(4px, 0.55vh, 8px);
+  overflow: hidden;
+}
+
+.bs-final-rank-row {
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: clamp(38px, 2.6vw, 48px) minmax(0, 1fr) auto;
+  gap: clamp(8px, 0.75vw, 12px);
+  align-items: center;
+  padding: 0 clamp(9px, 0.8vw, 14px);
+  border-radius: 15px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.03)),
+    rgba(9,14,30,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+
+.bs-final-rank-row.top-1 {
+  border-color: rgba(251,191,36,0.42);
+  background:
+    radial-gradient(circle at 10% 50%, rgba(251,191,36,0.22), transparent 34%),
+    linear-gradient(135deg, rgba(251,191,36,0.12), rgba(255,255,255,0.04)),
+    rgba(9,14,30,0.94);
+}
+
+.bs-final-rank-row.top-2 {
+  border-color: rgba(226,232,240,0.26);
+  background:
+    radial-gradient(circle at 10% 50%, rgba(226,232,240,0.14), transparent 34%),
+    linear-gradient(135deg, rgba(226,232,240,0.07), rgba(255,255,255,0.03)),
+    rgba(9,14,30,0.94);
+}
+
+.bs-final-rank-row.top-3 {
+  border-color: rgba(249,115,22,0.28);
+  background:
+    radial-gradient(circle at 10% 50%, rgba(249,115,22,0.16), transparent 34%),
+    linear-gradient(135deg, rgba(249,115,22,0.08), rgba(255,255,255,0.03)),
+    rgba(9,14,30,0.94);
+}
+
+.bs-final-rank-badge {
+  width: clamp(32px, 2.15vw, 40px);
+  height: clamp(32px, 2.15vw, 40px);
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-size: clamp(15px, 1vw, 20px);
+  font-weight: 950;
+  color: #ffffff;
+}
+
+.bs-final-rank-row.top-1 .bs-final-rank-badge {
+  background: rgba(251,191,36,0.14);
+  border-color: rgba(251,191,36,0.34);
+}
+
+.bs-final-rank-row.top-2 .bs-final-rank-badge {
+  background: rgba(226,232,240,0.12);
+  border-color: rgba(226,232,240,0.25);
+}
+
+.bs-final-rank-row.top-3 .bs-final-rank-badge {
+  background: rgba(249,115,22,0.14);
+  border-color: rgba(249,115,22,0.24);
+}
+
+.bs-final-rank-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+}
+
+.bs-final-rank-name {
+  min-width: 0;
+  color: #ffffff;
+  font-size: clamp(16px, 1.18vw, 22px);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.bs-final-rank-caption {
+  display: none;
+}
+
+.bs-final-rank-score {
+  display: inline-flex;
+  align-items: center;
+  height: clamp(30px, 2vh, 38px);
+  padding: 0 clamp(9px, 0.8vw, 13px);
+  border-radius: 999px;
+  background: rgba(96,165,250,0.10);
+  border: 1px solid rgba(96,165,250,0.20);
+  color: #bfdbfe;
+  font-size: clamp(14px, 0.98vw, 18px);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.bs-final-results-stage {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(14px, 1.6vh, 22px);
+  overflow: hidden;
+}
+
+.bs-final-results-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(18px, 1.6vw, 26px);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.bs-final-question-card {
+  --bs-final-answer-count: 4;
+
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: clamp(13px, 1.15vw, 20px);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(96,165,250,0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
+    rgba(8, 13, 28, 0.94);
+  border: 1px solid rgba(255,255,255,0.11);
+  box-shadow:
+    0 22px 54px rgba(0,0,0,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: clamp(8px, 1vh, 13px);
+}
+
+.bs-final-question-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.bs-final-question-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(168,85,247,0.14);
+  border: 1px solid rgba(168,85,247,0.30);
+  color: #d8b4fe;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bs-final-question-category {
+  color: #93c5fd;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: right;
+}
+
+.bs-final-question-text {
+  color: #ffffff;
+  font-size: clamp(17px, 1.32vw, 25px);
+  font-weight: 900;
+  line-height: 1.16;
+  min-height: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.bs-final-answer-stack {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(var(--bs-final-answer-count), minmax(0, 1fr));
+  gap: clamp(6px, 0.75vh, 10px);
+  overflow: hidden;
+}
+
+.bs-final-answer-row {
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: clamp(7px, 0.7vh, 11px) clamp(9px, 0.85vw, 12px);
+  border-radius: 15px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.09);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 8px;
+  align-content: center;
+}
+
+.bs-final-answer-row.correct {
+  background:
+    radial-gradient(circle at 0% 50%, rgba(34,197,94,0.16), transparent 30%),
+    rgba(34,197,94,0.08);
+  border-color: rgba(34,197,94,0.30);
+  box-shadow: inset 0 0 16px rgba(34,197,94,0.10);
+}
+
+.bs-final-answer-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: clamp(4px, 0.55vh, 7px);
+  min-height: 0;
+}
+
+.bs-final-answer-icon {
+  width: clamp(22px, 1.45vw, 28px);
+  height: clamp(22px, 1.45vw, 28px);
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  font-size: clamp(10px, 0.85vw, 13px);
+  flex-shrink: 0;
+}
+
+.bs-final-answer-row.correct .bs-final-answer-icon {
+  background: rgba(34,197,94,0.18);
+}
+
+.bs-final-answer-name {
+  min-width: 0;
+  color: #f8fafc;
+  font-size: clamp(13px, 0.96vw, 17px);
+  font-weight: 850;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bs-final-answer-stat {
+  color: #bfdbfe;
+  font-size: clamp(13px, 0.98vw, 17px);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.bs-final-answer-bar {
+  position: relative;
+  height: clamp(5px, 0.55vh, 8px);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+}
+
+.bs-final-answer-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60a5fa, #a855f7);
+}
+
+.bs-final-answer-row.correct .bs-final-answer-bar > span {
+  background: linear-gradient(90deg, #22c55e, #86efac);
+}
+
+.bs-final-results-footnote {
+  margin-top: 2px;
+  color: #8fa1bf;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .bs-panel {
   background:
     linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025)),
@@ -16159,6 +16824,18 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${e
       const checkLimit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
       const isWaitingForResults = checkNow >= checkLimit && !game.isResolved;
       const isFinished = game.isResolved || isWaitingForResults;
+
+      // Tant que les résultats finaux ne sont pas publiés,
+      // on prépare la prochaine transition animée.
+      if (!game.isResolved) {
+        clearBsFinalRevealTimers();
+        window.bsFinalRevealDone = false;
+        window.bsFinalRevealRunning = false;
+
+        const oldConfettiLayer = document.getElementById("bsFinalConfettiLayer");
+        if (oldConfettiLayer) oldConfettiLayer.remove();
+      }
+
       const scanText = isFinished ? "Scannez pour voir<br>votre classement" : "Scannez pour jouer";
             
 document.getElementById("bsQrContainer").innerHTML = `
@@ -16205,6 +16882,13 @@ bsStats.innerHTML = `
 
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
+         // Avant d'afficher les résultats finaux, on joue une animation de révélation.
+         if (!window.bsFinalRevealDone) {
+           startBsFinalRankingReveal();
+           updateBsTimers();
+           return;
+         }
+
          // POST-SESSION : podium à gauche, récapitulatif étendu sur la zone centrale + droite
          const bsLeftPanel = document.getElementById("bsLeft");
          const bsMiddlePanel = document.getElementById("bsMiddle");
@@ -16245,79 +16929,47 @@ bsStats.innerHTML = `
              }).sort((a,b) => b.score - a.score).slice(0, 10);
 
 let lbHtml = `
-  <div style="
-    height:100%;
-    min-height:0;
-    display:grid;
-    grid-template-rows:auto minmax(0, 1fr);
-    gap:clamp(12px, 1.6vh, 22px);
-    overflow:hidden;
-  ">
-    <div style="
-      font-size:clamp(24px, 2vw, 32px);
-      font-weight:950;
-      letter-spacing:2px;
-      color:#fbbf24;
-      text-transform:uppercase;
-      text-align:center;
-      line-height:1;
-    ">
-      🏆 PODIUM FINAL 🏆
+  <div class="bs-final-board bs-final-board--ranking">
+    <div class="bs-final-board-head">
+      <div class="bs-final-board-kicker">🏆 Classement officiel</div>
+      <div class="bs-final-board-title">Podium final</div>
+      <div class="bs-final-board-subtitle">
+        Top 10 de la session, classé par score final.
+      </div>
     </div>
 
-    <div style="
-      min-height:0;
-      height:100%;
-      display:grid;
-      grid-template-rows:repeat(10, minmax(0, 1fr));
-      gap:clamp(7px, 0.9vh, 12px);
-      overflow:hidden;
-    ">
+    <div class="bs-final-rank-list">
 `;
 
 leaderboard.forEach((p, idx) => {
-  let color = "#e2e8f0";
-  let trophy = `<span style="color:#a855f7; font-weight:950; width:34px; font-size:clamp(18px, 1.35vw, 23px); flex-shrink:0;">${idx + 1}</span>`;
-  let bg = "rgba(255,255,255,0.05)";
+  const badge =
+    idx === 0 ? "🥇" :
+    idx === 1 ? "🥈" :
+    idx === 2 ? "🥉" :
+    `#${idx + 1}`;
 
-  if (idx === 0) {
-    color = "#fbbf24";
-    trophy = `<span style="font-size:clamp(21px, 1.55vw, 27px); width:34px; flex-shrink:0;">🥇</span>`;
-    bg = "rgba(251,191,36,0.12)";
-  } else if (idx === 1) {
-    color = "#f3f4f6";
-    trophy = `<span style="font-size:clamp(20px, 1.45vw, 25px); width:34px; flex-shrink:0;">🥈</span>`;
-    bg = "rgba(243,244,246,0.10)";
-  } else if (idx === 2) {
-    color = "#d97706";
-    trophy = `<span style="font-size:clamp(20px, 1.45vw, 25px); width:34px; flex-shrink:0;">🥉</span>`;
-    bg = "rgba(217,119,6,0.12)";
-  }
+  const rowClass =
+    idx === 0 ? "bs-final-rank-row top-1" :
+    idx === 1 ? "bs-final-rank-row top-2" :
+    idx === 2 ? "bs-final-rank-row top-3" :
+    "bs-final-rank-row";
 
-  const scoreDisplay = isEasyScreen ? p.score.toFixed(2) : p.score.toFixed(0);
+  const scoreDisplay = isEasyScreen
+    ? `${Number(p.score || 0).toFixed(2).replace('.', ',')} 💰`
+    : `${Math.round(Number(p.score || 0)).toLocaleString('fr-FR')} 💰`;
 
   lbHtml += `
-    <div style="
-      height:100%;
-      min-height:0;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      box-sizing:border-box;
-      font-size:clamp(18px, 1.38vw, 25px);
-      line-height:1;
-      padding:0 clamp(14px, 1.2vw, 20px);
-      border-radius:12px;
-      background:${bg};
-      border:1px solid rgba(255,255,255,0.12);
-      color:${color};
-      overflow:hidden;
-    ">
-      <div style="display:flex; gap:12px; align-items:center; min-width:0;">
-        ${trophy}
-        <span style="font-weight:900; text-transform:capitalize; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${window.escapeHtml(p.name || "Joueur")}</span>
+    <div class="${rowClass}">
+      <div class="bs-final-rank-badge">${badge}</div>
+
+      <div class="bs-final-rank-meta">
+        <div class="bs-final-rank-name">${window.escapeHtml(p.name || "Joueur")}</div>
+        <div class="bs-final-rank-caption">
+          ${idx < 3 ? "Top 3 de la session" : "Participant classé"}
+        </div>
       </div>
-      <div style="font-weight:950; white-space:nowrap; margin-left:12px;">${scoreDisplay} 💰</div>
+
+      <div class="bs-final-rank-score">${scoreDisplay}</div>
     </div>
   `;
 });
@@ -16331,16 +16983,23 @@ document.getElementById("bsLeft").innerHTML = lbHtml;
          }
 
          // 3. Récapitulatif : On isole la grille dans un "Container" pour ne faire disparaître QUE les cartes
-         if (!document.getElementById("bsMiddle").innerHTML.includes("RÉCAPITULATIF DES RÉSULTATS")) {
+if (!document.getElementById("bsMiddle").innerHTML.includes("RÉCAPITULATIF DES RÉSULTATS")) {
 document.getElementById("bsMiddle").innerHTML = `
-   <div style="font-size:28px; font-weight:800; letter-spacing:1.5px; margin-bottom:18px; color:#e2e8f0; text-transform:uppercase; text-align:center; flex-shrink:0;">
-      RÉCAPITULATIF DES RÉSULTATS
-   </div>
-   <div id="bsRecapContainer" style="transition: opacity 0.8s ease, transform 0.8s ease; flex:1; min-height:0; display:flex;"></div>
-`;
-         }
+  <div class="bs-final-results-stage">
+    <div class="bs-final-board-head">
+      <div class="bs-final-board-kicker">📊 Résultats officiels</div>
+      <div class="bs-final-board-title">RÉCAPITULATIF DES RÉSULTATS</div>
+      <div class="bs-final-board-subtitle">
+        Chaque carte présente la bonne réponse finale ainsi que la répartition des votes sur la question.
+      </div>
+    </div>
 
-let recapHtml = `<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:clamp(18px, 1.6vw, 30px); width:100%; height:100%; min-height:0;">`;
+    <div id="bsRecapContainer" style="transition: opacity 0.8s ease, transform 0.8s ease; flex:1; min-height:0; display:flex;"></div>
+  </div>
+`;
+}
+
+let recapHtml = `<div class="bs-final-results-grid">`;
 
 const totalChallenges = game.challenges.length;
 
@@ -16355,36 +17014,58 @@ const visibleIndices = totalChallenges
   ? [currentRecapIndex, (currentRecapIndex + 1) % totalChallenges]
   : [];
 
-         visibleIndices.forEach(i => {
-            const ch = game.challenges[i];
-            let answersHtml = '';
-ch.answers.forEach((ans, aIdx) => {
-   const isCorrect = (ch.correct === aIdx);
-   const bgStyle = isCorrect ? 'background:rgba(34,197,94,0.2); border:1px solid #22c55e; color:#4ade80;' : 'background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#9ca3af; opacity:0.6;';
-   const icon = isCorrect ? '✅' : '❌';
+visibleIndices.forEach(i => {
+  const ch = game.challenges[i];
+  if (!ch || !Array.isArray(ch.answers)) return;
 
-   answersHtml += `
-      <div style="${bgStyle} padding:clamp(10px, 1vh, 18px) clamp(12px, 1.2vw, 20px); border-radius:12px; margin-bottom:10px; font-size:clamp(15px, 1.1vw, 22px); font-weight:800; display:flex; justify-content:space-between; align-items:center;">
-         <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ans}</span>
-         <span>${icon}</span>
+  const probs = typeof getLMSRProbs === 'function'
+    ? getLMSRProbs(ch.votes || ch.answers.map(() => 0))
+    : ch.answers.map(() => 1 / Math.max(1, ch.answers.length));
+
+  let answersHtml = '';
+
+  ch.answers.forEach((ans, aIdx) => {
+    const isCorrect = Number(ch.correct) === Number(aIdx);
+    const pct = Math.max(0, Math.round((Number(probs[aIdx]) || 0) * 100));
+    const safeAns = window.escapeHtml(ans || "Réponse");
+
+    answersHtml += `
+      <div class="bs-final-answer-row ${isCorrect ? 'correct' : ''}">
+        <div class="bs-final-answer-main">
+          <div class="bs-final-answer-icon">${isCorrect ? '✅' : '•'}</div>
+          <div class="bs-final-answer-name">${safeAns}</div>
+          <div class="bs-final-answer-stat">${pct}%</div>
+        </div>
+
+        <div class="bs-final-answer-bar">
+          <span style="width:${pct}%;"></span>
+        </div>
       </div>
-   `;
+    `;
+  });
+
+  recapHtml += `
+    <div class="bs-final-question-card" style="--bs-final-answer-count:${Math.max(1, ch.answers.length)};">
+      <div class="bs-final-question-top">
+        <div class="bs-final-question-chip">Question ${i + 1}</div>
+        <div class="bs-final-question-category">${window.escapeHtml(ch.category || "Catégorie")}</div>
+      </div>
+
+      <div class="bs-final-question-text">
+        ${window.escapeHtml(ch.question || "Question")}
+      </div>
+
+      <div>
+        <div class="bs-final-answer-stack">${answersHtml}</div>
+      </div>
+    </div>
+  `;
 });
 
-            recapHtml += `
-               <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:22px; padding:clamp(16px, 1.6vw, 26px); display:flex; flex-direction:column; justify-content:space-between; min-height:0; height:100%; box-sizing:border-box; overflow:hidden;">
-                  <div>
-                     <div style="font-size:11px; color:#a855f7; text-transform:uppercase; font-weight:bold; margin-bottom:5px;">Challenge ${i+1} • ${ch.category}</div>
-                     <div style="font-size:clamp(18px, 1.5vw, 28px); font-weight:800; color:white; margin-bottom:18px; line-height:1.25;">${ch.question}</div>
-                  </div>
-                  <div>${answersHtml}</div>
-               </div>
-            `;
-         });
-         recapHtml += `</div>`;
-         
-         // On ne met à jour que l'intérieur de la grille, le titre reste intact !
-         document.getElementById("bsRecapContainer").innerHTML = recapHtml;
+recapHtml += `</div>`;
+
+// On ne met à jour que l'intérieur de la grille, le titre reste intact !
+document.getElementById("bsRecapContainer").innerHTML = recapHtml;
 
          updateBsTimers();
          return; 
@@ -16737,6 +17418,297 @@ ${rows || `
 `}
     </div>
   `;
+}
+
+/* --- ANIMATION GRAND ÉCRAN : RÉVÉLATION DU CLASSEMENT FINAL --- */
+function clearBsFinalRevealTimers() {
+  (window.bsFinalRevealTimers || []).forEach(id => clearTimeout(id));
+  window.bsFinalRevealTimers = [];
+}
+
+function queueBsFinalRevealStep(fn, delay) {
+  if (!window.bsFinalRevealTimers) window.bsFinalRevealTimers = [];
+  const id = setTimeout(fn, delay);
+  window.bsFinalRevealTimers.push(id);
+  return id;
+}
+
+function getBsFinalRevealLeaderboard() {
+  const isEasyScreen = (
+    sessionConfig.mode === 'easy' ||
+    (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code)
+  );
+
+  return (game.players || [])
+    .map(p => ({
+      name: p.name || "Joueur",
+      score: window.calculatePlayerScore(p, game),
+      scoreDisplay: isEasyScreen
+        ? `${Number(window.calculatePlayerScore(p, game) || 0).toFixed(2).replace('.', ',')} 💰`
+        : `${Math.round(Number(window.calculatePlayerScore(p, game) || 0)).toLocaleString('fr-FR')} 💰`
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+}
+
+function renderBsFinalRevealShell() {
+  const grid = document.querySelector(".bs-grid");
+  const left = document.getElementById("bsLeft");
+  const middle = document.getElementById("bsMiddle");
+  const right = document.getElementById("bsRight");
+
+  if (grid) grid.classList.add("bs-grid-final");
+
+  if (right) {
+    right.style.display = "none";
+    right.innerHTML = "";
+  }
+
+  if (left) {
+    left.className = "bs-panel";
+    left.style.display = "flex";
+    left.style.flexDirection = "column";
+    left.style.overflow = "hidden";
+    left.innerHTML = `
+      <div class="bs-final-reveal-stage">
+        <div class="bs-final-reveal-title">
+          Classement final
+          <span>Révélation du Top 10</span>
+        </div>
+
+        <div id="bsFinalRevealList" class="bs-final-reveal-list"></div>
+      </div>
+    `;
+  }
+
+  if (middle) {
+    middle.className = "bs-panel";
+    middle.style.display = "flex";
+    middle.style.flexDirection = "column";
+    middle.style.overflow = "hidden";
+    middle.innerHTML = `
+      <div id="bsFinalRevealSpotlight" class="bs-final-reveal-spotlight">
+        <div class="bs-final-reveal-card show">
+          <div class="bs-final-reveal-rank">🏆</div>
+          <div class="bs-final-reveal-name">Le classement arrive</div>
+          <div class="bs-final-reveal-score">Préparez-vous...</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function showBsFinalRevealSpotlight(player, idx) {
+  const spot = document.getElementById("bsFinalRevealSpotlight");
+  if (!spot || !player) return;
+
+  const rank = idx + 1;
+  const safeName = window.escapeHtml ? window.escapeHtml(player.name) : String(player.name || "Joueur");
+
+  spot.innerHTML = `
+    <div class="bs-final-reveal-card">
+      <div class="bs-final-reveal-rank">#${rank}</div>
+      <div class="bs-final-reveal-name">${safeName}</div>
+      <div class="bs-final-reveal-score">${player.scoreDisplay}</div>
+    </div>
+  `;
+
+  requestAnimationFrame(() => {
+    const card = spot.querySelector(".bs-final-reveal-card");
+    if (card) card.classList.add("show");
+  });
+}
+
+function addBsFinalRevealRow(player, idx) {
+  const list = document.getElementById("bsFinalRevealList");
+  if (!list || !player) return;
+
+  const safeName = window.escapeHtml ? window.escapeHtml(player.name) : String(player.name || "Joueur");
+
+  const row = document.createElement("div");
+  row.className = "bs-final-reveal-row";
+  row.innerHTML = `
+    <div class="bs-final-reveal-row-rank">#${idx + 1}</div>
+    <div class="bs-final-reveal-row-name">${safeName}</div>
+    <div class="bs-final-reveal-row-score">${player.scoreDisplay}</div>
+  `;
+
+  list.appendChild(row);
+}
+
+function renderBsPodiumRevealShell() {
+  const middle = document.getElementById("bsMiddle");
+  if (!middle) return;
+
+  middle.innerHTML = `
+    <div class="bs-podium-reveal-stage">
+      <div class="bs-final-reveal-title">
+        Le podium
+        <span>Révélation finale</span>
+      </div>
+
+      <div class="bs-podium-reveal-grid">
+        <div id="bsPodiumSecond" class="bs-podium-column"></div>
+        <div id="bsPodiumFirst" class="bs-podium-column"></div>
+        <div id="bsPodiumThird" class="bs-podium-column"></div>
+      </div>
+    </div>
+  `;
+}
+
+function revealBsPodiumPlayer(player, idx) {
+  if (!player) return;
+
+  const rank = idx + 1;
+  const targetId =
+    rank === 1 ? "bsPodiumFirst" :
+    rank === 2 ? "bsPodiumSecond" :
+    "bsPodiumThird";
+
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  const safeName = window.escapeHtml ? window.escapeHtml(player.name) : String(player.name || "Joueur");
+
+  const medal =
+    rank === 1 ? "🥇" :
+    rank === 2 ? "🥈" :
+    "🥉";
+
+  const blockClass =
+    rank === 1 ? "first" :
+    rank === 2 ? "second" :
+    "third";
+
+  target.innerHTML = `
+    <div class="bs-podium-player">
+      <div class="bs-podium-medal">${medal}</div>
+      <div class="bs-podium-name">${safeName}</div>
+      <div class="bs-podium-score">${player.scoreDisplay}</div>
+    </div>
+    <div class="bs-podium-block ${blockClass}">#${rank}</div>
+  `;
+
+  requestAnimationFrame(() => target.classList.add("show"));
+}
+
+function launchBsFinalRevealConfetti(duration = 3200) {
+  const oldLayer = document.getElementById("bsFinalConfettiLayer");
+  if (oldLayer) oldLayer.remove();
+
+  const layer = document.createElement("div");
+  layer.id = "bsFinalConfettiLayer";
+  layer.className = "bs-confetti-layer";
+
+  const colors = [
+    "#fde047",
+    "#fb7185",
+    "#f97316",
+    "#22c55e",
+    "#38bdf8",
+    "#60a5fa",
+    "#a855f7",
+    "#ec4899",
+    "#ffffff"
+  ];
+
+  const count = 160;
+
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement("div");
+    piece.className = "bs-confetti-piece";
+
+    const width = 7 + Math.random() * 9;
+    const height = 10 + Math.random() * 18;
+    const drift = (Math.random() * 320) - 160;
+    const rotation = (Math.random() * 1080) - 540;
+    const fallDuration = 2.25 + Math.random() * 1.45;
+    const delay = Math.random() * 0.55;
+
+    piece.style.left = `${Math.random() * 100}vw`;
+    piece.style.setProperty("--w", `${width}px`);
+    piece.style.setProperty("--h", `${height}px`);
+    piece.style.setProperty("--x", `${drift}px`);
+    piece.style.setProperty("--r", `${rotation}deg`);
+    piece.style.setProperty("--d", `${fallDuration}s`);
+    piece.style.setProperty("--c", colors[Math.floor(Math.random() * colors.length)]);
+    piece.style.animationDelay = `${delay}s`;
+
+    layer.appendChild(piece);
+  }
+
+  document.body.appendChild(layer);
+
+  setTimeout(() => {
+    const currentLayer = document.getElementById("bsFinalConfettiLayer");
+    if (currentLayer) currentLayer.remove();
+  }, duration + 700);
+}
+
+function startBsFinalRankingReveal() {
+  if (window.bsFinalRevealRunning || window.bsFinalRevealDone) return;
+
+  const leaderboard = getBsFinalRevealLeaderboard();
+
+  if (!leaderboard.length) {
+    window.bsFinalRevealDone = true;
+    window.bsFinalRevealRunning = false;
+    renderBigScreen();
+    return;
+  }
+
+  clearBsFinalRevealTimers();
+
+  window.bsFinalRevealRunning = true;
+  window.bsFinalRevealDone = false;
+
+  renderBsFinalRevealShell();
+
+  const lowerRanks = [];
+  for (let idx = Math.min(9, leaderboard.length - 1); idx >= 3; idx--) {
+    lowerRanks.push(idx);
+  }
+  let delay = 1000;
+
+  lowerRanks.forEach(idx => {
+    queueBsFinalRevealStep(() => {
+      showBsFinalRevealSpotlight(leaderboard[idx], idx);
+    }, delay);
+
+    queueBsFinalRevealStep(() => {
+      addBsFinalRevealRow(leaderboard[idx], idx);
+    }, delay + 1650);
+
+    delay += 2800;
+  });
+
+  queueBsFinalRevealStep(() => {
+    renderBsPodiumRevealShell();
+  }, delay + 600);
+
+  const podiumOrder = [2, 1, 0].filter(idx => leaderboard[idx]);
+
+  const podiumStartDelay = delay + 1450;
+  const podiumStepDelay = 2300;
+
+  podiumOrder.forEach((idx, order) => {
+    queueBsFinalRevealStep(() => {
+      revealBsPodiumPlayer(leaderboard[idx], idx);
+    }, podiumStartDelay + order * podiumStepDelay);
+  });
+
+  const confettiDelay = podiumStartDelay + podiumOrder.length * podiumStepDelay + 950;
+
+  queueBsFinalRevealStep(() => {
+    launchBsFinalRevealConfetti(3300);
+  }, confettiDelay);
+
+  queueBsFinalRevealStep(() => {
+    window.bsFinalRevealDone = true;
+    window.bsFinalRevealRunning = false;
+    clearBsFinalRevealTimers();
+    renderBigScreen();
+  }, confettiDelay + 3600);
 }
 
 function drawBsTrendChart(trendData, canvasId, cIndex) {
