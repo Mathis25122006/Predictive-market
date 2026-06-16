@@ -4773,6 +4773,25 @@ body.has-app-top-logo #playerAuth.join-card {
         <div id="nextSessionMsg" class="msg" style="margin-top:5px;"></div>
       </div>
 
+      <div id="adminPlayersPanel" style="background:rgba(59,130,246,0.08); padding:15px; border-radius:14px; margin-bottom:20px; border:1px solid rgba(59,130,246,0.35);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+          <div>
+            <h3 style="color:#93c5fd; margin:0;">👥 Joueurs</h3>
+            <div style="font-size:11px; color:#94a3b8;">Rechercher un joueur et consulter la valeur actuelle de ses parts.</div>
+          </div>
+          <div id="adminPlayersCount" style="font-size:11px; color:#bfdbfe; font-weight:900;"></div>
+        </div>
+
+        <input
+          id="adminPlayerSearchInput"
+          placeholder="Rechercher par pseudo ou e-mail..."
+          oninput="renderAdminPlayersPanel()"
+          style="margin-bottom:10px; background:rgba(0,0,0,0.25); border:1px solid rgba(147,197,253,0.35);"
+        >
+
+        <div id="adminPlayersList"></div>
+      </div>
+
       <div id="manageChallengesContainer"></div>
 
   <div id="finalValidationZone" class="hidden" style="margin-top:20px; padding-top:20px; border-top:2px solid #f97316;">
@@ -7499,6 +7518,19 @@ function startPlayScreenTimers() {
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
+    const recapIndices = typeof getPlayerRecapIndices === "function"
+      ? getPlayerRecapIndices(player)
+      : [];
+
+    const portfolioIndices = getPlayerPortfolioQuestionIndices(player);
+
+    // Ces questions ne doivent jamais être remplacées :
+    // elles ont déjà été vues ou elles ont déjà une position joueur.
+    const protectedQuestionIndices = new Set([
+      ...recapIndices.map(Number),
+      ...portfolioIndices.map(Number)
+    ]);
+
 // --- NOUVEAU : REMPLACEMENT DYNAMIQUE ET INTELLIGENT DES CARTES FUTURES ---
     let indicesModified = false;
     const maxSeen = window.maxCardIndexSeen || 0;
@@ -7511,15 +7543,26 @@ function startPlayScreenTimers() {
         const timeToEnd = ch ? (ch.endTime - now) : 0;
         
         let needsReplacement = false;
-        // On remplace si la carte est expirée, OU SI elle se termine dans moins d'1 minute
-        if (effStatus !== "open" && effStatus !== "pending") {
+
+        // Si la question a déjà été vue ou pariée, elle reste figée.
+        // Même close, elle doit rester dans le récap.
+        if (protectedQuestionIndices.has(Number(cIndex))) {
+            needsReplacement = false;
+        }
+        // Sinon, on conserve le remplacement dynamique des cartes futures.
+        else if (effStatus !== "open" && effStatus !== "pending") {
             needsReplacement = true;
         } else if (effStatus === "open" && timeToEnd < 60000) {
             needsReplacement = true;
         }
 
         if (needsReplacement) {
-            const notInHand = game.challenges.map((c, idx) => ({c, idx})).filter(item => !myIndices.includes(item.idx));
+            const notInHand = game.challenges
+              .map((c, idx) => ({ c, idx }))
+              .filter(item =>
+                !myIndices.map(Number).includes(Number(item.idx)) &&
+                !protectedQuestionIndices.has(Number(item.idx))
+              );
             
             // Priorité 1 : Ouverte et se termine dans + d'1 minute (Sûre)
             let p1 = notInHand.filter(item => getEffectiveStatus(item.c) === "open" && (item.c.endTime - now) >= 60000);
@@ -7661,8 +7704,84 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
     return betInfoHtml;
 };
 
+function getQuestionsPerPlayerLimit() {
+  const n = Number(sessionConfig && sessionConfig.n);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : Infinity;
+}
+
+function getPlayerPortfolioQuestionIndices(player) {
+  if (!player || !Array.isArray(player.portfolio)) return [];
+
+  return [...new Set(
+    player.portfolio
+      .map(b => Number(b.cIndex))
+      .filter(i => Number.isInteger(i))
+  )];
+}
+
+function getPlayerRecapIndices(player) {
+  if (!player) return [];
+
+  const limit = getQuestionsPerPlayerLimit();
+
+  const recapIndices = Array.isArray(player.recapAssignedIndices)
+    ? player.recapAssignedIndices.map(Number)
+    : [];
+
+  const portfolioIndices = getPlayerPortfolioQuestionIndices(player);
+
+  const merged = [...new Set([...recapIndices, ...portfolioIndices])]
+    .filter(i => Number.isInteger(i) && game.challenges && game.challenges[i]);
+
+  return Number.isFinite(limit) ? merged.slice(0, limit) : merged;
+}
+
+function savePlayerRecapIndices(player) {
+  if (!player || !window.currentActiveSessionCode) return;
+
+  const pIdx = game.players
+    ? game.players.findIndex(p => p.name === player.name && p.email === player.email)
+    : -1;
+
+  if (pIdx === -1) return;
+
+  db.ref(
+    'sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx + '/recapAssignedIndices'
+  ).set(player.recapAssignedIndices || []);
+}
+
+function rememberQuestionInPlayerRecap(cIndex) {
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  if (!player || !Number.isInteger(Number(cIndex))) return;
+
+  const limit = getQuestionsPerPlayerLimit();
+
+  if (!Array.isArray(player.recapAssignedIndices)) {
+    player.recapAssignedIndices = [];
+  }
+
+  const clean = [...new Set(
+    player.recapAssignedIndices
+      .map(Number)
+      .filter(i => Number.isInteger(i) && game.challenges && game.challenges[i])
+  )];
+
+  const numericCIndex = Number(cIndex);
+
+  if (clean.includes(numericCIndex)) return;
+
+  // Une fois que le joueur a réellement eu N questions à disposition,
+  // aucune nouvelle question ne peut entrer dans son récap.
+  if (Number.isFinite(limit) && clean.length >= limit) return;
+
+  clean.push(numericCIndex);
+  player.recapAssignedIndices = clean;
+
+  savePlayerRecapIndices(player);
+}
+
 window.getPlayerDisplayIndices = function(player) {
-  const rawIndices = (player && Array.isArray(player.assignedIndices))
+    const rawIndices = (player && Array.isArray(player.assignedIndices))
     ? [...player.assignedIndices]
     : [];
 
@@ -7709,7 +7828,9 @@ function renderPlayChallenges(){
   // L'ancien bouton "quickRecap" a été supprimé au profit de la barre flottante mobile
   
 const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    const myIndices = typeof getPlayerRecapIndices === "function"
+    ? getPlayerRecapIndices(player)
+    : ((player && player.assignedIndices) ? player.assignedIndices : []);
   const displayIndices = typeof window.getPlayerDisplayIndices === "function"
     ? window.getPlayerDisplayIndices(player)
     : myIndices;
@@ -7946,6 +8067,16 @@ function updateCardStack() {
       card.style.pointerEvents = 'none';
     }
   });
+
+  const activeCard = cardsElements[window.currentCardIndex];
+  const activeCIndex =
+    activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined
+      ? Number(activeCard.dataset.cIndex)
+      : null;
+
+  if (Number.isInteger(activeCIndex)) {
+    rememberQuestionInPlayerRecap(activeCIndex);
+  }
 }
 
 window.updateCardStack = updateCardStack;
@@ -9971,6 +10102,8 @@ if (existingBet) {
    existingBet.cashedOut = false;
    existingBet.paidOut = false;
 
+   const previousOriginalStake = getAdminEvolutionOriginalStake(existingBet);
+
    if (!existingBet.events) {
      existingBet.events = [{
        bet: Number(existingBet.bet || 0),
@@ -9979,6 +10112,8 @@ if (existingBet) {
        validatedAt: Number(existingBet.validatedAt || sessionConfig.gameStartTime || betTime)
      }];
    }
+
+   existingBet.originalStake = roundBetAmount(previousOriginalStake + val);
 
    existingBet.bet = roundBetAmount(Number(existingBet.bet || 0) + val);
    existingBet.pts = Number(existingBet.pts || 0) + pointsPotentiels;
@@ -9993,11 +10128,12 @@ if (existingBet) {
      validatedAt: betTime
    });
 } else {
-         player.portfolio.push({
-           cIndex: tempBetCIndex,
-           ansIndex: tempBetAnsIndex,
-           bet: val,
-           pts: pointsPotentiels,
+player.portfolio.push({
+  cIndex: tempBetCIndex,
+  ansIndex: tempBetAnsIndex,
+  bet: val,
+  originalStake: val,
+  pts: pointsPotentiels,
            type: tempBetType,
            pctAtBet: pctAtBet,
            validatedAt: betTime,
@@ -12053,8 +12189,299 @@ function renderAdminResultsDropdown(cIndex) {
   `;
 }
 
+function getAdminSnapOriginalStake(snap) {
+  if (!snap) return 0;
+
+  if (Array.isArray(snap.events) && snap.events.length) {
+    return snap.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0);
+  }
+
+  return Number(snap.bet || 0) + Number(snap.cashedOutAmount || 0);
+}
+
+function getAdminPositionCurrentValue(ch, snap) {
+  if (!ch || !snap || snap.cashedOut) return 0;
+
+  const effStatus = getEffectiveStatus(ch);
+
+  if (effStatus === "resolved") {
+    const correctIdx = ch.correct !== null && ch.correct !== undefined
+      ? Number(ch.correct)
+      : null;
+
+    if (correctIdx === null) return 0;
+
+    return typeof isWinningBetForResolution === "function" &&
+      isWinningBetForResolution(snap, correctIdx)
+        ? Number(snap.pts || 0)
+        : 0;
+  }
+
+  if (typeof window.getAMMValue === "function") {
+    return Number(window.getAMMValue(ch, snap) || 0);
+  }
+
+  return Number(snap.bet || 0);
+}
+
+function getAdminPlayerPartsValue(player) {
+  if (!player || !Array.isArray(player.portfolio)) return 0;
+
+  return player.portfolio.reduce((sum, snap) => {
+    const ch = game.challenges && game.challenges[snap.cIndex]
+      ? game.challenges[snap.cIndex]
+      : null;
+
+    return sum + getAdminPositionCurrentValue(ch, snap);
+  }, 0);
+}
+
+function buildAdminPlayerPortfolioHtml(player) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+
+  if (!player || !Array.isArray(player.portfolio) || player.portfolio.length === 0) {
+    return `<div style="font-size:12px; color:#94a3b8; margin-top:10px;">Aucune position enregistrée.</div>`;
+  }
+
+  return player.portfolio.map(snap => {
+    const ch = game.challenges && game.challenges[snap.cIndex]
+      ? game.challenges[snap.cIndex]
+      : null;
+
+    if (!ch) return "";
+
+    const ansLabel = ch.answers && ch.answers[snap.ansIndex]
+      ? ch.answers[snap.ansIndex]
+      : "Réponse inconnue";
+
+    const originalStake = getAdminSnapOriginalStake(snap);
+    const currentValue = getAdminPositionCurrentValue(ch, snap);
+    const delta = currentValue - originalStake;
+    const deltaColor = delta >= 0 ? "#4ade80" : "#f87171";
+
+    const effStatus = getEffectiveStatus(ch);
+    const statusLabel =
+      snap.cashedOut ? "Cash out total" :
+      effStatus === "resolved" ? "Résultat publié" :
+      effStatus === "closed" ? "Mises closes" :
+      effStatus === "pending" ? "Pas encore ouverte" :
+      "En cours";
+
+    const cashouts = Array.isArray(snap.cashoutEvents)
+      ? snap.cashoutEvents
+      : [];
+
+    const cashoutsHtml = cashouts.length
+      ? `
+        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.10);">
+          ${cashouts.map(ev => `
+            <div style="font-size:11px; color:#fdba74; margin-top:4px;">
+              Cash out : <strong>${Number(ev.amount || 0).toFixed(2)} 💰</strong>
+              <span style="color:#94a3b8;">· reste ${Number(ev.remainingValue || 0).toFixed(2)} 💰</span>
+            </div>
+          `).join("")}
+        </div>
+      `
+      : "";
+
+    return `
+      <div style="background:rgba(15,23,42,0.72); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px; margin-top:8px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+          <div style="min-width:0;">
+            <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:900;">${safe(ch.category || "Question")}</div>
+            <div style="font-size:12px; color:#fff; font-weight:850; margin-top:3px; line-height:1.25;">${safe(ch.question || "")}</div>
+            <div style="font-size:11px; color:#cbd5e1; margin-top:5px;">Réponse : <strong>${safe(ansLabel)}</strong></div>
+          </div>
+
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:10px; color:#94a3b8;">Statut</div>
+            <div style="font-size:11px; color:#bfdbfe; font-weight:900;">${statusLabel}</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px;">
+          <div>
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Mise initiale</div>
+            <div style="font-size:12px; color:#fde047; font-weight:950;">${originalStake.toFixed(2)} 💰</div>
+          </div>
+
+          <div style="text-align:center;">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Valeur actuelle</div>
+            <div style="font-size:12px; color:#38bdf8; font-weight:950;">${currentValue.toFixed(2)} 💰</div>
+          </div>
+
+          <div style="text-align:right;">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Écart</div>
+            <div style="font-size:12px; color:${deltaColor}; font-weight:950;">${delta >= 0 ? "+" : ""}${delta.toFixed(2)} 💰</div>
+          </div>
+        </div>
+
+        ${cashoutsHtml}
+      </div>
+    `;
+  }).join("");
+}
+
+window.toggleAdminPlayerDetails = function(playerIndex) {
+  window.adminOpenedPlayerIndex =
+    window.adminOpenedPlayerIndex === playerIndex ? null : playerIndex;
+
+  renderAdminPlayersPanel();
+};
+
+function renderAdminPlayersPanel() {
+  const list = document.getElementById("adminPlayersList");
+  const count = document.getElementById("adminPlayersCount");
+  const search = document.getElementById("adminPlayerSearchInput");
+
+  if (!list) return;
+
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const query = search ? search.value.trim().toLowerCase() : "";
+
+  const allPlayers = game.players || [];
+
+  if (!query) {
+    if (count) {
+      count.textContent = `${allPlayers.length} joueur${allPlayers.length > 1 ? "s" : ""} dans la partie`;
+    }
+
+    list.innerHTML = `
+      <div style="font-size:12px; color:#94a3b8; line-height:1.45; padding:10px 2px;">
+        Tapez un pseudo ou une adresse e-mail pour afficher un joueur.
+      </div>
+    `;
+    return;
+  }
+
+  const players = allPlayers
+    .map((p, index) => ({ p, index }))
+    .filter(({ p }) => {
+      return String(p.name || "").toLowerCase().includes(query) ||
+        String(p.email || "").toLowerCase().includes(query);
+    });
+
+  if (count) {
+    count.textContent = `${players.length} résultat${players.length > 1 ? "s" : ""}`;
+  }
+
+  if (players.length === 0) {
+    list.innerHTML = `<div style="font-size:12px; color:#94a3b8;">Aucun joueur trouvé.</div>`;
+    return;
+  }
+
+  list.innerHTML = players.map(({ p, index }) => {
+    const partsValue = getAdminPlayerPartsValue(p);
+    const balance = Number(p.balance || 0);
+    const totalValue = balance + partsValue;
+    const isOpen = window.adminOpenedPlayerIndex === index;
+
+    return `
+      <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(147,197,253,0.22); border-radius:14px; padding:10px; margin-top:8px;">
+        <div onclick="toggleAdminPlayerDetails(${index})" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div style="min-width:0;">
+            <div style="font-size:13px; color:#fff; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safe(p.name || "Joueur")}</div>
+            <div style="font-size:10px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safe(p.email || "")}</div>
+          </div>
+
+          <div style="text-align:right; flex-shrink:0;">
+            <div style="font-size:10px; color:#94a3b8;">Parts actuelles</div>
+            <div style="font-size:14px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
+            <div style="font-size:10px; color:#cbd5e1;">Total : ${totalValue.toFixed(2)} 💰</div>
+          </div>
+        </div>
+
+        ${isOpen ? `
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+              <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:8px;">
+                <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Solde disponible</div>
+                <div style="font-size:13px; color:#fde047; font-weight:950;">${balance.toFixed(2)} 💰</div>
+              </div>
+
+              <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:8px; text-align:right;">
+                <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Valeur parts</div>
+                <div style="font-size:13px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
+              </div>
+            </div>
+
+            ${buildAdminPlayerPortfolioHtml(p)}
+          </div>
+        ` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+function getAdminEvolutionOriginalStake(b) {
+  if (!b) return 0;
+
+  if (b.originalStake !== undefined && b.originalStake !== null) {
+    return Number(b.originalStake || 0);
+  }
+
+  if (Array.isArray(b.events) && b.events.length) {
+    return b.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0);
+  }
+
+  // Fallback pour les anciens tickets :
+  // après cash out, b.bet = valeur restante.
+  // Donc mise de départ = valeur restante + déjà cashout.
+  return Number(b.bet || 0) + Number(b.cashedOutAmount || 0);
+}
+
+function getAdminCashoutEvents(b) {
+  if (!b) return [];
+
+  const originalStake = getAdminEvolutionOriginalStake(b);
+
+  if (Array.isArray(b.cashoutEvents) && b.cashoutEvents.length) {
+    return b.cashoutEvents.map(ev => {
+      const amount = Number(ev.amount || 0);
+      const remainingValue = Number(ev.remainingValue || 0);
+
+      return {
+        ...ev,
+        amount,
+        initialStake: Number(ev.initialStake ?? originalStake),
+        valueBeforeCashout: Number(
+          ev.valueBeforeCashout ??
+          roundBetAmount(amount + remainingValue)
+        ),
+        remainingValue,
+        ansIndex: ev.ansIndex ?? b.ansIndex,
+        type: ev.type || b.type || "YES",
+        validatedAt: ev.validatedAt || null
+      };
+    });
+  }
+
+  // Fallback pour les anciens cash out créés avant l'historique détaillé.
+  if (Number(b.cashedOutAmount || 0) > 0) {
+    return [{
+      amount: Number(b.cashedOutAmount || 0),
+      initialStake: originalStake,
+      valueBeforeCashout: Number(b.bet || 0) + Number(b.cashedOutAmount || 0),
+      remainingValue: Number(b.bet || 0),
+      ansIndex: b.ansIndex,
+      type: b.type || "YES",
+      validatedAt: b.validatedAt || null
+    }];
+  }
+
+  return [];
+}
+
+function formatAdminMoney(value) {
+  return Number(value || 0).toFixed(2);
+}
+
 function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
+
+  if (typeof renderAdminPlayersPanel === "function") {
+    renderAdminPlayersPanel();
+  }
   
   // CORRECTION : On ne nettoie tout l'écran que si le nombre de questions change (Ex: changement de session).
   // Cela empêche le rechargement complet du DOM toutes les 3 secondes !
@@ -12158,12 +12585,60 @@ function renderManageDashboard() {
     const playersList = game.players || [];
     playersList.forEach(p => {
         if (p.portfolio) {
-            const pBets = p.portfolio.filter(b => b.cIndex === i);
+            const pBets = p.portfolio.filter(b => Number(b.cIndex) === Number(i));
+
             pBets.forEach(b => {
-                hasBets = true;
-                // Si la donnée existe, on l'affiche entre parenthèses
-                let pctInfo = (b.pctAtBet !== undefined && b.pctAtBet !== null) ? ` <span style="color:#a855f7; font-size:10px;">(à ${b.pctAtBet}%)</span>` : "";
-                playersHtml += `<span style="color:#e5e7eb;">• ${p.name}</span> a misé <strong style="color:#3b82f6;">${b.bet} 💰</strong> sur "${ch.answers[b.ansIndex]}"${pctInfo}<br>`;
+                const ansLabel = ch.answers && ch.answers[b.ansIndex]
+                  ? ch.answers[b.ansIndex]
+                  : "Réponse inconnue";
+
+                const originalStake = getAdminEvolutionOriginalStake(b);
+                const currentRemaining = Number(b.bet || 0);
+                const cashouts = getAdminCashoutEvents(b);
+
+                if (originalStake > 0 || cashouts.length > 0) {
+                  hasBets = true;
+
+                  let pctInfo = (b.pctAtBet !== undefined && b.pctAtBet !== null)
+                    ? ` <span style="color:#a855f7; font-size:10px;">(à ${b.pctAtBet}%)</span>`
+                    : "";
+
+                  playersHtml += `
+                    <div style="margin-top:7px; padding:8px 9px; border-radius:10px; background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.18);">
+                      <div>
+                        <span style="color:#e5e7eb;">• ${p.name}</span>
+                        a misé au départ
+                        <strong style="color:#3b82f6;">${formatAdminMoney(originalStake)} 💰</strong>
+                        sur "${ansLabel}"${pctInfo}
+                      </div>
+
+                      <div style="margin-top:4px; color:#94a3b8; font-size:10px;">
+                        Valeur restante actuelle :
+                        <strong style="color:#cbd5e1;">${formatAdminMoney(currentRemaining)} 💰</strong>
+                      </div>
+                  `;
+
+                  cashouts.forEach(ev => {
+                    const cashoutAmount = Number(ev.amount || 0);
+                    const initialStake = Number(ev.initialStake || originalStake);
+                    const valueBeforeCashout = Number(ev.valueBeforeCashout || 0);
+                    const remainingValue = Number(ev.remainingValue || 0);
+
+                    playersHtml += `
+                      <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.12); color:#fdba74;">
+                        ↳ Cash out :
+                        <strong>${formatAdminMoney(cashoutAmount)} 💰 retirés</strong>
+                        <span style="color:#94a3b8;">
+                          · mise départ ${formatAdminMoney(initialStake)} 💰
+                          · valeur avant ${formatAdminMoney(valueBeforeCashout)} 💰
+                          · reste ${formatAdminMoney(remainingValue)} 💰
+                        </span>
+                      </div>
+                    `;
+                  });
+
+                  playersHtml += `</div>`;
+                }
             });
         }
     });
@@ -13542,6 +14017,28 @@ function confirmSell() {
   updateGlobalBalance();
 
   // Mise à jour du portefeuille :
+  // on garde une mise de départ immuable pour l'évolution admin.
+  const originalStakeBeforeCashout = roundBetAmount(getAdminEvolutionOriginalStake(tempSellSnap));
+  const valueBeforeCashout = maxMoneyBeforeSell;
+
+  if (tempSellSnap.originalStake === undefined || tempSellSnap.originalStake === null) {
+    tempSellSnap.originalStake = originalStakeBeforeCashout;
+  }
+
+  if (!Array.isArray(tempSellSnap.cashoutEvents)) {
+    tempSellSnap.cashoutEvents = [];
+  }
+
+  tempSellSnap.cashoutEvents.push({
+    amount: desiredMoney,
+    initialStake: tempSellSnap.originalStake,
+    valueBeforeCashout: valueBeforeCashout,
+    remainingValue: remainingMoney,
+    ansIndex: tempSellAnsIndex,
+    type: tempSellType || "YES",
+    validatedAt: Date.now()
+  });
+
   // on force la valeur restante à être exactement la valeur monétaire restante.
   tempSellSnap.cashedOutAmount = roundBetAmount((tempSellSnap.cashedOutAmount || 0) + desiredMoney);
 
