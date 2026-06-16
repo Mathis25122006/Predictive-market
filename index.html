@@ -6229,11 +6229,11 @@ window.validateCurrentCardVote = window.validateCurrentCardVote || function(cInd
     if (!player.portfolio) player.portfolio = [];
   }
 
-  const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
-  if (alreadyValidated) return true;
+const ch = game.challenges[cIndex];
+if (!ch || !ch.votes) return false;
 
-  const ch = game.challenges[cIndex];
-  if (!ch || !ch.votes) return false;
+const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
+if (alreadyValidated) return true;
 
   const bet = selectedBets[cIndex] || 1;
   const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
@@ -6282,10 +6282,11 @@ window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
   }
 
 const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
 
 const ch = game && game.challenges ? game.challenges[cIndex] : null;
 const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+
+const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
 
 // Si la carte n'est pas ouverte, le swipe passe la carte sans popup,
 // sans validation, sans mise, sans écriture dans le portfolio.
@@ -9740,15 +9741,15 @@ window.validateCurrentCardVote = function(cIndex) {
     if (!player.portfolio) player.portfolio = [];
   }
 
-  const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
-  if (alreadyValidated) return true;
-
 const ch = game.challenges[cIndex];
 
 if (!ch || !ch.votes || getEffectiveStatus(ch) !== "open") {
   clearUnopenedQuestionDraft(cIndex);
   return false;
 }
+
+const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
+if (alreadyValidated) return true;
 
 const selectedAt = Number(selectedAnswerTimes && selectedAnswerTimes[cIndex] ? selectedAnswerTimes[cIndex] : 0);
 
