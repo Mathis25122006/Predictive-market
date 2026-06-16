@@ -1170,77 +1170,35 @@ body.bet-panel-open #challengesPlay {
 .bet-odds-card {
   position: relative;
   overflow: hidden;
-  min-height: 86px;
-  padding: 13px 15px 18px !important;
-  border-color: rgba(168,85,247,0.44) !important;
-  background: rgba(255,255,255,0.045);
+  min-height: 0;
+  padding: 10px 12px !important;
+  border-color: rgba(168,85,247,0.34) !important;
+  background: rgba(168,85,247,0.08);
 }
 
-/* Barre d'évolution fine en bas du cadre, comme un remplissage de carte */
-.bet-odds-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 7px;
-  margin: 0;
-  border-radius: 0 0 18px 18px;
-  overflow: hidden;
-  background: rgba(255,255,255,0.075);
-  border: none;
-  box-shadow: inset 0 0 8px rgba(0,0,0,0.35);
-  z-index: 0;
-  pointer-events: none;
+.bet-odds-bar,
+.bet-odds-fill,
+.bet-odds-scale {
+  display: none !important;
 }
 
-.bet-odds-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  height: 100%;
-  width: 0%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7, #f97316);
-  box-shadow: 0 0 14px rgba(168,85,247,0.30);
-  transition: width 3.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
+.bet-odds-card::after,
 .bet-odds-fill::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: -2px;
-  width: 3px;
-  height: 100%;
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 0 12px rgba(255,255,255,0.65);
-}
-
-.bet-odds-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.01));
-  pointer-events: none;
-  z-index: 0;
-}
-
-.bet-odds-card > *:not(.bet-odds-bar) {
-  position: relative;
-  z-index: 1;
+  display: none !important;
+  content: none !important;
 }
 
 .bet-odds-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  gap: 14px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
 }
 
 .bet-odds-label {
-  font-size: 11px;
-  color: #bfdbfe;
+  font-size: 10px;
+  color: #c4b5fd;
   font-weight: 950;
   text-transform: uppercase;
   letter-spacing: 0.10em;
@@ -1249,51 +1207,63 @@ body.bet-panel-open #challengesPlay {
 
 .bet-odds-value {
   display: block;
-  color: #fde047;
-  font-size: clamp(26px, 6.5vw, 34px);
+  color: #c4b5fd;
+  font-size: 20px;
   line-height: 1;
   font-weight: 950;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   text-align: right;
-  text-shadow: 0 0 16px rgba(253,224,71,0.22);
+  text-shadow: none;
   white-space: nowrap;
 }
 
-.bet-odds-scale {
-  display: none;
-}
-
 .bet-balance-strip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  background: rgba(0,0,0,0.18);
-  border: none;
+  display: block;
+  background: rgba(168,85,247,0.07);
+  border: 1px solid rgba(168,85,247,0.16);
   border-radius: 16px;
   padding: 10px 12px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .bet-balance-label {
-  font-size: 11px;
-  color: #9ca3af;
-  font-weight: 750;
+  font-size: 10px;
+  color: #a7adc8;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .bet-balance-value {
-  font-size: 15px;
+  font-size: 12px;
+  color: #c4b5fd;
+  font-weight: 900;
+  margin-top: 2px;
+}
+
+.bet-balance-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.bet-selected-amount {
+  min-width: 70px;
+  text-align: right;
   color: #ffffff;
+  font-size: 14px;
   font-weight: 950;
+  white-space: nowrap;
 }
 
 .bet-balance-bar {
   position: relative;
-  height: 8px;
+  height: 7px;
   width: 100%;
-  margin-top: 12px;
   border-radius: 999px;
-  background: transparent;
+  background: rgba(255,255,255,0.10);
   overflow: visible;
 }
 
@@ -1304,7 +1274,7 @@ body.bet-panel-open #challengesPlay {
   height: 100%;
   width: 0%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #a855f7, #f97316);
+  background: linear-gradient(90deg, #8b5cf6, #60a5fa);
   transition: width 0.12s ease;
   pointer-events: none;
 }
@@ -1357,15 +1327,15 @@ body.bet-panel-open #challengesPlay {
 .bet-balance-slider::-webkit-slider-thumb {
   appearance: none;
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
-  margin-top: -7px;
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
   border-radius: 50%;
   background: #ffffff;
-  border: 3px solid #a855f7;
+  border: 3px solid #8b5cf6;
   box-shadow:
-    0 0 0 5px rgba(168,85,247,0.16),
-    0 4px 12px rgba(0,0,0,0.45);
+    0 0 0 4px rgba(139,92,246,0.18),
+    0 4px 12px rgba(0,0,0,0.40);
 }
 
 .bet-balance-slider::-moz-range-track {
@@ -1375,24 +1345,24 @@ body.bet-panel-open #challengesPlay {
 }
 
 .bet-balance-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #ffffff;
-  border: 3px solid #a855f7;
+  border: 3px solid #8b5cf6;
   box-shadow:
-    0 0 0 5px rgba(168,85,247,0.16),
-    0 4px 12px rgba(0,0,0,0.45);
+    0 0 0 4px rgba(139,92,246,0.18),
+    0 4px 12px rgba(0,0,0,0.40);
 }
 
 .bet-balance-slider:active::-webkit-slider-thumb {
   transform: scale(1.08);
-  border-color: #f97316;
+  border-color: #60a5fa;
 }
 
 .bet-balance-slider:active::-moz-range-thumb {
   transform: scale(1.08);
-  border-color: #f97316;
+  border-color: #60a5fa;
 }
 
 .bet-input-wrap {
@@ -1401,18 +1371,18 @@ body.bet-panel-open #challengesPlay {
 }
 
 #betPanel #betInput {
-  height: 56px;
+  height: 48px;
   margin: 0;
-  padding: 10px 52px 10px 16px;
-  border-radius: 18px;
-  background: rgba(0,0,0,0.34);
-  border: 1px solid rgba(255,255,255,0.12);
+  padding: 9px 46px 9px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(168,85,247,0.24);
   color: #ffffff;
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
   font-weight: 950;
-  text-align: left;
-  box-shadow: inset 0 0 18px rgba(168,85,247,0.10);
+  text-align: right;
+  box-shadow: inset 0 0 14px rgba(139,92,246,0.10);
 }
 
 #betPanel #betInput:focus {
@@ -1424,38 +1394,18 @@ body.bet-panel-open #challengesPlay {
 
 .bet-input-currency {
   position: absolute;
-  right: 18px;
+  right: 15px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 900;
-  color: #fde047;
+  color: #c4b5fd;
   pointer-events: none;
 }
 
-.bet-quick-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
+.bet-quick-row,
 .bet-chip-btn {
-  margin: 0 !important;
-  padding: 10px 8px !important;
-  border-radius: 14px !important;
-  background: rgba(255,255,255,0.07) !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-  color: #e5e7eb !important;
-  box-shadow: none !important;
-  font-size: 13px !important;
-  font-weight: 900 !important;
-}
-
-.bet-chip-btn.is-max {
-  background: rgba(168,85,247,0.17) !important;
-  border-color: rgba(168,85,247,0.55) !important;
-  color: #d8b4fe !important;
+  display: none !important;
 }
 
 .bet-result-card {
@@ -1463,16 +1413,16 @@ body.bet-panel-open #challengesPlay {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: rgba(34,197,94,0.10);
-  border: 1px solid rgba(34,197,94,0.30);
-  border-radius: 18px;
-  padding: 12px;
-  margin-bottom: 10px;
+  background: rgba(96,165,250,0.08);
+  border: 1px solid rgba(96,165,250,0.20);
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
 
 .bet-result-label {
-  font-size: 11px;
-  color: #a7f3d0;
+  font-size: 10px;
+  color: #bfdbfe;
   text-transform: uppercase;
   font-weight: 900;
   letter-spacing: 0.06em;
@@ -1480,14 +1430,14 @@ body.bet-panel-open #challengesPlay {
 
 .bet-result-hint {
   margin-top: 3px;
-  font-size: 11px;
-  color: rgba(209,250,229,0.72);
+  font-size: 10px;
+  color: rgba(191,219,254,0.72);
 }
 
 #betPotential {
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 950;
-  color: #34d399;
+  color: #bfdbfe;
   white-space: nowrap;
 }
 
@@ -4968,38 +4918,33 @@ body.has-app-top-logo #playerAuth.join-card {
     <div class="bet-odds-label">Cote actuelle</div>
     <strong id="betOdds" class="bet-odds-value">--%</strong>
   </div>
-
-  <div class="bet-odds-bar" aria-hidden="true">
-    <div id="betOddsFill" class="bet-odds-fill"></div>
-  </div>
-
-  <div class="bet-odds-scale">
-    <span>0%</span>
-    <span>50%</span>
-    <span>100%</span>
-  </div>
 </div>
 
   <div id="tutoBetZone" style="border-radius:20px; transition:all 0.3s;">
     <div class="bet-balance-strip">
-      <div style="flex:1;">
+      <div>
         <div class="bet-balance-label">Solde disponible</div>
-<div class="bet-balance-bar">
-  <div id="betBalanceFill" class="bet-balance-fill"></div>
-  <input
-    id="betSlider"
-    class="bet-balance-slider"
-    type="range"
-    min="0"
-    max="0"
-    step="1"
-    value="0"
-    oninput="updateBetFromSlider()"
-    aria-label="Choisir le montant de la mise"
-  >
-</div>
+        <div id="betAvailable" class="bet-balance-value">0 💰</div>
       </div>
-      <div id="betAvailable" class="bet-balance-value">0 💰</div>
+
+      <div class="bet-balance-line">
+        <div class="bet-balance-bar">
+          <div id="betBalanceFill" class="bet-balance-fill"></div>
+          <input
+            id="betSlider"
+            class="bet-balance-slider"
+            type="range"
+            min="0"
+            max="0"
+            step="1"
+            value="0"
+            oninput="updateBetFromSlider()"
+            aria-label="Choisir le montant de la mise"
+          >
+        </div>
+
+        <div id="betSelectedAmount" class="bet-selected-amount">0 💰</div>
+      </div>
     </div>
 
     <div class="bet-input-wrap">
@@ -5015,12 +4960,6 @@ body.has-app-top-logo #playerAuth.join-card {
     </div>
   </div>
 
-  <div class="bet-quick-row">
-<button id="betQuick10" class="bet-chip-btn" onclick="addBetFraction(0.10)">+—</button>
-<button id="betQuick25" class="bet-chip-btn" onclick="addBetFraction(0.25)">+—</button>
-<button id="betQuick50" class="bet-chip-btn" onclick="addBetFraction(0.50)">+—</button>
-<button class="bet-chip-btn is-max" onclick="setBetMax()">MAX</button>
-  </div>
 
   <div class="bet-result-card">
     <div>
@@ -6290,7 +6229,7 @@ window.validateCurrentCardVote = window.validateCurrentCardVote || function(cInd
     if (!player.portfolio) player.portfolio = [];
   }
 
-  const alreadyValidated = player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+  const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
   if (alreadyValidated) return true;
 
   const ch = game.challenges[cIndex];
@@ -6343,7 +6282,7 @@ window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
   }
 
 const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
 
 const ch = game && game.challenges ? game.challenges[cIndex] : null;
 const effStatus = ch ? getEffectiveStatus(ch) : "closed";
@@ -7788,10 +7727,50 @@ function formatTimeDiff(diff) {
   return `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
+function isActivePortfolioBetForChallenge(b, cIndex, ch, options = {}) {
+  if (!b || !ch) return false;
+
+  const betCIndex = Number(b.cIndex);
+  const targetCIndex = Number(cIndex);
+
+  if (!Number.isInteger(betCIndex) || !Number.isInteger(targetCIndex)) return false;
+  if (betCIndex !== targetCIndex) return false;
+
+  // Une vraie mise active doit avoir encore une valeur réelle.
+  if (!(Number(b.bet || 0) > 0)) return false;
+
+  // Une mise cash-outée ne doit plus être affichée comme une mise active.
+  if (b.cashedOut === true) return false;
+
+  const requireOpen = options.requireOpen !== false;
+  const effStatus = typeof getEffectiveStatus === "function"
+    ? getEffectiveStatus(ch)
+    : ch.status;
+
+  // Sur les cartes joueur, on n'affiche une mise active que si la question est ouverte.
+  if (requireOpen && effStatus !== "open") return false;
+
+  // Empêche une ancienne mise de coller à une question reprogrammée
+  // ou jamais ouverte dans son cycle actuel.
+  const startTime = Number(ch.startTime || 0);
+  const validatedAt = Number(b.validatedAt || 0);
+
+  if (startTime > 0 && (!validatedAt || validatedAt < startTime)) {
+    return false;
+  }
+
+  return true;
+}
+
 // NOUVEAU: Fonction dédiée pour générer la liste des mises sur la carte
 window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
+    if (!ch || effStatus !== "open") return "";
+
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-    const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
+    const snaps = player
+      ? (player.portfolio || []).filter(b => isActivePortfolioBetForChallenge(b, cIndex, ch))
+      : [];
+
     let betInfoHtml = "";
     
     // Si la carte comporte beaucoup de réponses, on passe en mode ultra-compact
@@ -7804,7 +7783,7 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
             ? `<button onclick="event.preventDefault(); event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}'); return false;" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
             : "";
            
-           let ansText = ch.answers[snap.ansIndex];
+           let ansText = ch.answers[snap.ansIndex] || "Réponse";
            if (isCompact && ansText.length > 18) ansText = ansText.substring(0, 15) + "..."; 
 
            betInfoHtml += `<div style="color:#fde047; font-size:${isCompact ? '11px' : '12px'}; margin-top:${isCompact ? '4px' : '6px'}; font-weight:bold; background:rgba(255,255,255,0.05); padding:${isCompact ? '6px 8px' : '8px'}; border-radius:8px; border:1px solid rgba(253,224,71,0.2); display:flex; justify-content:space-between; align-items:center; gap:8px;">
@@ -8219,7 +8198,15 @@ if (!ch || effStatus !== "open") {
     // Une question non ouverte ne doit jamais conserver une sélection ou une mise brouillon.
     clearUnopenedQuestionDraft(cIndex);
 
-    // Exception unique : le swipe est autorisé pour passer la carte.
+    // En mode facile, une carte non ouverte ne peut jamais être passée.
+    // Le joueur doit attendre que la question soit ouverte.
+    if (currentPlayerMode === 'easy') {
+        showQuestionNotOpenMessage(ch);
+        return false;
+    }
+
+    // En mode avancé uniquement, on garde l'ancienne exception :
+    // le swipe peut passer une carte non ouverte.
     if (allowLockedSwipe) {
         return true;
     }
@@ -8231,7 +8218,7 @@ if (!ch || effStatus !== "open") {
 if (currentPlayerMode === 'easy') {
           // On vérifie que selectedAnswers contient bien une valeur numérique (index de réponse)
           const ans = selectedAnswers[cIndex];
-          const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+          const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
           const hasAnswer = alreadyValidated || (ans !== null && ans !== undefined && ans !== -1);
           
           if (!hasAnswer) {
@@ -8701,8 +8688,10 @@ function renderAnswersForChallenge(cIndex){
     clearUnopenedQuestionDraft(cIndex);
   }
   
-  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const snaps = player ? (player.portfolio || []).filter(b => b.cIndex === cIndex && b.bet > 0) : [];
+const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+const snaps = player
+  ? (player.portfolio || []).filter(b => isActivePortfolioBetForChallenge(b, cIndex, ch))
+  : [];
   
 const hasBets = snaps.length > 0;
 const ansCount = ch.answers.length;
@@ -8768,8 +8757,22 @@ box.style.setProperty("--answer-gap", answerGap);
 box.style.setProperty("--answer-letter-size", answerLetterSize);
 box.style.setProperty("--answer-text-lines", answerTextLines);
 
-  const probs = getLMSRProbs(ch.votes);
-  const hasSelection = hasBets || (selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined);
+const probs = getLMSRProbs(ch.votes);
+
+const selectedAtForCard = Number(
+  selectedAnswerTimes && selectedAnswerTimes[cIndex]
+    ? selectedAnswerTimes[cIndex]
+    : 0
+);
+
+const hasFreshLocalSelection =
+  answersAreTradeable &&
+  selectedAnswers[cIndex] !== null &&
+  selectedAnswers[cIndex] !== undefined &&
+  selectedAnswers[cIndex] !== -1 &&
+  (!Number(ch.startTime || 0) || selectedAtForCard >= Number(ch.startTime || 0));
+
+const hasSelection = hasBets || hasFreshLocalSelection;
   
 // Couleurs et lettres identiques au Grand Écran
 const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15","#14b8a6"];
@@ -8795,7 +8798,7 @@ const c = colors[i % colors.length];
     if (currentPlayerMode === 'easy' && snapForThisAns && snapForThisAns.pts) {
         pts = +(Number(snapForThisAns.pts).toFixed(2));
     }
-    const isThisSelected = snapForThisAns || selectedAnswers[cIndex] === i;
+    const isThisSelected = !!snapForThisAns || (hasFreshLocalSelection && selectedAnswers[cIndex] === i);
 
     let div, gauge, label, ptsSpan;
 
@@ -8877,7 +8880,7 @@ div.onclick = (e) => {
         return;
     }
 
-            const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+            const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
             if (alreadyValidated) {
                 const msgEl = document.getElementById("playMsg");
                 if (msgEl) {
@@ -9645,6 +9648,22 @@ function playNext() {
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const totalCards = document.querySelectorAll('#challengesPlay .challenge-block').length;
 
+    // Sécurité mode facile : même sur la dernière carte, impossible de passer/valider
+    // si la question courante n'est pas encore ouverte.
+    if (currentPlayerMode === 'easy' && !window.isRebetting) {
+        const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
+          ? window.getActiveCardChallengeIndex()
+          : myIndices[window.currentCardIndex];
+
+        const activeChallenge = game && game.challenges ? game.challenges[activeCIndex] : null;
+
+        if (!activeChallenge || getEffectiveStatus(activeChallenge) !== "open") {
+            clearUnopenedQuestionDraft(activeCIndex);
+            showQuestionNotOpenMessage(activeChallenge);
+            return;
+        }
+    }
+
     // 1. Navigation : si on n'est pas à la fin du paquet ET qu'on n'est pas en train de faire un Retour Rapide (re-miser)
     if (window.currentCardIndex < totalCards - 1 && !window.isRebetting) {
         if (typeof window.canPassCurrentCard === 'function' && !window.canPassCurrentCard()) return;
@@ -9660,14 +9679,15 @@ if (currentPlayerMode === 'easy' && !window.isRebetting) {
         let cIndex = myIndices[cardIdx];
         const ch = game && game.challenges ? game.challenges[cIndex] : null;
 
-        // Une carte non ouverte peut être swipée/ignorée,
-        // mais elle ne doit jamais être exigée ni validée.
+        // Sécurité : normalement, en mode facile, une carte non ouverte
+        // ne peut plus être passée. Si elle est rencontrée ici, on nettoie
+        // simplement son brouillon et on continue la vérification des cartes ouvertes.
         if (!ch || getEffectiveStatus(ch) !== "open") {
             clearUnopenedQuestionDraft(cIndex);
             continue;
         }
 
-        const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+        const alreadyValidated = player && player.portfolio && player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
         if (!alreadyValidated && (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1)) {
             missingCardIndex = cardIdx;
             break;
@@ -9720,7 +9740,7 @@ window.validateCurrentCardVote = function(cIndex) {
     if (!player.portfolio) player.portfolio = [];
   }
 
-  const alreadyValidated = player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+  const alreadyValidated = player.portfolio.some(b => isActivePortfolioBetForChallenge(b, cIndex, ch));
   if (alreadyValidated) return true;
 
 const ch = game.challenges[cIndex];
@@ -9809,11 +9829,6 @@ function updateBetOddsDisplay(probability) {
   if (betOddsEl) {
     betOddsEl.textContent = pct.toFixed(1) + "%";
   }
-
-  const betOddsFillEl = document.getElementById("betOddsFill");
-  if (betOddsFillEl) {
-    betOddsFillEl.style.width = pct + "%";
-  }
 }
 
 function openBetPanel(cIndex, ansIndex, betType) {
@@ -9876,6 +9891,8 @@ tempBetOpenedAt = Date.now();
 
 const betBalanceFillEl = document.getElementById("betBalanceFill");
 if (betBalanceFillEl) betBalanceFillEl.style.width = "0%";
+const betSelectedAmountEl = document.getElementById("betSelectedAmount");
+if (betSelectedAmountEl) betSelectedAmountEl.textContent = "0 💰";
 
 const betSliderEl = document.getElementById("betSlider");
 if (betSliderEl) {
@@ -9885,10 +9902,7 @@ betSliderEl.step = "1";
 betSliderEl.value = "0";
 }
 
-// Met à jour les boutons rapides avec les vraies valeurs : +20, +50, +100, etc.
-if (typeof updateBetQuickButtons === "function") {
-  updateBetQuickButtons();
-}
+
 
 const betConfirmBtn = document.getElementById("betConfirmBtn");
 if (betConfirmBtn) betConfirmBtn.disabled = true;
@@ -10133,6 +10147,7 @@ function updatePotentialGain(fromSlider = false) {
   const confirmBtn = document.getElementById("betConfirmBtn");
   const fillEl = document.getElementById("betBalanceFill");
   const sliderEl = document.getElementById("betSlider");
+  const selectedAmountEl = document.getElementById("betSelectedAmount");
 
   const maxBalance = Math.max(0, roundBetAmount(currentPlayerBalance));
 
@@ -10155,6 +10170,10 @@ if (!fromSlider) {
       : 0;
 
     fillEl.style.width = pct + "%";
+  }
+
+    if (selectedAmountEl) {
+    selectedAmountEl.textContent = formatBetAmount(Math.max(0, val)) + " 💰";
   }
 
   if (val <= 0) {
