@@ -4868,7 +4868,7 @@ body.has-app-top-logo #playerAuth.join-card {
 <div id="play" style="display:none;">
   <div id="playerAuth" class="join-card" style="z-index:1000;">
 
-    <button class="ui-back" onclick="goBack()">←</button>
+    <button class="ui-back" onclick="goBackFromJoinPage()">←</button>
 
     <div id="joinCodeStep">
       <h2 class="join-title">Rejoindre le jeu</h2>
@@ -5445,13 +5445,37 @@ function updateUrlForScreen(screenId, replace = false) {
 }
 
 // NOUVEAU : Fonction de retour en arrière
-function goBack() {
-  if (screenHistory.length > 0) {
-    const prevScreen = screenHistory.pop();
-    showScreen(prevScreen, true); // true indique qu'on fait un retour
-  } else {
-    showScreen('home');
+function goBackFromJoinPage() {
+  const codeStep = document.getElementById("joinCodeStep");
+  const detailsStep = document.getElementById("joinDetailsStep");
+
+  const isCodeStepVisible =
+    codeStep && !codeStep.classList.contains("hidden");
+
+  const isDetailsStepVisible =
+    detailsStep && !detailsStep.classList.contains("hidden");
+
+  // Cas 1 :
+  // On est sur pseudo/e-mail.
+  // La flèche revient simplement à la saisie du code.
+  if (isDetailsStepVisible) {
+    showJoinCodeStep();
+    return;
   }
+
+  // Cas 2 :
+  // On est déjà sur la saisie du code.
+  // La flèche quitte le parcours joueur et revient à l'accueil.
+  if (isCodeStepVisible) {
+    window.pendingJoinMode = null;
+    window.pendingJoinQuestionsPerPlayer = null;
+
+    showScreen("home", true);
+    return;
+  }
+
+  // Sécurité si l'état est inattendu.
+  showScreen("home", true);
 }
 
 function showJoinCodeStep() {
@@ -6200,6 +6224,7 @@ let currentSetupIndex = 0;
 let selectedAnswers = [];
 let selectedBets = []; // Stocke le montant misé par question
 let selectedBetTypes = []; // NOUVEAU : Stocke 'YES' ou 'NO'
+let selectedAnswerTimes = []; // Empêche qu'une sélection faite avant ouverture devienne valide à l'ouverture
 let currentPlayChallengeIndex = 0;
 let currentAdminChallengeIndex = 0;
 let savedSetupData = null; 
@@ -6306,8 +6331,19 @@ window.confirmEasyValidationBeforeNext = function(cIndex, onConfirm) {
     return;
   }
 
-  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-  const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+
+const ch = game && game.challenges ? game.challenges[cIndex] : null;
+const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+
+// Si la carte n'est pas ouverte, le swipe passe la carte sans popup,
+// sans validation, sans mise, sans écriture dans le portfolio.
+if (!ch || effStatus !== "open") {
+  clearUnopenedQuestionDraft(cIndex);
+  onConfirm();
+  return;
+}
 
   const confirmAndContinue = () => {
     if (!alreadyValidated && typeof window.validateCurrentCardVote === 'function') {
@@ -6442,17 +6478,81 @@ function showQuestionNotOpenMessage(ch) {
 }
 
 function clearUnopenedQuestionDraft(cIndex) {
-  if (selectedAnswers && selectedAnswers[cIndex] !== undefined) {
-    selectedAnswers[cIndex] = null;
+  const idx = Number(cIndex);
+  if (!Number.isInteger(idx)) return;
+
+  if (selectedAnswers && selectedAnswers[idx] !== undefined) {
+    selectedAnswers[idx] = null;
   }
 
-  if (selectedBets && selectedBets[cIndex] !== undefined) {
-    selectedBets[cIndex] = 0;
+  if (selectedBets && selectedBets[idx] !== undefined) {
+    selectedBets[idx] = 0;
   }
 
-  if (typeof selectedBetTypes !== "undefined" && selectedBetTypes[cIndex] !== undefined) {
-    selectedBetTypes[cIndex] = null;
+  if (typeof selectedBetTypes !== "undefined" && selectedBetTypes[idx] !== undefined) {
+    selectedBetTypes[idx] = null;
   }
+
+  if (typeof selectedAnswerTimes !== "undefined" && selectedAnswerTimes[idx] !== undefined) {
+    selectedAnswerTimes[idx] = null;
+  }
+
+  // Si un panneau de mise était lié à cette question, on neutralise aussi le brouillon avancé.
+  if (typeof tempBetCIndex !== "undefined" && Number(tempBetCIndex) === idx) {
+    tempBetCIndex = null;
+    tempBetAnsIndex = null;
+    tempBetType = "YES";
+
+    if (typeof tempBetOpenedAt !== "undefined") {
+      tempBetOpenedAt = 0;
+    }
+
+    const input = document.getElementById("betInput");
+    if (input) input.value = "";
+
+    const slider = document.getElementById("betSlider");
+    if (slider) slider.value = "0";
+
+    const confirmBtn = document.getElementById("betConfirmBtn");
+    if (confirmBtn) confirmBtn.disabled = true;
+  }
+}
+
+function getCurrentActiveCardCIndex() {
+  const activeCard = document.querySelector("#challengesPlay .challenge-block.active-card");
+  if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
+    return Number(activeCard.dataset.cIndex);
+  }
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const myIndices = player && player.assignedIndices ? player.assignedIndices : [];
+  return myIndices[window.currentCardIndex];
+}
+
+function isChallengeOpenForPlayerAction(cIndex, options = {}) {
+  const idx = Number(cIndex);
+  const ch = game && game.challenges ? game.challenges[idx] : null;
+
+  if (!Number.isInteger(idx) || !ch || getEffectiveStatus(ch) !== "open") {
+    clearUnopenedQuestionDraft(idx);
+
+    if (
+      options.closePanel !== false &&
+      typeof closeBetPanel === "function" &&
+      typeof tempBetCIndex !== "undefined" &&
+      Number(tempBetCIndex) === idx
+    ) {
+      closeBetPanel({ suppressTuto: true });
+    }
+
+    if (options.message !== false) {
+      showQuestionNotOpenMessage(ch);
+    }
+
+    return false;
+  }
+
+  return true;
 }
 
 // Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
@@ -7266,9 +7366,10 @@ if (!isValid) {
   game.players = [];
   game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
   game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
-  selectedAnswers = new Array(game.challenges.length).fill(null);
-  selectedBets = new Array(game.challenges.length).fill(0);
-  selectedBetTypes = new Array(game.challenges.length).fill('YES');
+selectedAnswers = new Array(game.challenges.length).fill(null);
+selectedBets = new Array(game.challenges.length).fill(0);
+selectedBetTypes = new Array(game.challenges.length).fill('YES');
+selectedAnswerTimes = new Array(game.challenges.length).fill(null);
   currentPlayChallengeIndex = 0;
   currentAdminChallengeIndex = 0;
 
@@ -7859,8 +7960,13 @@ const block = document.createElement("div");
     block.className = "challenge-block";
     block.dataset.cIndex = String(cIndex);
     block.dataset.cardPos = String(displayPos);
-    const effStatus = getEffectiveStatus(ch);
-    // (L'événement de clic est désormais géré intelligemment par le moteur tactile pour éviter les bugs sur mobile)
+const effStatus = getEffectiveStatus(ch);
+
+if (effStatus !== "open") {
+  clearUnopenedQuestionDraft(cIndex);
+}
+
+// (L'événement de clic est désormais géré intelligemment par le moteur tactile pour éviter les bugs sur mobile)
 
 
     // 2. QUESTION TERMINÉE (CLOSED ou RESOLVED)
@@ -7977,11 +8083,15 @@ const hintText = currentPlayerMode === 'easy'
 
     const isLastCard = renderIndices.indexOf(cIndex) === renderIndices.length - 1;
     // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
-const btnHtml = window.isRebetting
-   ? `<button onclick="finishRebetAndReturnToRecap()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
-   : isLastCard
-      ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
-      : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
+const cardIsActionable = effStatus === "open";
+
+const btnHtml = !cardIsActionable
+   ? `<button type="button" disabled style="background: rgba(255,255,255,0.18); color: #ffffff; opacity:0.55; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Question verrouillée</button>${hintText}`
+   : window.isRebetting
+      ? `<button onclick="finishRebetAndReturnToRecap()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+      : isLastCard
+         ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+         : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
 
     // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
     footer.innerHTML = `
@@ -8082,7 +8192,7 @@ function updateCardStack() {
 window.updateCardStack = updateCardStack;
 
 // NOUVEAU : Fonction centralisée pour vérifier si le joueur a le droit de quitter la carte
-  window.canPassCurrentCard = function() {
+window.canPassCurrentCard = function(options = {}) {
       const player = (game.players || []).find(p => p.name === game.currentPlayerName);
       const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
 
@@ -8090,11 +8200,24 @@ window.updateCardStack = updateCardStack;
         ? window.getActiveCardChallengeIndex()
         : myIndices[window.currentCardIndex];
 
-      const ch = game.challenges[cIndex];
+const ch = game.challenges[cIndex];
+const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+const allowLockedSwipe = options && options.allowLockedSwipe === true;
 
+if (!ch || effStatus !== "open") {
+    // Une question non ouverte ne doit jamais conserver une sélection ou une mise brouillon.
+    clearUnopenedQuestionDraft(cIndex);
 
+    // Exception unique : le swipe est autorisé pour passer la carte.
+    if (allowLockedSwipe) {
+        return true;
+    }
 
-      if (currentPlayerMode === 'easy') {
+    showQuestionNotOpenMessage(ch);
+    return false;
+}
+
+if (currentPlayerMode === 'easy') {
           // On vérifie que selectedAnswers contient bien une valeur numérique (index de réponse)
           const ans = selectedAnswers[cIndex];
           const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
@@ -8138,7 +8261,7 @@ window.swipeNextCard = function() {
     }
 
     // Utilisation de la vérification centralisée
-    if (!window.canPassCurrentCard()) return false;
+    if (!window.canPassCurrentCard({ allowLockedSwipe: true })) return false;
 
     activeCard.style.transform = '';
 
@@ -8211,6 +8334,7 @@ window.swipePrevCard = function() {
 let startY = 0; let startX = 0;
 window.isCardDragging = false; 
 window.hasMovedCard = false; // NOUVEAU : Détecteur d'intention de mouvement
+window.touchStartedOnCard = false; // Permet le swipe depuis tout l'écran sans transformer un tap hors carte en action
 
 function resetSwipePrevPreview() {
   document.querySelectorAll('#challengesPlay .challenge-block[data-prev-preview="1"]').forEach(card => {
@@ -8290,8 +8414,20 @@ function finishSwipePrevWithPreview(activeCard) {
 }
 
 containerEl.addEventListener('touchstart', (e) => {
-    const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
-    if(!activeCard || !activeCard.contains(e.target)) return;
+const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
+if(!activeCard) return;
+
+const activeCIndex = activeCard.dataset && activeCard.dataset.cIndex !== undefined
+  ? Number(activeCard.dataset.cIndex)
+  : getCurrentActiveCardCIndex();
+
+const activeChallenge = game && game.challenges ? game.challenges[activeCIndex] : null;
+
+// On autorise toujours le geste de swipe,
+// mais on neutralise tout brouillon si la question n'est pas ouverte.
+if (!activeChallenge || getEffectiveStatus(activeChallenge) !== "open") {
+  clearUnopenedQuestionDraft(activeCIndex);
+}
 
     const realCardIndex = cardsElements.indexOf(activeCard);
     if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
@@ -8357,22 +8493,37 @@ if (!window.hasMovedCard && Math.abs(deltaY) < 15 && Math.abs(deltaX) < 15) {
         activeCard.style.transform = ''; 
         activeCard.style.opacity = "";
         activeCard.style.zIndex = "";
-        
-        // Si on a tapé dans le vide (pas sur un bouton ni sur une réponse), on désélectionne !
-        if (!e.target.closest('button') && !e.target.closest('.answer-btn')) {
-const activeCardForTap = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
-            const cIndex = activeCardForTap && activeCardForTap.dataset && activeCardForTap.dataset.cIndex !== undefined
-              ? Number(activeCardForTap.dataset.cIndex)
-              : null;
-            
-if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
-    window.lastAnswerInteractionAt = Date.now();
 
-    selectedAnswers[cIndex] = null;
-    selectedBets[cIndex] = 0;
-    window.saveLocalProgress();
-    renderAnswersForChallenge(cIndex);
-}
+        const activeCardForTap = document.querySelector('#challengesPlay .challenge-block.active-card') || cardsElements[window.currentCardIndex];
+        const cIndex = activeCardForTap && activeCardForTap.dataset && activeCardForTap.dataset.cIndex !== undefined
+          ? Number(activeCardForTap.dataset.cIndex)
+          : null;
+
+        const ch = game && game.challenges && cIndex !== null ? game.challenges[cIndex] : null;
+
+        // Tap sur carte non ouverte = aucune action.
+        // Le swipe reste autorisé, mais le tap ne peut rien modifier.
+        if (!ch || getEffectiveStatus(ch) !== "open") {
+            clearUnopenedQuestionDraft(cIndex);
+            showQuestionNotOpenMessage(ch);
+            return;
+        }
+        
+        // Si on a tapé dans le vide (pas sur un bouton ni sur une réponse), on désélectionne uniquement une carte ouverte.
+        if (!e.target.closest('button') && !e.target.closest('.answer-btn')) {
+            if (cIndex !== null && currentPlayerMode === 'easy' && selectedAnswers[cIndex] !== null && selectedAnswers[cIndex] !== undefined) {
+                window.lastAnswerInteractionAt = Date.now();
+
+                selectedAnswers[cIndex] = null;
+                selectedBets[cIndex] = 0;
+
+                if (typeof selectedAnswerTimes !== "undefined") {
+                  selectedAnswerTimes[cIndex] = null;
+                }
+
+                window.saveLocalProgress();
+                renderAnswersForChallenge(cIndex);
+            }
         }
         return; 
     }
@@ -8411,7 +8562,7 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
     closeTuto();
 }
 
-          if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+          if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard({ allowLockedSwipe: true })) {
               activeCard.style.transform = ''; 
               activeCard.classList.add('fly-away'); 
               setTimeout(() => {
@@ -8442,6 +8593,14 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
   // CORRECTION : Écouteur de clics permissif, mais il ne doit jamais intercepter
   // un vrai clic sur réponse ou bouton.
 containerEl.addEventListener('click', (e) => {
+      const activeCIndex = getCurrentActiveCardCIndex();
+
+      if (!isChallengeOpenForPlayerAction(activeCIndex, { message: true })) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+      }
+
       if (e.target.closest('button') || e.target.closest('.answer-btn') || e.target.closest('.side-panel')) {
           return;
       }
@@ -8491,7 +8650,7 @@ if (window.currentTutoStep === 7) {
     return;
 }
 
-if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard()) {
+if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard({ allowLockedSwipe: true })) {
                           const activeCard = cards[window.currentCardIndex];
                           activeCard.classList.add('fly-away');
                           setTimeout(() => {
@@ -8724,10 +8883,16 @@ const wasAlreadySelected = selectedAnswers[cIndex] === i;
 
 if (wasAlreadySelected) {
     selectedAnswers[cIndex] = null; 
-    selectedBets[cIndex] = 0; 
+    selectedBets[cIndex] = 0;
+    selectedAnswerTimes[cIndex] = null;
 } else {
+    if (!isChallengeOpenForPlayerAction(cIndex, { message: true })) {
+        return;
+    }
+
     selectedAnswers[cIndex] = i; 
-    selectedBets[cIndex] = 1; 
+    selectedBets[cIndex] = 1;
+    selectedAnswerTimes[cIndex] = Date.now();
 }
 
 window.saveLocalProgress(); 
@@ -8768,9 +8933,13 @@ div.onclick = (e) => {
 
     window.suppressNextAnswerTapUntil = 0;
 
-    selectedAnswers[cIndex] = i; 
-    renderAnswersForChallenge(cIndex); 
-    openBetPanel(cIndex, i, 'YES');
+if (!isChallengeOpenForPlayerAction(cIndex, { message: true })) {
+    return;
+}
+
+selectedAnswers[cIndex] = i; 
+renderAnswersForChallenge(cIndex); 
+openBetPanel(cIndex, i, 'YES');
             
             // CORRECTION : On fait avancer le tutoriel seulement si le clic vient de la carte active verrouillée
             const activeTutoCIndex = typeof window.getActiveCardChallengeIndex === "function"
@@ -9475,16 +9644,25 @@ function playNext() {
     // 2. Sur la dernière carte : Vérification stricte UNIQUEMENT en mode Facile (et si on ne re-mise pas)
     let missingCardIndex = -1;
     
-    if (currentPlayerMode === 'easy' && !window.isRebetting) {
-        for (let cardIdx = 0; cardIdx < myIndices.length; cardIdx++) {
-            let cIndex = myIndices[cardIdx];
-            const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
-            if (!alreadyValidated && (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1)) {
-                missingCardIndex = cardIdx;
-                break;
-            }
+if (currentPlayerMode === 'easy' && !window.isRebetting) {
+    for (let cardIdx = 0; cardIdx < myIndices.length; cardIdx++) {
+        let cIndex = myIndices[cardIdx];
+        const ch = game && game.challenges ? game.challenges[cIndex] : null;
+
+        // Une carte non ouverte peut être swipée/ignorée,
+        // mais elle ne doit jamais être exigée ni validée.
+        if (!ch || getEffectiveStatus(ch) !== "open") {
+            clearUnopenedQuestionDraft(cIndex);
+            continue;
+        }
+
+        const alreadyValidated = player && player.portfolio && player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
+        if (!alreadyValidated && (selectedAnswers[cIndex] === null || selectedAnswers[cIndex] === undefined || selectedAnswers[cIndex] === -1)) {
+            missingCardIndex = cardIdx;
+            break;
         }
     }
+}
 
     // 3. S'il manque une réponse en Facile, on ramène le joueur sur la carte concernée
     if (missingCardIndex !== -1) {
@@ -9534,8 +9712,20 @@ window.validateCurrentCardVote = function(cIndex) {
   const alreadyValidated = player.portfolio.some(b => b.cIndex === cIndex && b.bet > 0 && !b.cashedOut);
   if (alreadyValidated) return true;
 
-  const ch = game.challenges[cIndex];
-  if (!ch || !ch.votes) return false;
+const ch = game.challenges[cIndex];
+
+if (!ch || !ch.votes || getEffectiveStatus(ch) !== "open") {
+  clearUnopenedQuestionDraft(cIndex);
+  return false;
+}
+
+const selectedAt = Number(selectedAnswerTimes && selectedAnswerTimes[cIndex] ? selectedAnswerTimes[cIndex] : 0);
+
+if (!selectedAt || selectedAt < Number(ch.startTime || 0)) {
+  clearUnopenedQuestionDraft(cIndex);
+  return false;
+}
+
 
   const bet = selectedBets[cIndex] || 1;
   const bType = typeof selectedBetTypes !== 'undefined' && selectedBetTypes[cIndex] ? selectedBetTypes[cIndex] : 'YES';
@@ -9586,6 +9776,7 @@ player.portfolio.push({
 let tempBetAnsIndex = null;
 let tempBetCIndex = null;
 let tempBetType = 'YES'; // OUI ou NON
+let tempBetOpenedAt = 0; // Empêche de confirmer un panneau ouvert avant l'ouverture réelle
 
 function showPlayerTradeClosedMessage(message) {
   const msgEl = document.getElementById("playMsg");
@@ -9632,9 +9823,10 @@ if (!ch || getEffectiveStatus(ch) !== "open") {
   return;
 }
 
-  tempBetCIndex = cIndex;
-  tempBetAnsIndex = ansIndex;
-  tempBetType = betType;
+tempBetCIndex = cIndex;
+tempBetAnsIndex = ansIndex;
+tempBetType = betType;
+tempBetOpenedAt = Date.now();
   
   // 1. Calcul des probabilités avec LMSR
   const probs = getLMSRProbs(ch.votes);
@@ -10060,9 +10252,13 @@ if (val <= 0) { err.textContent = "Veuillez saisir une mise valide."; return; }
 if (val > currentPlayerBalance) { err.textContent = "Vous ne pouvez pas miser une somme supérieure à votre capital."; return; }
 
 const betQuestion = game && game.challenges ? game.challenges[tempBetCIndex] : null;
-if (!betQuestion || getEffectiveStatus(betQuestion) !== "open") {
+const panelWasOpenedBeforeQuestion =
+  betQuestion && Number(tempBetOpenedAt || 0) < Number(betQuestion.startTime || 0);
+
+if (!betQuestion || getEffectiveStatus(betQuestion) !== "open" || panelWasOpenedBeforeQuestion) {
   err.textContent = "Cette question n'est pas encore ouverte aux mises.";
   clearUnopenedQuestionDraft(tempBetCIndex);
+  closeBetPanel({ suppressTuto: true });
   return;
 }
 
@@ -10245,11 +10441,13 @@ function validate(){
   }
   
   // On nettoie les sélections temporaires
-  selectedAnswers = new Array(game.challenges.length).fill(null);
-  selectedBets = new Array(game.challenges.length).fill(0);
-  if (typeof selectedBetTypes !== 'undefined') {
-    selectedBetTypes = new Array(game.challenges.length).fill('YES');
-  }
+selectedAnswers = new Array(game.challenges.length).fill(null);
+selectedBets = new Array(game.challenges.length).fill(0);
+selectedAnswerTimes = new Array(game.challenges.length).fill(null);
+
+if (typeof selectedBetTypes !== 'undefined') {
+  selectedBetTypes = new Array(game.challenges.length).fill('YES');
+}
 
   // Après un retour depuis le récap pour parier / re-miser,
   // on revient toujours automatiquement au récapitulatif.
@@ -11308,9 +11506,10 @@ window.saveLocalProgress = function() {
     if (game && game.currentPlayerName && window.currentActiveSessionCode) {
         const saveKey = window.currentActiveSessionCode + '_' + game.currentPlayerName;
         localStorage.setItem('savedIndex_' + saveKey, window.currentCardIndex);
-        if (currentPlayerMode === 'easy') {
-            localStorage.setItem('savedAnswers_' + saveKey, JSON.stringify(selectedAnswers));
-        }
+if (currentPlayerMode === 'easy') {
+    localStorage.setItem('savedAnswers_' + saveKey, JSON.stringify(selectedAnswers));
+    localStorage.setItem('savedAnswerTimes_' + saveKey, JSON.stringify(selectedAnswerTimes));
+}
     }
 };
 
@@ -11797,12 +11996,17 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
                 const savedIndex = localStorage.getItem('savedIndex_' + saveKey);
                 window.currentCardIndex = savedIndex ? parseInt(savedIndex) : 0;
                 
-                if (currentPlayerMode === 'easy') {
-                    const savedAnswers = localStorage.getItem('savedAnswers_' + saveKey);
-                    if (savedAnswers) {
-                        try { selectedAnswers = JSON.parse(savedAnswers); } catch(e){}
-                    }
-                }
+              if (currentPlayerMode === 'easy') {
+                  const savedAnswers = localStorage.getItem('savedAnswers_' + saveKey);
+                  if (savedAnswers) {
+                      try { selectedAnswers = JSON.parse(savedAnswers); } catch(e){}
+                  }
+
+                  const savedAnswerTimes = localStorage.getItem('savedAnswerTimes_' + saveKey);
+                  if (savedAnswerTimes) {
+                      try { selectedAnswerTimes = JSON.parse(savedAnswerTimes); } catch(e){}
+                  }
+              }
                 
                 renderPlayChallenges();
                 saveCurrentPageState("play");
