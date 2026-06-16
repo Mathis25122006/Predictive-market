@@ -12691,6 +12691,139 @@ function formatAdminMoney(value) {
   return Number(value || 0).toFixed(2);
 }
 
+function formatAdminTimelineTime(ts) {
+  const n = Number(ts || 0);
+  if (!Number.isFinite(n) || n <= 0) return "Heure inconnue";
+
+  return new Date(n).toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const events = [];
+  const activePlayers = new Set();
+
+  const getAnswerLabel = (ansIndex) => {
+    const idx = Number(ansIndex);
+    return ch.answers && ch.answers[idx] !== undefined
+      ? ch.answers[idx]
+      : "Réponse inconnue";
+  };
+
+  const pushBetEvent = (player, snap, ev = null) => {
+    const amount = Number(ev?.bet ?? snap.originalStake ?? snap.bet ?? 0);
+    if (!(amount > 0)) return;
+
+    const ansIndex = Number(ev?.ansIndex ?? snap.ansIndex);
+    const eventType = ev?.type || snap.type || "YES";
+    const t = Number(ev?.validatedAt ?? snap.validatedAt ?? sessionConfig.gameStartTime ?? 0);
+
+    activePlayers.add(String(player.name || "Joueur"));
+
+    events.push({
+      kind: "bet",
+      t,
+      playerName: player.name || "Joueur",
+      amount,
+      pts: Number(ev?.pts ?? snap.pts ?? 0),
+      ansLabel: getAnswerLabel(ansIndex),
+      type: eventType,
+      remainingNow: Number(snap.bet || 0)
+    });
+  };
+
+  (game.players || []).forEach(player => {
+    (player.portfolio || [])
+      .filter(snap => Number(snap.cIndex) === Number(cIndex))
+      .forEach(snap => {
+        if (Array.isArray(snap.events) && snap.events.length) {
+          snap.events.forEach(ev => pushBetEvent(player, snap, ev));
+        } else {
+          pushBetEvent(player, snap, null);
+        }
+
+        getAdminCashoutEvents(snap).forEach(ev => {
+          const amount = Number(ev.amount || 0);
+          if (!(amount > 0)) return;
+
+          activePlayers.add(String(player.name || "Joueur"));
+
+          events.push({
+            kind: "cashout",
+            t: Number(ev.validatedAt || snap.validatedAt || sessionConfig.gameStartTime || 0),
+            playerName: player.name || "Joueur",
+            amount,
+            ansLabel: getAnswerLabel(ev.ansIndex ?? snap.ansIndex),
+            valueBeforeCashout: Number(ev.valueBeforeCashout || 0),
+            remainingValue: Number(ev.remainingValue || 0)
+          });
+        });
+      });
+  });
+
+  events.sort((a, b) => a.t - b.t);
+
+  const eventsHtml = events.length
+    ? events.map(ev => {
+        const isCashout = ev.kind === "cashout";
+        const icon = isCashout ? "↩️" : "🎯";
+        const title = isCashout ? "Cash out" : "Mise validée";
+        const color = isCashout ? "#fdba74" : "#93c5fd";
+
+        return `
+          <div style="display:grid; grid-template-columns:74px 1fr; gap:10px; padding:10px 0; border-top:1px dashed rgba(255,255,255,0.10);">
+            <div style="font-size:10px; color:#94a3b8; font-family:monospace; padding-top:2px;">
+              ${formatAdminTimelineTime(ev.t)}
+            </div>
+
+            <div style="border-left:3px solid ${color}; padding-left:10px;">
+              <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
+                <strong style="color:#ffffff; font-size:12px;">${icon} ${title}</strong>
+                <span style="color:${color}; font-size:11px; font-weight:900; white-space:nowrap;">
+                  ${formatAdminMoney(ev.amount)} 💰
+                </span>
+              </div>
+
+              <div style="margin-top:3px; color:#cbd5e1; font-size:11px; line-height:1.35;">
+                <strong>${safe(ev.playerName)}</strong>
+                ${isCashout ? "a retiré de" : "a misé sur"}
+                « ${safe(ev.ansLabel)} »
+              </div>
+
+              <div style="margin-top:4px; color:#94a3b8; font-size:10px; line-height:1.35;">
+                ${isCashout
+                  ? `Valeur avant cash out : ${formatAdminMoney(ev.valueBeforeCashout)} 💰 · reste : ${formatAdminMoney(ev.remainingValue)} 💰`
+                  : `Parts obtenues : ${Number(ev.pts || 0).toFixed(2)} · valeur restante ticket : ${formatAdminMoney(ev.remainingNow)} 💰`
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")
+    : `<div style="padding:10px 0; color:#9ca3af; font-size:11px;"><em>Aucune action enregistrée pour le moment.</em></div>`;
+
+  return `
+    <details id="admin-timeline-${cIndex}" ${isOpen ? "open" : ""} style="margin-top:10px; font-size:11px; color:#9ca3af; border-top:1px solid rgba(55,65,81,0.5); padding-top:8px;">
+      <summary style="cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:10px; align-items:center; background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.18); border-radius:10px; padding:9px 10px; color:#e5e7eb; font-weight:900;">
+        <span>Chronologie des actions</span>
+        <span style="font-size:10px; color:#93c5fd; font-weight:900; white-space:nowrap;">
+          ${events.length} action(s) · ${activePlayers.size} joueur(s)
+        </span>
+      </summary>
+
+      <div style="padding:2px 2px 0 2px;">
+        ${eventsHtml}
+      </div>
+    </details>
+  `;
+}
+
 function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
 
@@ -12794,72 +12927,8 @@ function renderManageDashboard() {
               </div>`;
     }).join('');
 
-    let playersHtml = `<div style="margin-top:10px; font-size:11px; color:#9ca3af; border-top:1px solid rgba(55,65,81,0.5); padding-top:8px;"><strong>Mises des joueurs :</strong><br>`;
-    let hasBets = false;
-    
-    const playersList = game.players || [];
-    playersList.forEach(p => {
-        if (p.portfolio) {
-            const pBets = p.portfolio.filter(b => Number(b.cIndex) === Number(i));
-
-            pBets.forEach(b => {
-                const ansLabel = ch.answers && ch.answers[b.ansIndex]
-                  ? ch.answers[b.ansIndex]
-                  : "Réponse inconnue";
-
-                const originalStake = getAdminEvolutionOriginalStake(b);
-                const currentRemaining = Number(b.bet || 0);
-                const cashouts = getAdminCashoutEvents(b);
-
-                if (originalStake > 0 || cashouts.length > 0) {
-                  hasBets = true;
-
-                  let pctInfo = (b.pctAtBet !== undefined && b.pctAtBet !== null)
-                    ? ` <span style="color:#a855f7; font-size:10px;">(à ${b.pctAtBet}%)</span>`
-                    : "";
-
-                  playersHtml += `
-                    <div style="margin-top:7px; padding:8px 9px; border-radius:10px; background:rgba(59,130,246,0.07); border:1px solid rgba(59,130,246,0.18);">
-                      <div>
-                        <span style="color:#e5e7eb;">• ${p.name}</span>
-                        a misé au départ
-                        <strong style="color:#3b82f6;">${formatAdminMoney(originalStake)} 💰</strong>
-                        sur "${ansLabel}"${pctInfo}
-                      </div>
-
-                      <div style="margin-top:4px; color:#94a3b8; font-size:10px;">
-                        Valeur restante actuelle :
-                        <strong style="color:#cbd5e1;">${formatAdminMoney(currentRemaining)} 💰</strong>
-                      </div>
-                  `;
-
-                  cashouts.forEach(ev => {
-                    const cashoutAmount = Number(ev.amount || 0);
-                    const initialStake = Number(ev.initialStake || originalStake);
-                    const valueBeforeCashout = Number(ev.valueBeforeCashout || 0);
-                    const remainingValue = Number(ev.remainingValue || 0);
-
-                    playersHtml += `
-                      <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(255,255,255,0.12); color:#fdba74;">
-                        ↳ Cash out :
-                        <strong>${formatAdminMoney(cashoutAmount)} 💰 retirés</strong>
-                        <span style="color:#94a3b8;">
-                          · mise départ ${formatAdminMoney(initialStake)} 💰
-                          · valeur avant ${formatAdminMoney(valueBeforeCashout)} 💰
-                          · reste ${formatAdminMoney(remainingValue)} 💰
-                        </span>
-                      </div>
-                    `;
-                  });
-
-                  playersHtml += `</div>`;
-                }
-            });
-        }
-    });
-    
-    if (!hasBets) playersHtml += "<em>Aucune mise enregistrée pour le moment.</em>";
-    playersHtml += `</div>`;
+    const timelineOpen = document.getElementById(`admin-timeline-${i}`)?.open || false;
+    const playersHtml = buildAdminChallengeTimelineHtml(i, ch, timelineOpen);
 
     document.getElementById(`manage-stats-data-${i}`).innerHTML = answersHtml + playersHtml;
   });
