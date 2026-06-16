@@ -5444,6 +5444,17 @@ function updateUrlForScreen(screenId, replace = false) {
   }
 }
 
+function goBack() {
+  // Si nous avons un historique, on récupère le dernier écran et on l'affiche
+  if (screenHistory && screenHistory.length > 0) {
+    const previousScreen = screenHistory.pop();
+    showScreen(previousScreen, true); 
+  } else {
+    // Sinon, par sécurité, on redirige vers l'accueil
+    showScreen('home');
+  }
+}
+
 // NOUVEAU : Fonction de retour en arrière
 function goBackFromJoinPage() {
   const codeStep = document.getElementById("joinCodeStep");
