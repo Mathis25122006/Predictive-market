@@ -8379,7 +8379,15 @@ if (!window.isCardDragging && typeof updatePlayChallengesLive === "function") {
 }
 
 if (needsRefresh && !window.isCardDragging && !shouldFreezeTutoDom) {
+    const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+
+    if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
+      window.lastActiveCIndexBeforeTimerRefresh = Number(activeCard.dataset.cIndex);
+    }
+
     renderPlayChallenges();
+
+    window.lastActiveCIndexBeforeTimerRefresh = null;
 }
   }, 1000);
 }
@@ -8577,6 +8585,23 @@ function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
 
+  // On mémorise la vraie question active AVANT de reconstruire les cartes.
+  // Sinon, quand une question passe de "pending" à "open", le tri peut changer
+  // et window.currentCardIndex peut pointer vers une autre carte.
+  const activeCardBeforeRender = document.querySelector('#challengesPlay .challenge-block.active-card');
+  const activeCIndexBeforeRender =
+    Number.isInteger(Number(window.lastActiveCIndexBeforeTimerRefresh))
+      ? Number(window.lastActiveCIndexBeforeTimerRefresh)
+      : (
+          activeCardBeforeRender && activeCardBeforeRender.dataset && activeCardBeforeRender.dataset.cIndex !== undefined
+            ? Number(activeCardBeforeRender.dataset.cIndex)
+            : (
+                typeof window.getActiveCardChallengeIndex === "function"
+                  ? Number(window.getActiveCardChallengeIndex())
+                  : null
+              )
+        );
+
   // Sur les cartes de questions, le logo doit disparaître.
   updateAppTopLogo("play");
 
@@ -8599,11 +8624,20 @@ const player = (game.players || []).find(p => p.name === game.currentPlayerName)
       ? [rebetSingleIndex]
       : displayIndices;
 
+  // Si le DOM vient d'être reconstruit parce qu'un décompte s'est terminé,
+  // on garde la même question active, même si sa position dans renderIndices a changé.
+  if (!window.isRebetting && Number.isInteger(activeCIndexBeforeRender)) {
+    const restoredCardIndex = renderIndices.map(Number).indexOf(Number(activeCIndexBeforeRender));
+
+    if (restoredCardIndex >= 0) {
+      window.currentCardIndex = restoredCardIndex;
+    }
+  }
+
   if (window.isRebetting) {
     window.currentCardIndex = 0;
     window.maxCardIndexSeen = 0;
   }
-
   // SÉCURITÉ : Si on est en train de glisser une carte, on n'interrompt pas le rendu
   if (window.isCardDragging) return; 
 
