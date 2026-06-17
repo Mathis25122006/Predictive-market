@@ -5750,7 +5750,7 @@ body.has-app-top-logo #playerAuth.join-card {
         <div id="reader" class="join-qr-reader"></div>
 
         <div class="join-qr-hint">
-          Autorisez l’accès à la caméra, puis visez le QR code affiché par l’organisateur.
+          Autorisez l’accès à la caméra, rapprochez légèrement le téléphone, puis placez le QR code au centre du cadre.
         </div>
       </div>
 
@@ -13140,6 +13140,43 @@ function extractSessionCodeFromQR(decodedText) {
     .toUpperCase();
 }
 
+async function tuneQRScannerCameraFocus() {
+  try {
+    const video = document.querySelector("#reader video");
+    const stream = video && video.srcObject;
+    const track = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+
+    if (!track || typeof track.getCapabilities !== "function" || typeof track.applyConstraints !== "function") {
+      return;
+    }
+
+    const capabilities = track.getCapabilities();
+    const advanced = [];
+
+    // Demande un autofocus continu quand le téléphone / navigateur le permet.
+    if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+      advanced.push({ focusMode: "continuous" });
+    } else if (capabilities.focusMode && capabilities.focusMode.includes("auto")) {
+      advanced.push({ focusMode: "auto" });
+    }
+
+    // Petit zoom optique/numérique léger si disponible : aide à isoler le QR code.
+    if (capabilities.zoom) {
+      const minZoom = Number(capabilities.zoom.min || 1);
+      const maxZoom = Number(capabilities.zoom.max || minZoom);
+      const targetZoom = Math.min(maxZoom, Math.max(minZoom, 1.25));
+
+      advanced.push({ zoom: targetZoom });
+    }
+
+    if (advanced.length) {
+      await track.applyConstraints({ advanced });
+    }
+  } catch (e) {
+    console.log("Optimisation focus QR ignorée :", e);
+  }
+}
+
 function startQRScanner() {
   const isTouchDevice = window.matchMedia &&
     window.matchMedia("(hover: none) and (pointer: coarse)").matches;
@@ -13168,13 +13205,24 @@ function startQRScanner() {
   html5QrCode = new Html5Qrcode("reader");
 
   const config = {
-    fps: 10,
-    qrbox: { width: 230, height: 230 },
-    aspectRatio: 1
+    fps: 12,
+    qrbox: { width: 270, height: 270 },
+    aspectRatio: 1,
+    disableFlip: true
+  };
+
+  const cameraConstraints = {
+    facingMode: { ideal: "environment" },
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    focusMode: "continuous",
+    advanced: [
+      { focusMode: "continuous" }
+    ]
   };
 
   html5QrCode.start(
-    { facingMode: "environment" },
+    cameraConstraints,
     config,
     (decodedText) => {
       const code = extractSessionCodeFromQR(decodedText);
@@ -13199,6 +13247,10 @@ function startQRScanner() {
       // Les erreurs de scan image par image sont normales, on les ignore.
     }
   ).then(() => {
+    setTimeout(() => {
+      tuneQRScannerCameraFocus();
+    }, 450);
+
     if (btn) {
       btn.disabled = false;
       btn.textContent = "Arrêter le scanner";
