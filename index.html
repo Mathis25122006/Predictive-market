@@ -8557,6 +8557,17 @@ function startPlayScreenTimers() {
 // --- NOUVEAU : REMPLACEMENT DYNAMIQUE ET INTELLIGENT DES CARTES FUTURES ---
     let indicesModified = false;
     const maxSeen = window.maxCardIndexSeen || 0;
+
+    // NOUVEAU :
+    // si la carte active vient d'être clôturée par l'admin,
+    // on la remplace immédiatement selon la règle demandée.
+    if (
+      !window.isRebetting &&
+      replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestionIndices, now)
+    ) {
+      indicesModified = true;
+      needsRefresh = true;
+    }
     
     for (let i = maxSeen + 1; i < myIndices.length; i++) {
         const cIndex = myIndices[i];
@@ -8619,11 +8630,26 @@ function startPlayScreenTimers() {
     }
     if (indicesModified) {
         player.assignedIndices = myIndices;
-        // CORRECTION : Sauvegarde ciblée (Ne pas utiliser saveToCloud() pour ne pas écraser l'Admin !)
+
+        // CORRECTION : Sauvegarde ciblée
+        // On sauvegarde assignedIndices + recapAssignedIndices,
+        // car la carte active remplacée est déjà entrée dans le récap interne.
         const pIdx = game.players.findIndex(p => p.name === game.currentPlayerName);
+
         if (pIdx !== -1 && window.currentActiveSessionCode) {
-            db.ref('sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx + '/assignedIndices').set(myIndices);
+            const playerUpdates = {
+              assignedIndices: myIndices
+            };
+
+            if (Array.isArray(player.recapAssignedIndices)) {
+              playerUpdates.recapAssignedIndices = player.recapAssignedIndices;
+            }
+
+            db.ref(
+              'sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx
+            ).update(playerUpdates);
         }
+
         needsRefresh = true;
     }
     // ------------------------------------------------------------------
@@ -8685,10 +8711,17 @@ if (!window.isCardDragging && typeof updatePlayChallengesLive === "function") {
 }
 
 if (needsRefresh && !window.isCardDragging && !shouldFreezeTutoDom) {
-    const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+    const pendingReplacementCIndex = window.pendingActiveReplacementCIndex;
 
-    if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
-      window.lastActiveCIndexBeforeTimerRefresh = Number(activeCard.dataset.cIndex);
+    if (Number.isInteger(pendingReplacementCIndex)) {
+      window.lastActiveCIndexBeforeTimerRefresh = pendingReplacementCIndex;
+      window.pendingActiveReplacementCIndex = null;
+    } else {
+      const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+
+      if (activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined) {
+        window.lastActiveCIndexBeforeTimerRefresh = Number(activeCard.dataset.cIndex);
+      }
     }
 
     renderPlayChallenges();
@@ -8790,6 +8823,153 @@ function getPlayerPortfolioQuestionIndices(player) {
   )];
 }
 
+function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protectedQuestionIndices, now) {
+  if (!game || !Array.isArray(game.challenges)) return null;
+
+  const oldIndex = Number(activeCIndex);
+
+  const candidates = game.challenges
+    .map((ch, idx) => {
+      const status = ch ? getEffectiveStatus(ch) : "unknown";
+
+      return {
+        ch,
+        idx: Number(idx),
+        status,
+        startTime: Number(ch && ch.startTime ? ch.startTime : 0),
+        endTime: Number(ch && ch.endTime ? ch.endTime : 0)
+      };
+    })
+    .filter(item => {
+      if (!item.ch || !Number.isInteger(item.idx)) return false;
+      if (item.idx === oldIndex) return false;
+
+      // On évite de reproposer une question déjà vue / protégée.
+      if (protectedQuestionIndices && protectedQuestionIndices.has(item.idx)) return false;
+
+      return item.status === "open" || item.status === "pending";
+    });
+
+  // Priorité 1 :
+  // une question déjà ouverte, mais qui reste jouable plus d'une minute.
+  const safeOpenQuestions = candidates
+    .filter(item => item.status === "open" && (item.endTime - now) > 60000)
+    .sort((a, b) => {
+      const endDiff = a.endTime - b.endTime;
+      if (endDiff !== 0) return endDiff;
+      return a.idx - b.idx;
+    });
+
+  if (safeOpenQuestions.length) {
+    return safeOpenQuestions[0].idx;
+  }
+
+  // Priorité 2 :
+  // sinon, la question qui va s'ouvrir le plus rapidement.
+  const soonestPendingQuestions = candidates
+    .filter(item => item.status === "pending")
+    .sort((a, b) => {
+      const startDiff = a.startTime - b.startTime;
+      if (startDiff !== 0) return startDiff;
+      return a.idx - b.idx;
+    });
+
+  if (soonestPendingQuestions.length) {
+    return soonestPendingQuestions[0].idx;
+  }
+
+  return null;
+}
+
+function replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestionIndices, now) {
+  if (!player || !Array.isArray(myIndices)) return false;
+  if (!game || !Array.isArray(game.challenges)) return false;
+
+  const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
+    ? window.getActiveCardChallengeIndex()
+    : myIndices[window.currentCardIndex];
+
+  const oldIndex = Number(activeCIndex);
+  if (!Number.isInteger(oldIndex)) return false;
+
+  const oldChallenge = game.challenges[oldIndex];
+  if (!oldChallenge) return false;
+
+  const oldStatus = getEffectiveStatus(oldChallenge);
+
+  // On ne remplace que si la question active n'est plus jouable.
+  if (oldStatus === "open" || oldStatus === "pending") return false;
+
+  // Sécurité : si le joueur a déjà validé une mise sur cette question,
+  // on la garde dans son parcours/récap.
+  const alreadyValidated = player.portfolio && player.portfolio.some(b =>
+    isActivePortfolioBetForChallenge(b, oldIndex, oldChallenge, { requireOpen: false })
+  );
+
+  if (alreadyValidated) return false;
+
+  const replacementIndex = chooseReplacementForClosedActiveQuestion(
+    oldIndex,
+    player,
+    protectedQuestionIndices,
+    now
+  );
+
+  if (!Number.isInteger(replacementIndex)) return false;
+
+  // On nettoie les brouillons de réponse/mise de l'ancienne question clôturée.
+  if (typeof clearUnopenedQuestionDraft === "function") {
+    clearUnopenedQuestionDraft(oldIndex);
+  }
+
+  // Remplacement dans la main du joueur.
+  const assignedPosition = myIndices.map(Number).indexOf(oldIndex);
+
+  if (assignedPosition >= 0) {
+    myIndices[assignedPosition] = replacementIndex;
+  } else {
+    const insertAt = Math.max(0, Number(window.currentCardIndex || 0));
+    myIndices.splice(insertAt, 0, replacementIndex);
+  }
+
+  // Déduplication en conservant l'ordre.
+  const cleanAssigned = [...new Set(
+    myIndices
+      .map(Number)
+      .filter(i => Number.isInteger(i) && game.challenges[i])
+  )];
+
+  myIndices.splice(0, myIndices.length, ...cleanAssigned);
+
+  // Remplacement aussi dans le récap interne,
+  // sinon l'ancienne carte clôturée peut rester rendue à l'écran.
+  const recap = Array.isArray(player.recapAssignedIndices)
+    ? player.recapAssignedIndices.map(Number)
+    : [];
+
+  const recapPosition = recap.indexOf(oldIndex);
+
+  if (recapPosition >= 0) {
+    recap[recapPosition] = replacementIndex;
+  } else {
+    recap.push(replacementIndex);
+  }
+
+  player.recapAssignedIndices = [...new Set(
+    recap.filter(i => Number.isInteger(i) && game.challenges[i])
+  )];
+
+  if (protectedQuestionIndices) {
+    protectedQuestionIndices.delete(oldIndex);
+    protectedQuestionIndices.add(replacementIndex);
+  }
+
+  // Au prochain render, on force la carte active à devenir la remplaçante.
+  window.pendingActiveReplacementCIndex = replacementIndex;
+
+  return true;
+}
+
 function getPlayerRecapIndices(player) {
   if (!player) return [];
 
@@ -8806,6 +8986,8 @@ function getPlayerRecapIndices(player) {
 
   return Number.isFinite(limit) ? merged.slice(0, limit) : merged;
 }
+
+
 
 function savePlayerRecapIndices(player) {
   if (!player || !window.currentActiveSessionCode) return;
@@ -9082,7 +9264,7 @@ const hintText = currentPlayerMode === 'easy'
 const cardIsActionable = effStatus === "open";
 
 const btnHtml = !cardIsActionable
-   ? `<button type="button" disabled style="background: rgba(255,255,255,0.18); color: #ffffff; opacity:0.55; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Question verrouillée</button>${hintText}`
+   ? `<button type="button" data-skip-locked-card="1" onclick="skipLockedCardForLater()" style="background: rgba(255,255,255,0.92); color: #000000; border-radius: 999px; font-weight: 900; letter-spacing: 0.04em; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 24px rgba(255,255,255,0.22); font-size:clamp(12px, 1.7vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Revenir sur cette carte plus tard</button>${hintText}`
    : window.isRebetting
       ? `<button onclick="finishRebetAndReturnToRecap()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
       : isLastCard
@@ -9099,7 +9281,7 @@ const btnHtml = !cardIsActionable
     block.appendChild(footer);
     
     // --- NOUVEAU : Effet de flou mystère si la carte est en attente ---
-    if (effStatus === "pending") {
+if (effStatus === "pending") {
         // On récupère tout le design de la vraie carte qui vient d'être générée
         const realCardContent = block.innerHTML;
         
@@ -9108,9 +9290,29 @@ const btnHtml = !cardIsActionable
                 ${realCardContent}
             </div>
             
-            <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; pointer-events:none;">
-                <div style="font-size:20px; font-weight:800; color:#ffffff; text-shadow:0 4px 15px rgba(0,0,0,1); text-align:center; padding:0 20px; letter-spacing:1px;">La question ouvre dans</div>
-                <div id="pending-timer-${cIndex}" style="font-size:55px; font-weight:900; color:#3b82f6; font-family:monospace; margin-top:15px; text-shadow:0 0 25px rgba(59,130,246,1), 0 4px 10px rgba(0,0,0,0.8);">${cardTimerText}</div>
+            <div style="position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:10; padding:22px; box-sizing:border-box; pointer-events:none;">
+                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%;">
+                  <div style="font-size:20px; font-weight:800; color:#ffffff; text-shadow:0 4px 15px rgba(0,0,0,1); text-align:center; padding:0 20px; letter-spacing:1px;">
+                    La question ouvre dans
+                  </div>
+
+                  <div id="pending-timer-${cIndex}" style="font-size:55px; font-weight:900; color:#3b82f6; font-family:monospace; margin-top:15px; text-shadow:0 0 25px rgba(59,130,246,1), 0 4px 10px rgba(0,0,0,0.8);">
+                    ${cardTimerText}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  data-skip-locked-card="1"
+                  onclick="skipLockedCardForLater()"
+                  style="pointer-events:auto; background:#ffffff; color:#000000; border-radius:999px; font-weight:900; letter-spacing:0.04em; padding:clamp(14px, 1.8vh, 18px); width:100%; box-shadow:0 0 28px rgba(255,255,255,0.28); font-size:clamp(12px, 1.7vh, 14px); text-transform:uppercase; border:none; margin:0;"
+                >
+                  Revenir sur cette carte plus tard
+                </button>
+
+                <div style="text-align:center; color:#ffffff; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.55;">
+                  ↑
+                </div>
             </div>
         `;
     }
@@ -9204,16 +9406,13 @@ if (!ch || effStatus !== "open") {
     // Une question non ouverte ne doit jamais conserver une sélection ou une mise brouillon.
     clearUnopenedQuestionDraft(cIndex);
 
-    // En mode facile, une carte non ouverte ne peut jamais être passée.
-    // Le joueur doit attendre que la question soit ouverte.
-    if (currentPlayerMode === 'easy') {
-        showQuestionNotOpenMessage(ch);
-        return false;
-    }
-
-    // En mode avancé uniquement, on garde l'ancienne exception :
-    // le swipe peut passer une carte non ouverte.
+    // Mode facile ET mode avancé :
+    // le joueur peut passer une carte pas encore ouverte pour y revenir plus tard.
     if (allowLockedSwipe) {
+        if (Number.isInteger(Number(cIndex)) && typeof rememberQuestionInPlayerRecap === "function") {
+            rememberQuestionInPlayerRecap(Number(cIndex));
+        }
+
         return true;
     }
 
@@ -9240,6 +9439,38 @@ if (currentPlayerMode === 'easy') {
       // Mode avancé : on autorise toujours le passage
       return true;
   };
+
+  window.skipLockedCardForLater = function() {
+  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+  const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+
+  const cIndex =
+    activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined
+      ? Number(activeCard.dataset.cIndex)
+      : (
+          typeof window.getActiveCardChallengeIndex === "function"
+            ? Number(window.getActiveCardChallengeIndex())
+            : null
+        );
+
+  if (Number.isInteger(cIndex)) {
+    clearUnopenedQuestionDraft(cIndex);
+
+    if (typeof rememberQuestionInPlayerRecap === "function") {
+      rememberQuestionInPlayerRecap(cIndex);
+    }
+  }
+
+  if (window.currentCardIndex < cards.length - 1) {
+    if (typeof window.swipeNextCard === "function") {
+      window.swipeNextCard();
+    }
+  } else {
+    if (typeof playNext === "function") {
+      playNext();
+    }
+  }
+};
 
 window.swipeNextCard = function() {
     const domActiveCard = document.querySelector('#challengesPlay .challenge-block.active-card');
@@ -9597,6 +9828,12 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
   // CORRECTION : Écouteur de clics permissif, mais il ne doit jamais intercepter
   // un vrai clic sur réponse ou bouton.
 containerEl.addEventListener('click', (e) => {
+      // Le bouton "Revenir sur cette carte plus tard" doit rester cliquable
+      // même si la question n'est pas encore ouverte.
+      if (e.target.closest('[data-skip-locked-card="1"]')) {
+          return;
+      }
+
       const activeCIndex = getCurrentActiveCardCIndex();
 
       if (!isChallengeOpenForPlayerAction(activeCIndex, { message: true })) {
@@ -10718,9 +10955,9 @@ function playNext() {
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const totalCards = document.querySelectorAll('#challengesPlay .challenge-block').length;
 
-    // Sécurité mode facile : même sur la dernière carte, impossible de passer/valider
-    // si la question courante n'est pas encore ouverte.
-    if (currentPlayerMode === 'easy' && !window.isRebetting) {
+    // Une carte pas encore ouverte peut maintenant être passée,
+    // même en mode facile, pour permettre au joueur d'y revenir plus tard.
+    if (!window.isRebetting) {
         const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
           ? window.getActiveCardChallengeIndex()
           : myIndices[window.currentCardIndex];
@@ -10729,8 +10966,10 @@ function playNext() {
 
         if (!activeChallenge || getEffectiveStatus(activeChallenge) !== "open") {
             clearUnopenedQuestionDraft(activeCIndex);
-            showQuestionNotOpenMessage(activeChallenge);
-            return;
+
+            if (Number.isInteger(Number(activeCIndex)) && typeof rememberQuestionInPlayerRecap === "function") {
+              rememberQuestionInPlayerRecap(Number(activeCIndex));
+            }
         }
     }
 
@@ -14409,6 +14648,35 @@ if (diff <= 0) {
       // Affichage propre (cache les heures s'il reste moins d'1h)
       timerEl.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
     }
+        let recapNeedsRefresh = false;
+
+    document.querySelectorAll("[data-recap-pending-timer]").forEach(el => {
+      const cIndex = Number(el.getAttribute("data-recap-pending-timer"));
+      const ch = game && game.challenges ? game.challenges[cIndex] : null;
+
+      if (!ch) return;
+
+      const effStatus = getEffectiveStatus(ch);
+
+      if (effStatus === "open") {
+        recapNeedsRefresh = true;
+        return;
+      }
+
+      if (effStatus === "pending") {
+        const diffToOpen = Number(ch.startTime || 0) - Date.now();
+
+        if (diffToOpen <= 0) {
+          recapNeedsRefresh = true;
+        } else {
+          el.textContent = formatRecapCountdown(diffToOpen);
+        }
+      }
+    });
+
+    if (recapNeedsRefresh && game.currentPlayerName && typeof updateRecapUI === "function") {
+      setTimeout(() => updateRecapUI(game.currentPlayerName), 0);
+    }
   };
 
   // 1. On force l'affichage IMMÉDIAT du temps (corrige le bug du --:--:--)
@@ -14598,9 +14866,92 @@ const stats = typeof getQuestionBettorStats === "function"
   `;
 }
 
-// Fonction interne pour mettre à jour les chiffres en temps réel
-// Fonction interne pour mettre à jour les chiffres en temps réel
-// Fonction interne pour mettre à jour les chiffres en temps réel
+function formatRecapCountdown(diff) {
+  const safeDiff = Math.max(0, Number(diff || 0));
+  const h = Math.floor(safeDiff / 3600000);
+  const m = Math.floor((safeDiff % 3600000) / 60000);
+  const s = Math.floor((safeDiff % 60000) / 1000);
+
+  return `${h > 0 ? h.toString().padStart(2, "0") + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+  const sessionClosedForRecap =
+    typeof isSessionTradingClosed === "function"
+      ? isSessionTradingClosed()
+      : (
+          Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt)) > 0 &&
+          Date.now() >= Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt))
+        );
+
+  const canTradeQuestion = effStatus === "open" && !sessionClosedForRecap;
+  const isPending = effStatus === "pending";
+  const pendingDiff = Number(ch.startTime || 0) - Date.now();
+
+  const cardAttrs = canTradeQuestion
+    ? `data-recap-jump-cindex="${cIndex}" style="border-left:3px solid #3b82f6; cursor:pointer;"`
+    : `style="border-left:3px solid ${isPending ? "#fbbf24" : "#64748b"}; opacity:${isPending ? "1" : "0.72"}; cursor:default;"`;
+
+  const statusHtml = isPending
+    ? `
+      <div style="margin-top:10px; background:rgba(251,191,36,0.10); border:1px solid rgba(251,191,36,0.35); padding:10px 12px; border-radius:12px;">
+        <div style="font-size:10px; color:#fde68a; font-weight:950; text-transform:uppercase; letter-spacing:0.06em;">
+          ⏳ Cette carte va bientôt s’ouvrir
+        </div>
+        <div
+          id="recap-pending-timer-${cIndex}"
+          data-recap-pending-timer="${cIndex}"
+          style="margin-top:5px; font-size:22px; color:#fbbf24; font-weight:950; font-family:monospace;"
+        >
+          ${formatRecapCountdown(pendingDiff)}
+        </div>
+      </div>
+    `
+    : canTradeQuestion
+      ? `
+        <div style="margin-top:10px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.38); padding:10px 12px; border-radius:12px;">
+          <div style="font-size:11px; color:#93c5fd; font-weight:950; text-transform:uppercase;">
+            👆 Touchez cette carte pour miser maintenant
+          </div>
+        </div>
+      `
+      : `
+        <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:10px 12px; border-radius:12px;">
+          <div style="font-size:11px; color:#cbd5e1; font-weight:950; text-transform:uppercase;">
+            🔒 ${effStatus === "resolved" ? "Résultat promulgué" : "Mises closes"}
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:3px;">
+            Vous ne pouvez plus miser sur cette question.
+          </div>
+        </div>
+      `;
+
+  return `
+    <div class="challenge-block" ${cardAttrs}>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">
+          ${safe(ch.category)}
+        </div>
+
+        <div style="font-size:10px; color:${isPending ? "#fbbf24" : canTradeQuestion ? "#3b82f6" : "#94a3b8"}; font-weight:900; text-transform:uppercase;">
+          ${isPending ? "À venir" : canTradeQuestion ? "Ouverte" : "Indisponible"}
+        </div>
+      </div>
+
+      <div class="challenge-title" style="margin-top:6px;">
+        ${safe(ch.question)}
+      </div>
+
+      <div style="margin-top:8px; font-size:12px; color:#9ca3af;">
+        Pas encore de mise sur cette question.
+      </div>
+
+      ${statusHtml}
+    </div>
+  `;
+}
+
 function updateRecapUI(pseudo) {
   let player = (game.players || []).find(p => p.name === pseudo) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === pseudo ? window.localPlayerSnapshot : null);
   if (!player) {
@@ -14620,9 +14971,23 @@ function updateRecapUI(pseudo) {
 
   const chartsTitle = document.querySelector("#playerRecap h3");
   const chartsContainer = document.getElementById("recapChartsContainer");
+
+  const recapIndicesForDisplay = typeof getPlayerRecapIndices === "function"
+    ? getPlayerRecapIndices(player)
+    : [
+        ...new Set([
+          ...((player && Array.isArray(player.recapAssignedIndices)) ? player.recapAssignedIndices : []),
+          ...((player && Array.isArray(player.portfolio)) ? player.portfolio.map(b => Number(b.cIndex)) : [])
+        ])
+      ]
+        .map(Number)
+        .filter(i => Number.isInteger(i) && game.challenges && game.challenges[i]);
+
+  const hasRecapQuestionsToShow = recapIndicesForDisplay.length > 0;
   
-  // GESTION DE L'ÉTAT VIDE (Aucun pari)
-  if (!player.portfolio || player.portfolio.length === 0) {
+  // GESTION DE L'ÉTAT VIDE
+  // On affiche l'état vide uniquement s'il n'y a ni mise, ni carte mémorisée pour plus tard.
+  if ((!player.portfolio || player.portfolio.length === 0) && !hasRecapQuestionsToShow) {
     if (chartsTitle) chartsTitle.style.display = "none";
     if (chartsContainer) chartsContainer.style.display = "none";
     
@@ -14746,7 +15111,7 @@ const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
     <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
   `;
 
-  const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+  const myIndices = recapIndicesForDisplay;
 
   myIndices.forEach(cIndex => {
     const ch = game.challenges[cIndex];
@@ -14959,6 +15324,8 @@ const selectedValueColor = isResolvedQuestion
             </div>
           </div>
         `;
+      } else {
+        finalHtml += buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus);
       }
 } else {
         const sessionClosedForRecap =
@@ -15135,38 +15502,7 @@ snaps.forEach(snap => {
             </div>
           `;
         } else {
-        const emptyCardAttrs = canTradeQuestion
-          ? `data-recap-jump-cindex="${cIndex}" style="border-left: 3px solid #64748b; opacity:0.85; cursor:pointer;"`
-          : `style="border-left: 3px solid #64748b; opacity:0.65; cursor:default;"`;
-          finalHtml += `
-            <div class="challenge-block" ${emptyCardAttrs}>
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-                <button onclick="event.stopPropagation(); toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
-              </div>
-
-              <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
-
-              <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
-                <div style="margin-top:8px; font-size:12px; font-style:italic; color:#9ca3af;">Pas de mise sur cette question</div>
-
-                ${
-                  canTradeQuestion
-                    ? `<div style="margin-top:8px; font-size:11px; color:#3b82f6; font-weight:bold;">👆 Cliquez pour parier</div>`
-                    : `
-                      <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:8px 10px; border-radius:8px;">
-                        <div style="font-size:11px; color:#cbd5e1; font-weight:900; text-transform:uppercase;">🔒 ${lockTitle}</div>
-                        <div style="font-size:11px; color:#94a3b8; margin-top:3px;">Vous ne pouvez plus parier sur cette question.</div>
-                      </div>
-                    `
-                }
-              </div>
-
-              <div id="details-ch-${cIndex}" class="${advancedDetailsClass}" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.2); padding-top:10px;">
-                ${advancedDetailsHtml}
-              </div>
-            </div>
-          `;
+        finalHtml += buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus);
       }
     }
   });
@@ -15714,14 +16050,11 @@ function goToPlayScreen() {
 }
 
 window.goToSpecificCard = function(cIndex) {
-    // En mode Facile, une réponse validée est définitive : aucun retour possible.
-    if (currentPlayerMode === 'easy') return;
-
     cIndex = Number(cIndex);
 
     const ch = game && game.challenges ? game.challenges[cIndex] : null;
     if (!ch || getEffectiveStatus(ch) !== "open") {
-        showPlayerTradeClosedMessage("Les mises sont closes pour cette question : vous ne pouvez plus parier ni faire de cash out.");
+        showPlayerTradeClosedMessage("Cette question n'est pas encore ouverte ou les mises sont closes.");
         return;
     }
 
@@ -15734,14 +16067,31 @@ window.goToSpecificCard = function(cIndex) {
           : null
       );
 
-    const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
+    if (currentPlayerMode === "easy") {
+      const alreadyValidated = player && player.portfolio && player.portfolio.some(b =>
+        isActivePortfolioBetForChallenge(b, cIndex, ch, { requireOpen: false })
+      );
+
+      if (alreadyValidated) {
+        showPlayerTradeClosedMessage("Votre réponse est déjà validée pour cette question.");
+        return;
+      }
+    }
+
+    const myIndices = typeof getPlayerRecapIndices === "function"
+      ? getPlayerRecapIndices(player)
+      : ((player && player.assignedIndices) ? player.assignedIndices : []);
+
     const displayIndices = typeof window.getPlayerDisplayIndices === "function"
-      ? window.getPlayerDisplayIndices(player)
+      ? window.getPlayerDisplayIndices({
+          ...(player || {}),
+          assignedIndices: myIndices
+        })
       : myIndices;
 
-    const cardPos = displayIndices.indexOf(cIndex);
+    const cardPos = displayIndices.map(Number).indexOf(cIndex);
 
-    if (cardPos === -1) {
+    if (cardPos === -1 && !window.isRebetting) {
       showPlayerTradeClosedMessage("Cette question n'est pas disponible dans votre session joueur.");
       return;
     }
@@ -16906,6 +17256,26 @@ function updateBsStatsOnly() {
   const bsStats = document.getElementById("bsStats");
   if (!bsStats || !game) return;
 
+  const isWaitingForResults = game.challenges && game.challenges.length > 0 &&
+    game.challenges.every(ch => ch.status === "resolved") &&
+    !game.isResolved;
+
+const hasLinkedNextSession = !!(sessionConfig && sessionConfig.nextSessionCode);
+
+// Pas de QR ni de suppression des stats pendant l'attente de promulgation.
+// Seulement après publication officielle du classement final.
+const isFinalBigScreen = game.isResolved;
+
+if (hasLinkedNextSession && isFinalBigScreen) {
+    bsStats.classList.remove("bs-stats-card");
+    bsStats.style.display = "none";
+    bsStats.innerHTML = "";
+    return;
+  }
+
+  bsStats.classList.add("bs-stats-card");
+  bsStats.style.display = "";
+
   const playersCount = (game.players || []).length;
   const predictionsCount = (game.players || []).reduce((sum, p) => {
     return sum + ((p.portfolio || []).filter(b => Number(b.bet || 0) > 0).length);
@@ -17407,24 +17777,49 @@ const poolTotal = (game.players || []).reduce((sum, p) => {
 }, 0);
 
 const bsStats = document.getElementById("bsStats");
+const bsNextSessionHeader = document.getElementById("bsNextSessionHeaderContainer");
+
+const hasLinkedNextSession = !!(sessionConfig && sessionConfig.nextSessionCode);
+
+// Le QR de la session suivante n'apparaît que quand les résultats finaux
+// ont été officiellement promulgués.
+const isFinalBigScreen = game.isResolved;
+const shouldShowNextSessionOnly = hasLinkedNextSession && isFinalBigScreen;
+
 if (bsStats) {
-bsStats.innerHTML = `
-  <div class="bs-stat">
-    <div class="bs-stat-icon">♙</div>
-    <strong>${playersCount.toLocaleString('fr-FR')}</strong>
-    <span>participants</span>
-  </div>
-  <div class="bs-stat">
-    <div class="bs-stat-icon">↗</div>
-    <strong>${predictionsCount.toLocaleString('fr-FR')}</strong>
-    <span>prédictions</span>
-  </div>
-  <div class="bs-stat">
-    <div class="bs-stat-icon">💰</div>
-    <strong>${poolTotal.toLocaleString('fr-FR')}</strong>
-    <span>pool total</span>
-  </div>
-`;
+  if (shouldShowNextSessionOnly) {
+    // En affichage final, si une session suivante est liée,
+    // on retire totalement les stats ET leur cadre.
+    bsStats.classList.remove("bs-stats-card");
+    bsStats.style.display = "none";
+    bsStats.innerHTML = "";
+  } else {
+    bsStats.classList.add("bs-stats-card");
+    bsStats.style.display = "";
+    bsStats.innerHTML = `
+      <div class="bs-stat">
+        <div class="bs-stat-icon">♙</div>
+        <strong>${playersCount.toLocaleString('fr-FR')}</strong>
+        <span>participants</span>
+      </div>
+      <div class="bs-stat">
+        <div class="bs-stat-icon">↗</div>
+        <strong>${predictionsCount.toLocaleString('fr-FR')}</strong>
+        <span>prédictions</span>
+      </div>
+      <div class="bs-stat">
+        <div class="bs-stat-icon">💰</div>
+        <strong>${poolTotal.toLocaleString('fr-FR')}</strong>
+        <span>pool total</span>
+      </div>
+    `;
+  }
+}
+
+if (shouldShowNextSessionOnly) {
+  renderNextSessionQR();
+} else if (bsNextSessionHeader) {
+  bsNextSessionHeader.innerHTML = "";
 }
       const bsGridEl = document.querySelector(".bs-grid");
       if (bsGridEl) bsGridEl.classList.toggle("bs-grid-final", game.isResolved || isWaitingForResults);
@@ -17654,12 +18049,9 @@ if (bsRightWaiting) {
   bsRightWaiting.innerHTML = "";
 }
 
-// On génère la prochaine session en haut à droite
-if (sessionConfig.nextSessionCode) {
-    renderNextSessionQR();
-} else {
-    document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
-}
+// Pendant l'attente de promulgation, on ne montre pas encore
+// le QR de la session suivante.
+document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
 
 const resolvedCount = (game.challenges || []).filter(ch => ch.correct !== undefined && ch.correct !== null).length;
 const totalChallengesCount = (game.challenges || []).length;
@@ -18526,15 +18918,50 @@ function updateBsTimers() {
   }
   // 3. MISE À JOUR DU CHRONO DE LA PROCHAINE SESSION
   const nextTimerEl = document.getElementById("bsNextSessionTimer");
-  if (nextTimerEl && sessionConfig.nextSessionStartTime) {
-     const nextDiff = sessionConfig.nextSessionStartTime - Date.now();
-     if (nextDiff <= 0) {
-        nextTimerEl.textContent = "EN COURS";
+  const nextTimerLabelEl = document.getElementById("bsNextSessionTimerLabel");
+
+  if (nextTimerEl && sessionConfig.nextSessionCode) {
+     const nextStart = Number(sessionConfig.nextSessionStartTime || 0);
+     const nextEnd = Number(sessionConfig.nextSessionEndTime || 0);
+     const nowNext = Date.now();
+
+     const formatCountdown = (diff) => {
+        const safeDiff = Math.max(0, diff);
+        const h = Math.floor(safeDiff / 3600000);
+        const m = Math.floor((safeDiff % 3600000) / 60000);
+        const s = Math.floor((safeDiff % 60000) / 1000);
+
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+     };
+
+     if (nextStart && nowNext < nextStart) {
+        if (nextTimerLabelEl) {
+          nextTimerLabelEl.textContent = "Session suivante commence dans";
+        }
+
+        nextTimerEl.textContent = formatCountdown(nextStart - nowNext);
+        nextTimerEl.style.color = "#10b981";
+     } else if (nextEnd && nowNext < nextEnd) {
+        if (nextTimerLabelEl) {
+          nextTimerLabelEl.textContent = "Session suivante se termine dans";
+        }
+
+        nextTimerEl.textContent = formatCountdown(nextEnd - nowNext);
+        nextTimerEl.style.color = "#fbbf24";
+     } else if (nextEnd && nowNext >= nextEnd) {
+        if (nextTimerLabelEl) {
+          nextTimerLabelEl.textContent = "Session suivante";
+        }
+
+        nextTimerEl.textContent = "TERMINÉE";
+        nextTimerEl.style.color = "#fb7185";
      } else {
-        const h = Math.floor(nextDiff / 3600000);
-        const m = Math.floor((nextDiff % 3600000) / 60000);
-        const s = Math.floor((nextDiff % 60000) / 1000);
-        nextTimerEl.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (nextTimerLabelEl) {
+          nextTimerLabelEl.textContent = "Session suivante";
+        }
+
+        nextTimerEl.textContent = "EN COURS";
+        nextTimerEl.style.color = "#fbbf24";
      }
   }
 }
@@ -18925,8 +19352,12 @@ function linkNextSession() {
         
         const nextConfig = snap.val();
         sessionConfig.nextSessionCode = input;
-        // On sauvegarde l'heure de début pour le chronomètre du grand écran
-        sessionConfig.nextSessionStartTime = nextConfig.gameStartTime || Date.now(); 
+
+        // On sauvegarde le début ET la fin pour gérer les deux cas :
+        // - session suivante pas encore commencée ;
+        // - session suivante déjà commencée.
+        sessionConfig.nextSessionStartTime = Number(nextConfig.gameStartTime || Date.now());
+        sessionConfig.nextSessionEndTime = Number(nextConfig.gameEndTime || nextConfig.expiresAt || 0);
         
         saveToCloud(); // On enregistre ce lien dans la session ACTUELLE
         
@@ -18934,8 +19365,9 @@ function linkNextSession() {
         if (sessionConfig.mode === 'both' && window.isCommonManagement) {
             const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
             if (otherCode) {
-                db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionCode').set(input);
-                db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionStartTime').set(sessionConfig.nextSessionStartTime);
+            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionCode').set(input);
+            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionStartTime').set(sessionConfig.nextSessionStartTime);
+            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionEndTime').set(sessionConfig.nextSessionEndTime || 0);
             }
         }
 
@@ -18949,21 +19381,44 @@ function linkNextSession() {
 
 function renderNextSessionQR() {
     if (!sessionConfig.nextSessionCode) return;
+
+    const container = document.getElementById("bsNextSessionHeaderContainer");
+    if (!container) return;
     
-const nextUrl = getPlayerJoinUrl(sessionConfig.nextSessionCode);
-const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(nextUrl)}`;
+    const nextUrl = getPlayerJoinUrl(sessionConfig.nextSessionCode);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(nextUrl)}`;
     
-    // CORRECTION : Rendu compact inséré en haut à droite, symétrique au bloc de gauche
-    document.getElementById("bsNextSessionHeaderContainer").innerHTML = `
-       <div style="display:flex; align-items:center; gap:20px; background:rgba(255,255,255,0.05); padding:12px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); text-align:right;">
+    container.innerHTML = `
+       <div style="display:flex; align-items:center; gap:20px; padding:0; text-align:right;">
           <div>
-            <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">Prochaine Session</div>
-            <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.nextSessionCode}</div>
-            <div id="bsNextSessionTimer" style="font-size:13px; font-weight:800; font-family:monospace; color:#10b981; margin-top:2px;">--:--:--</div>
+            <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">
+              Prochaine Session
+            </div>
+
+            <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">
+              ${sessionConfig.nextSessionCode}
+            </div>
+
+            <div
+              id="bsNextSessionTimerLabel"
+              style="font-size:10px; color:#8ff5c7; text-transform:uppercase; font-weight:900; margin-top:3px; letter-spacing:0.05em;"
+            >
+              Session suivante commence dans
+            </div>
+
+            <div
+              id="bsNextSessionTimer"
+              style="font-size:13px; font-weight:800; font-family:monospace; color:#10b981; margin-top:2px;"
+            >
+              --:--:--
+            </div>
           </div>
-          <img src="${qrUrl}" style="width:100px; height:100px; border:4px solid white; border-radius:12px;">
+
+          <img src="${qrUrl}" style="width:124px; height:124px; border:5px solid white; border-radius:14px; background:#fff;">
        </div>
     `;
+
+    updateBsTimers();
 }
 
 
