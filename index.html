@@ -5073,6 +5073,412 @@ body.has-app-top-logo #playerAuth.join-card {
   min-height: 210px;
 }
 
+/* =========================================================
+   CLEAN UI — GRAND ÉCRAN / FINAL
+   Suppression des cadres décoratifs inutiles
+   ========================================================= */
+
+/* 1. Suppression du cadre "Session terminée" / code session */
+.bs-session-pill,
+.bs-session-pill.is-ended {
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.bs-session-pill span:first-child,
+.bs-session-pill.is-ended span:first-child {
+  color: #a7adc8 !important;
+}
+
+.bs-session-pill span:last-child,
+.bs-session-pill.is-ended span:last-child {
+  color: #ffffff !important;
+}
+
+/* 2. Suppression du cadre autour du QR code principal */
+.bs-code-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.bs-code-card img {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* 3. Suppression du cadre autour du QR code de session suivante */
+#bsNextSessionHeaderContainer > div {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+#bsNextSessionHeaderContainer img {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* 4. En final : les grandes colonnes ne doivent plus ressembler à des cartes */
+.bs-grid-final #bsLeft,
+.bs-grid-final #bsMiddle,
+.bs-grid-final #bsRight {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 5. Suppression du cadre "Récapitulatif des résultats" */
+.bs-grid-final #bsMiddle .bs-final-results-stage > .bs-final-board-head {
+  display: none !important;
+}
+
+.bs-grid-final #bsMiddle .bs-final-results-stage {
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+
+/* 6. Suppression des cadres d'en-tête inutiles du classement */
+.bs-grid-final .bs-final-board-head {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.bs-final-board-kicker {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.bs-final-board-subtitle {
+  display: none !important;
+}
+
+/* 7. Classement final : lignes plus sobres, sans cartes */
+.bs-final-rank-row,
+.bs-final-rank-row.top-1,
+.bs-final-rank-row.top-2,
+.bs-final-rank-row.top-3 {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.bs-final-rank-row:last-child {
+  border-bottom: 0 !important;
+}
+
+/* Badge sans cadre */
+.bs-final-rank-badge,
+.bs-final-rank-row.top-1 .bs-final-rank-badge,
+.bs-final-rank-row.top-2 .bs-final-rank-badge,
+.bs-final-rank-row.top-3 .bs-final-rank-badge {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* 8. Suppression du cadre autour des crédits / scores */
+.bs-final-rank-score,
+.final-score-pill {
+  height: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #bfdbfe !important;
+}
+
+/* 9. Cartes du récap final : on garde le contenu, on enlève le contenant visuel */
+.bs-final-question-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: clamp(8px, 0.9vw, 14px) !important;
+}
+
+/* Les réponses restent lisibles, mais sans cadres lourds */
+.bs-final-answer-row {
+  background: rgba(255,255,255,0.025) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.bs-final-answer-row.correct {
+  background: rgba(34,197,94,0.075) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 10. Suppression des cadres génériques autour des stats */
+.bs-stats-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Séparations internes plus discrètes */
+.bs-stat {
+  border-right-color: rgba(255,255,255,0.06) !important;
+}
+/* =========================================================
+   CLEAN UI — CADRES PRINCIPAUX CONSERVÉS EN ÉCRAN FINAL
+   On garde un cadre global autour du classement et des résultats
+   ========================================================= */
+
+.bs-grid-final #bsLeft,
+.bs-grid-final #bsMiddle {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.022)),
+    rgba(9, 14, 32, 0.74) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  border-radius: 30px !important;
+  box-shadow:
+    0 24px 70px rgba(0,0,0,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.07) !important;
+  padding: clamp(18px, 1.45vw, 28px) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.bs-grid-final #bsLeft {
+  padding-left: clamp(14px, 1.1vw, 22px) !important;
+  padding-right: clamp(14px, 1.1vw, 22px) !important;
+}
+
+/* Le panneau de droite reste retiré en écran final */
+.bs-grid-final #bsRight {
+  display: none !important;
+}
+
+/* On garde les cadres principaux, mais pas les petits cadres internes inutiles */
+.bs-grid-final .bs-final-board-head {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Le bloc des résultats finaux retrouve un peu d'air à l'intérieur du cadre */
+.bs-grid-final #bsMiddle .bs-final-results-stage {
+  height: 100%;
+  min-height: 0;
+  gap: clamp(12px, 1.4vh, 20px) !important;
+}
+
+/* On ne remet pas le titre/cadre “Récapitulatif des résultats” */
+.bs-grid-final #bsMiddle .bs-final-results-stage > .bs-final-board-head {
+  display: none !important;
+}
+
+/* =========================================================
+   ÉCRAN FINAL — CENTRAGE + CADRES QUESTIONS
+   ========================================================= */
+
+/* 1. Centrer le classement officiel dans son cadre */
+.bs-grid-final #bsLeft .bs-final-board {
+  height: 100%;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-board-head {
+  text-align: center !important;
+  margin-bottom: clamp(14px, 1.8vh, 24px) !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-board-kicker {
+  justify-content: center !important;
+  margin: 0 auto !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-board-title {
+  text-align: center !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-rank-list {
+  width: min(100%, 620px) !important;
+  margin: 0 auto !important;
+}
+
+/* 2. Centrer le podium final dans son cadre */
+.bs-grid-final #bsMiddle .bs-podium-reveal-stage {
+  height: 100%;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto !important;
+  align-self: center !important;
+  justify-self: center !important;
+}
+
+.bs-grid-final #bsMiddle .bs-podium-reveal-grid {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto !important;
+  align-self: center !important;
+}
+
+/* Le titre du podium reste bien centré */
+.bs-grid-final #bsMiddle .bs-podium-title,
+.bs-grid-final #bsMiddle .bs-final-reveal-title {
+  text-align: center !important;
+}
+
+/* 3. Centrer aussi l'animation de révélation du classement */
+.bs-grid-final #bsMiddle .bs-final-reveal-stage {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto !important;
+  align-self: center !important;
+  justify-self: center !important;
+}
+
+/* 4. Remettre un cadre autour de chaque question finale */
+.bs-grid-final .bs-final-question-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.050), rgba(255,255,255,0.018)),
+    rgba(8, 13, 28, 0.62) !important;
+  border: 1px solid rgba(255,255,255,0.115) !important;
+  border-radius: 24px !important;
+  box-shadow:
+    0 16px 42px rgba(0,0,0,0.26),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+  padding: clamp(12px, 1vw, 18px) !important;
+}
+
+/* 5. Garder les réponses plus légères que les questions */
+.bs-grid-final .bs-final-answer-row {
+  background: rgba(255,255,255,0.030) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.bs-grid-final .bs-final-answer-row.correct {
+  background: rgba(34,197,94,0.080) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 6. Mieux respirer entre les questions */
+.bs-grid-final .bs-final-results-grid {
+  gap: clamp(20px, 1.8vw, 32px) !important;
+}
+
+/* =========================================================
+   ÉCRAN FINAL — CLASSEMENT OFFICIEL PLUS GRAND
+   ========================================================= */
+
+/* Le classement officiel prend plus de largeur */
+.bs-grid.bs-grid-final {
+  grid-template-columns: minmax(430px, 0.70fr) minmax(0, 1.50fr) !important;
+}
+
+/* Le cadre gauche utilise toute sa hauteur, sans centrer verticalement le contenu */
+.bs-grid-final #bsLeft .bs-final-board {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) !important;
+  justify-content: stretch !important;
+  align-content: stretch !important;
+  gap: clamp(10px, 1.2vh, 16px) !important;
+}
+
+/* Titre unique : Classement officiel */
+.bs-grid-final #bsLeft .bs-final-ranking-head {
+  padding: 0 !important;
+  margin: 0 0 clamp(8px, 1vh, 14px) !important;
+  text-align: center !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* On agrandit vraiment "Classement officiel" */
+.bs-grid-final #bsLeft .bs-final-ranking-title {
+  display: block !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-size: clamp(26px, 2.25vw, 42px) !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+  text-transform: none !important;
+}
+
+/* Sécurité : on masque définitivement l'ancien "Podium final" et le sous-texte */
+.bs-grid-final #bsLeft .bs-final-board-title,
+.bs-grid-final #bsLeft .bs-final-board-subtitle {
+  display: none !important;
+}
+
+/* La liste gagne toute la place libérée */
+.bs-grid-final #bsLeft .bs-final-rank-list {
+  height: 100% !important;
+  min-height: 0 !important;
+  width: min(100%, 520px) !important;
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  grid-template-rows: repeat(10, minmax(0, 1fr)) !important;
+  gap: clamp(5px, 0.65vh, 9px) !important;
+  overflow: hidden !important;
+}
+
+/* Lignes un peu plus lisibles dans le classement agrandi */
+.bs-grid-final #bsLeft .bs-final-rank-row {
+  min-height: 0 !important;
+  padding: 0 clamp(12px, 0.95vw, 18px) !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-rank-name {
+  font-size: clamp(17px, 1.28vw, 24px) !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-rank-score {
+  font-size: clamp(15px, 1.08vw, 21px) !important;
+}
+
+.bs-grid-final #bsLeft .bs-final-rank-badge {
+  font-size: clamp(17px, 1.2vw, 24px) !important;
+}
+
 </style>
 </head>
 <body>
@@ -17879,12 +18285,8 @@ if (shouldShowNextSessionOnly) {
 
 let lbHtml = `
   <div class="bs-final-board bs-final-board--ranking">
-    <div class="bs-final-board-head">
-      <div class="bs-final-board-kicker">🏆 Classement officiel</div>
-      <div class="bs-final-board-title">Podium final</div>
-      <div class="bs-final-board-subtitle">
-        Top 10 de la session, classé par score final.
-      </div>
+    <div class="bs-final-board-head bs-final-ranking-head">
+      <div class="bs-final-board-kicker bs-final-ranking-title">🏆 Classement officiel</div>
     </div>
 
     <div class="bs-final-rank-list">
