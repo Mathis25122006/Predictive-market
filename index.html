@@ -13153,20 +13153,22 @@ async function tuneQRScannerCameraFocus() {
     const capabilities = track.getCapabilities();
     const advanced = [];
 
-    // Demande un autofocus continu quand le téléphone / navigateur le permet.
-    if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+    if (
+      capabilities.focusMode &&
+      Array.isArray(capabilities.focusMode) &&
+      capabilities.focusMode.includes("continuous")
+    ) {
       advanced.push({ focusMode: "continuous" });
-    } else if (capabilities.focusMode && capabilities.focusMode.includes("auto")) {
-      advanced.push({ focusMode: "auto" });
     }
 
-    // Petit zoom optique/numérique léger si disponible : aide à isoler le QR code.
     if (capabilities.zoom) {
       const minZoom = Number(capabilities.zoom.min || 1);
       const maxZoom = Number(capabilities.zoom.max || minZoom);
-      const targetZoom = Math.min(maxZoom, Math.max(minZoom, 1.25));
 
-      advanced.push({ zoom: targetZoom });
+      if (maxZoom > minZoom) {
+        const targetZoom = Math.min(maxZoom, Math.max(minZoom, 1.15));
+        advanced.push({ zoom: targetZoom });
+      }
     }
 
     if (advanced.length) {
@@ -13205,20 +13207,13 @@ function startQRScanner() {
   html5QrCode = new Html5Qrcode("reader");
 
   const config = {
-    fps: 12,
-    qrbox: { width: 270, height: 270 },
-    aspectRatio: 1,
+    fps: 10,
+    qrbox: { width: 250, height: 250 },
     disableFlip: true
   };
 
   const cameraConstraints = {
-    facingMode: { ideal: "environment" },
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    focusMode: "continuous",
-    advanced: [
-      { focusMode: "continuous" }
-    ]
+    facingMode: "environment"
   };
 
   html5QrCode.start(
@@ -13267,7 +13262,15 @@ function startQRScanner() {
       btn.onclick = startQRScanner;
     }
 
-    alert("Impossible d'accéder à la caméra. Vérifiez l'autorisation caméra du navigateur.");
+    const isSecure = window.isSecureContext ||
+      location.hostname === "localhost" ||
+      location.hostname === "127.0.0.1";
+
+    if (!isSecure) {
+      alert("La caméra nécessite une page sécurisée. Ouvre le jeu en HTTPS, ou via localhost pendant les tests.");
+    } else {
+      alert("Impossible d'accéder à la caméra. Vérifiez l'autorisation caméra du navigateur.");
+    }
   });
 }
 
