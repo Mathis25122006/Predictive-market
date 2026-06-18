@@ -758,6 +758,7 @@
   min-height: 0;
   overflow: hidden;
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
@@ -5525,6 +5526,267 @@ body.has-app-top-logo #playerAuth.join-card {
   display: block !important;
 }
 
+/* =========================================================
+   RÉCAP JOUEUR — DÉTAIL DE VOS PRÉDICTIONS SOBRE
+   Palette : blanc / gris / bleu uniquement
+   ========================================================= */
+
+/* Titre de section */
+#playerRecap .recap-predictions-head {
+  margin: 24px 0 14px !important;
+}
+
+#playerRecap .recap-predictions-head h3 {
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+}
+
+#playerRecap .recap-predictions-head p {
+  margin: 5px 0 0 !important;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
+
+/* Carte principale de chaque prédiction */
+#playerRecap #recapSummary > .challenge-block,
+#playerRecap #recapSummary .challenge-block {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.020)),
+    rgba(15,23,42,0.88) !important;
+  border: 1px solid rgba(148,163,184,0.16) !important;
+  border-left: 1px solid rgba(148,163,184,0.16) !important;
+  border-radius: 22px !important;
+  box-shadow: none !important;
+  padding: 15px !important;
+  margin-bottom: 13px !important;
+  overflow: hidden !important;
+}
+
+/* Variante cliquable : juste une bordure bleue douce, pas de gros trait */
+#playerRecap #recapSummary .challenge-block[data-recap-jump-cindex] {
+  border-color: rgba(96,165,250,0.32) !important;
+  background:
+    linear-gradient(180deg, rgba(96,165,250,0.075), rgba(255,255,255,0.020)),
+    rgba(15,23,42,0.90) !important;
+}
+
+/* Catégorie */
+#playerRecap #recapSummary .challenge-block > div:first-child div:first-child {
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Question */
+#playerRecap #recapSummary .challenge-title {
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  line-height: 1.28 !important;
+  margin-top: 8px !important;
+}
+
+/* Bouton Voir détails */
+#playerRecap #recapSummary button[onclick*="toggleDetails"] {
+  background: rgba(255,255,255,0.045) !important;
+  border: 1px solid rgba(148,163,184,0.18) !important;
+  color: #cbd5e1 !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* Résumé fermé : choix + valeur */
+#playerRecap #recapSummary [id^="summary-ch-"] {
+  color: #cbd5e1 !important;
+}
+
+#playerRecap #recapSummary [id^="summary-ch-"] > div {
+  border-top-color: rgba(148,163,184,0.12) !important;
+}
+
+#playerRecap #recapSummary [id^="summary-ch-"] div[style] {
+  color: #cbd5e1 !important;
+}
+
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="font-weight:bold"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="font-weight: bold"] {
+  color: #ffffff !important;
+}
+
+/* Valeurs importantes : bleu unique */
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#3b82f6"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#4ade80"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#f87171"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#fde047"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#f97316"],
+#playerRecap #recapSummary [id^="summary-ch-"] div[style*="#a855f7"] {
+  color: #93c5fd !important;
+}
+
+/* Zone ouverte des détails */
+#playerRecap #recapSummary [id^="details-ch-"] {
+  margin-top: 12px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid rgba(148,163,184,0.14) !important;
+}
+
+/* Tous les blocs internes des détails redeviennent cohérents */
+#playerRecap #recapSummary [id^="details-ch-"] > div,
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="background"] {
+  background: rgba(2,6,23,0.26) !important;
+  border: 1px solid rgba(148,163,184,0.14) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+/* Texte interne */
+#playerRecap #recapSummary [id^="details-ch-"] div,
+#playerRecap #recapSummary [id^="details-ch-"] span {
+  color: #cbd5e1 !important;
+}
+
+/* Titres et valeurs importantes dans les détails */
+#playerRecap #recapSummary [id^="details-ch-"] strong,
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="font-weight:950"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="font-weight:900"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="font-weight:bold"] {
+  color: #ffffff !important;
+}
+
+/* Chiffres / pourcentages / valeurs de marché */
+#playerRecap #recapSummary [id^="recap-pct-val"],
+#playerRecap #recapSummary [id^="cashout-val"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="💰"] {
+  color: #93c5fd !important;
+}
+
+/* Suppression des couleurs vert/rouge/orange/violet dans le détail */
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#4ade80"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#f87171"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#fde047"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#f97316"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#a855f7"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#3b82f6"] {
+  color: #93c5fd !important;
+}
+
+/* Les réponses du marché deviennent des lignes sobres */
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="margin-top:6px"][style*="display:flex"] {
+  background: rgba(15,23,42,0.62) !important;
+  border: 1px solid rgba(148,163,184,0.12) !important;
+  border-radius: 13px !important;
+}
+
+/* Réponse sélectionnée : seulement un contour bleu doux */
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#a855f7"],
+#playerRecap #recapSummary [id^="details-ch-"] div[style*="#22c55e"] {
+  border-color: rgba(96,165,250,0.34) !important;
+  background: rgba(96,165,250,0.075) !important;
+}
+
+/* Bloc cash out : plus d’orange, même palette */
+#playerRecap #recapSummary button[onclick*="openSellPanel"] {
+  background: rgba(96,165,250,0.10) !important;
+  color: #bfdbfe !important;
+  border: 1px solid rgba(96,165,250,0.32) !important;
+  border-radius: 999px !important;
+  padding: 6px 11px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+/* Messages d’action */
+#playerRecap #recapSummary div[style*="Cliquez pour re-miser"],
+#playerRecap #recapSummary div[style*="Mises closes"] {
+  color: #94a3b8 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+}
+
+/* Retire les effets trop colorés des états gagné/perdu */
+#playerRecap #recapSummary div[style*="GAGNÉ"],
+#playerRecap #recapSummary div[style*="PERDU"] {
+  color: #cbd5e1 !important;
+}
+
+/* =========================================================
+   ADMIN FINAL — LIER UNE SESSION AU-DESSUS DU CLASSEMENT
+   ========================================================= */
+
+.admin-final-next-session-link {
+  margin-bottom: 14px;
+  padding: 13px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.060), rgba(255,255,255,0.025)),
+    rgba(15,23,42,0.84);
+  border: 1px solid rgba(96,165,250,0.24);
+  box-shadow: none;
+}
+
+.admin-final-next-session-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.admin-final-next-session-title {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.admin-final-next-session-subtitle {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.admin-final-next-session-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.admin-final-next-session-row input {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 13px;
+  border-radius: 13px;
+  background: rgba(2,6,23,0.42);
+  border: 1px solid rgba(148,163,184,0.22);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+
+.admin-final-next-session-row button {
+  min-height: 42px;
+  border-radius: 13px !important;
+  background: rgba(96,165,250,0.16) !important;
+  border: 1px solid rgba(96,165,250,0.34) !important;
+  color: #bfdbfe !important;
+  box-shadow: none !important;
+  font-weight: 950 !important;
+  white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -6502,12 +6764,41 @@ body.has-app-top-logo #playerAuth.join-card {
       <span class="final-dropdown-chevron">⌄</span>
     </summary>
 
-    <div class="final-dropdown-content">
-      <div id="leaderboard"></div>
-      <div class="final-dropdown-note">
-        Score calculé sur la valeur finale de vos prédictions.
+<div class="final-dropdown-content">
+  <div id="adminFinalNextSessionLinkBar" class="admin-final-next-session-link" style="display:none;">
+    <div class="admin-final-next-session-head">
+      <div>
+        <div class="admin-final-next-session-title">🔗 Prochaine session</div>
+        <div class="admin-final-next-session-subtitle">
+          Lier une session suivante à afficher sur le grand écran.
+        </div>
       </div>
     </div>
+
+    <div class="admin-final-next-session-row">
+      <input
+        id="adminFinalNextSessionInput"
+        placeholder="Code (Ex: A1B2C3)"
+        style="text-transform:uppercase; margin:0; flex:1;"
+      >
+
+      <button
+        onclick="linkNextSessionFromFields('adminFinalNextSessionInput', 'adminFinalNextSessionMsg')"
+        style="margin:0; width:auto; padding:0 14px; font-size:12px;"
+      >
+        Lier
+      </button>
+    </div>
+
+    <div id="adminFinalNextSessionMsg" class="msg" style="margin-top:6px;"></div>
+  </div>
+
+  <div id="leaderboard"></div>
+
+  <div class="final-dropdown-note">
+    Score calculé sur la valeur finale de vos prédictions.
+  </div>
+</div>
   </details>
 
   <details id="finalResultsDropdown" class="final-dropdown">
@@ -13092,17 +13383,39 @@ function showAdminFinalResults() {
   if (subtitle) subtitle.textContent = "Récapitulatif neutre des résultats et classement final.";
   if (questionsContainer) questionsContainer.innerHTML = renderAdminFinalQuestionResults();
 
+  const finalNextBar = document.getElementById("adminFinalNextSessionLinkBar");
+  const finalNextInput = document.getElementById("adminFinalNextSessionInput");
+  const finalNextMsg = document.getElementById("adminFinalNextSessionMsg");
+
+  if (finalNextBar) {
+    finalNextBar.style.display = "block";
+  }
+
+  if (finalNextInput) {
+    finalNextInput.value = sessionConfig.nextSessionCode || "";
+  }
+
+  if (finalNextMsg) {
+    finalNextMsg.textContent = sessionConfig.nextSessionCode
+      ? "Session suivante déjà liée. Vous pouvez modifier le code ici."
+      : "";
+    finalNextMsg.className = sessionConfig.nextSessionCode ? "msg ok" : "msg";
+  }
+
   displayLeaderboard(null, false);
 
   const leaderboardDropdown = document.getElementById("finalLeaderboardDropdown");
-const resultsDropdown = document.getElementById("finalResultsDropdown");
+  const resultsDropdown = document.getElementById("finalResultsDropdown");
 
-if (leaderboardDropdown) leaderboardDropdown.open = true;
-if (resultsDropdown) resultsDropdown.open = false;
+  if (leaderboardDropdown) leaderboardDropdown.open = true;
+  if (resultsDropdown) resultsDropdown.open = false;
+
   showScreen("results");
 }
 
 function showFullResultsForPlayer(pseudo) {
+  const finalNextBar = document.getElementById("adminFinalNextSessionLinkBar");
+  if (finalNextBar) finalNextBar.style.display = "none";
   const finalPlayer = window.findFinalPlayer ? window.findFinalPlayer(pseudo) : null;
   const finalPseudo = finalPlayer
     ? finalPlayer.name
@@ -15560,7 +15873,10 @@ const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
       <div id="recap-top3">${top3Html}</div>
     </div>
 
-    <h3 style="margin-bottom:10px; margin-top:20px;">Détail de vos prédictions</h3>
+    <div class="recap-predictions-head">
+  <h3>Détail de vos prédictions</h3>
+  <p>Chaque carte résume votre choix, sa valeur actuelle et l’état du marché.</p>
+</div>
   `;
 
   const myIndices = recapIndicesForDisplay;
@@ -15601,7 +15917,7 @@ if (snap) {
     ? new Date(Number(snap.validatedAt)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : "";
 
-  const deltaColor = selectedDeltaPct >= 0 ? "#4ade80" : "#f87171";
+  const deltaColor = "#93c5fd";
   const deltaArrow = selectedDeltaPct >= 0 ? "↗" : "↘";
 
   const deltaExplanation = isResolvedQuestion
@@ -15697,7 +16013,7 @@ const answerDeltaText = hasEntryPctForAnswer
   ? `${answerDelta >= 0 ? "+" : ""}${answerDelta.toFixed(1)} pts`
   : "";
 
-const answerDeltaColor = answerDelta >= 0 ? "#4ade80" : "#f87171";
+const answerDeltaColor = "#93c5fd";
 
 const isSelected = snap.ansIndex === aIdx;
 const isCorrectAnswer = isResolvedQuestion && correctIdx === aIdx;
@@ -15752,15 +16068,13 @@ const selectedValueLabel = isResolvedQuestion
   ? (selectedIsWinning ? `+${Number(snap.pts).toFixed(2)} 💰 gagné` : `0 💰 perdu`)
   : `${Number(window.getAMMValue(ch, snap)).toFixed(2)} 💰 maintenant`;
 
-const selectedValueColor = isResolvedQuestion
-  ? (selectedIsWinning ? "#4ade80" : "#f87171")
-  : "#3b82f6";
+const selectedValueColor = "#93c5fd";
 
         finalHtml += `
           <div class="challenge-block" style="border-left: 3px solid #3b82f6; padding-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
-               <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
+               <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Voir détails</button>
             </div>
             <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
             
@@ -15827,7 +16141,7 @@ snaps.forEach(snap => {
                : 0;
 
              const valueDelta = currentResaleValue - originalStake;
-             const valueDeltaColor = valueDelta >= 0 ? "#4ade80" : "#f87171";
+             const valueDeltaColor = "#93c5fd";
              const valueDeltaText = `${valueDelta >= 0 ? "+" : ""}${valueDelta.toFixed(2)} 💰`;
 
              const snapType = snap.type || "YES";
@@ -15839,9 +16153,9 @@ snaps.forEach(snap => {
                (!snap.type && Number(snap.ansIndex) === Number(correctIdx))
              );
 
-             const snapStatusColor = snapIsWinning ? "#4ade80" : "#f87171";
-             const snapStatusBg = snapIsWinning ? "rgba(34,197,94,0.12)" : "rgba(248,113,113,0.12)";
-             const snapStatusBorder = snapIsWinning ? "rgba(34,197,94,0.35)" : "rgba(248,113,113,0.35)";
+              const snapStatusColor = "#93c5fd";
+              const snapStatusBg = "rgba(96,165,250,0.08)";
+              const snapStatusBorder = "rgba(96,165,250,0.22)";
              const snapStatusLabel = snapIsWinning ? "GAGNÉ" : "PERDU";
              const snapStatusIcon = snapIsWinning ? "✅" : "❌";
 
@@ -15854,7 +16168,7 @@ snaps.forEach(snap => {
                ? (snapIsWinning ? `+${Number(snap.pts || 0).toFixed(2)} 💰 encaissés` : "Perdu")
                : `+${Number(snap.pts || 0).toFixed(2)} 💰 pot.`;
 
-             const snapMainValueColor = snapIsResolved ? snapStatusColor : "#3b82f6";
+             const snapMainValueColor = "#93c5fd";
 
              const resolvedStatusHtml = snapIsResolved
                ? `
@@ -17822,11 +18136,46 @@ function checkBigScreenAccess() {
     startBigScreenEngine();
 
     // On relance l'écoute continue pour la mise à jour fluide des jauges
+    // et pour récupérer aussi les changements de configuration,
+    // notamment la session suivante liée après promulgation.
+    sessionRef.off('value');
     sessionRef.on('value', (liveSnap) => {
       if (liveSnap.exists()) {
-          game = liveSnap.val().gameData;
+          const liveData = liveSnap.val() || {};
+
+          const previousNextSessionKey = [
+          sessionConfig && sessionConfig.nextSessionCode,
+          sessionConfig && sessionConfig.nextSessionStartTime,
+          sessionConfig && sessionConfig.nextSessionEndTime
+        ].join("|");
+
+          sessionConfig = liveData.sessionConfig || sessionConfig;
+          game = liveData.gameData || game;
+
           if (!game.players) game.players = [];
-          if (isBigScreenActive) requestBigScreenDataRefresh();
+
+const currentNextSessionKey = [
+  sessionConfig && sessionConfig.nextSessionCode,
+  sessionConfig && sessionConfig.nextSessionStartTime,
+  sessionConfig && sessionConfig.nextSessionEndTime
+].join("|");
+
+const nextSessionChanged = previousNextSessionKey !== currentNextSessionKey;
+
+          if (isBigScreenActive) {
+            // Si la session suivante vient d'être liée alors que les résultats sont déjà affichés,
+            // on force un rendu immédiat pour afficher le QR sans attendre la rotation suivante.
+            if (nextSessionChanged && game.isResolved) {
+              renderBigScreen();
+              bsLastLayoutKey = getBigScreenLayoutKey();
+
+              if (typeof updateBsTimers === "function") {
+                updateBsTimers();
+              }
+            } else {
+              requestBigScreenDataRefresh();
+            }
+          }
       }
     });
   }).catch((error) => {
@@ -19777,12 +20126,29 @@ function closeWelcomeCode() {
 // ==========================================
 // LOGIQUE : PROCHAINE SESSION
 // ==========================================
-function linkNextSession() {
-    const input = document.getElementById("nextSessionInput").value.trim().toUpperCase();
-    const msg = document.getElementById("nextSessionMsg");
-    
+function linkNextSessionFromFields(inputId = "nextSessionInput", msgId = "nextSessionMsg") {
+    const inputEl = document.getElementById(inputId);
+    const msg = document.getElementById(msgId);
+
+    if (!inputEl || !msg) return;
+
+    const input = inputEl.value.trim().toUpperCase().replace(/\s+/g, "");
+    const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+
     if (!input) {
         msg.textContent = "Veuillez entrer le code de la session suivante.";
+        msg.className = "msg err";
+        return;
+    }
+
+    if (!activeCode) {
+        msg.textContent = "Impossible d'identifier la session actuelle.";
+        msg.className = "msg err";
+        return;
+    }
+
+    if (input === activeCode) {
+        msg.textContent = "Vous ne pouvez pas lier une session à elle-même.";
         msg.className = "msg err";
         return;
     }
@@ -19790,45 +20156,74 @@ function linkNextSession() {
     msg.textContent = "Vérification...";
     msg.className = "msg ok";
 
-    // On vérifie que la session cible existe sur la base de données
     db.ref('sessions/' + input + '/sessionConfig').once('value').then(snap => {
         if (!snap.exists()) {
             msg.textContent = "Cette session n'existe pas.";
             msg.className = "msg err";
-            return;
+            return null;
         }
-        
-        const nextConfig = snap.val();
-        sessionConfig.nextSessionCode = input;
 
-        // On sauvegarde le début ET la fin pour gérer les deux cas :
-        // - session suivante pas encore commencée ;
-        // - session suivante déjà commencée.
-        sessionConfig.nextSessionStartTime = Number(nextConfig.gameStartTime || Date.now());
-        sessionConfig.nextSessionEndTime = Number(nextConfig.gameEndTime || nextConfig.expiresAt || 0);
-        
-        saveToCloud(); // On enregistre ce lien dans la session ACTUELLE
-        
-        // NOUVEAU : Synchronisation à l'autre mode (Gestion Commune)
+        const nextConfig = snap.val() || {};
+
+        const nextSessionFields = {
+            nextSessionCode: input,
+            nextSessionStartTime: Number(nextConfig.gameStartTime || Date.now()),
+            nextSessionEndTime: Number(nextConfig.gameEndTime || nextConfig.expiresAt || 0)
+        };
+
+        sessionConfig.nextSessionCode = nextSessionFields.nextSessionCode;
+        sessionConfig.nextSessionStartTime = nextSessionFields.nextSessionStartTime;
+        sessionConfig.nextSessionEndTime = nextSessionFields.nextSessionEndTime;
+
+        const writes = [
+            db.ref('sessions/' + activeCode + '/sessionConfig').update(nextSessionFields)
+        ];
+
         if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-            const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-            if (otherCode) {
-            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionCode').set(input);
-            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionStartTime').set(sessionConfig.nextSessionStartTime);
-            db.ref('sessions/' + otherCode + '/sessionConfig/nextSessionEndTime').set(sessionConfig.nextSessionEndTime || 0);
+            const otherCode =
+              activeCode === sessionConfig.codeAdvanced
+                ? sessionConfig.code
+                : sessionConfig.codeAdvanced;
+
+            if (otherCode && otherCode !== activeCode) {
+                writes.push(
+                    db.ref('sessions/' + otherCode + '/sessionConfig').update(nextSessionFields)
+                );
             }
         }
 
+        return Promise.all(writes);
+    }).then(result => {
+        if (!result) return;
+
         msg.textContent = "Prochaine session liée avec succès !";
         msg.className = "msg ok";
+
+        const manageInput = document.getElementById("nextSessionInput");
+        const finalInput = document.getElementById("adminFinalNextSessionInput");
+
+if (manageInput) manageInput.value = sessionConfig.nextSessionCode || "";
+if (finalInput) finalInput.value = sessionConfig.nextSessionCode || "";
+
+// Affichage immédiat du QR si le grand écran est ouvert
+// dans le même navigateur. Pour un autre écran/appareil,
+// le listener Firebase de checkBigScreenAccess() fera aussi le rendu.
+if (typeof refreshNextSessionQRImmediately === "function") {
+  refreshNextSessionQRImmediately();
+}
     }).catch(err => {
         msg.textContent = "Erreur : " + err.message;
         msg.className = "msg err";
     });
 }
 
+function linkNextSession() {
+    return linkNextSessionFromFields("nextSessionInput", "nextSessionMsg");
+}
+
+
 function renderNextSessionQR() {
-    if (!sessionConfig.nextSessionCode) return;
+    if (!sessionConfig || !sessionConfig.nextSessionCode) return;
 
     const container = document.getElementById("bsNextSessionHeaderContainer");
     if (!container) return;
@@ -19839,34 +20234,41 @@ function renderNextSessionQR() {
     container.innerHTML = `
        <div style="display:flex; align-items:center; gap:20px; padding:0; text-align:right;">
           <div>
-            <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">
-              Prochaine Session
-            </div>
-
-            <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">
-              ${sessionConfig.nextSessionCode}
-            </div>
-
-            <div
-              id="bsNextSessionTimerLabel"
-              style="font-size:10px; color:#8ff5c7; text-transform:uppercase; font-weight:900; margin-top:3px; letter-spacing:0.05em;"
-            >
-              Session suivante commence dans
-            </div>
-
-            <div
-              id="bsNextSessionTimer"
-              style="font-size:13px; font-weight:800; font-family:monospace; color:#10b981; margin-top:2px;"
-            >
-              --:--:--
-            </div>
+            <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">Prochaine Session</div>
+            <div style="font-size:32px; font-weight:900; color:#fff; letter-spacing:3px;">${sessionConfig.nextSessionCode}</div>
+            <div id="bsNextSessionTimer" style="font-size:13px; font-weight:800; font-family:monospace; color:#10b981; margin-top:2px;">--:--:--</div>
           </div>
-
           <img src="${qrUrl}" style="width:124px; height:124px; border:5px solid white; border-radius:14px; background:#fff;">
        </div>
     `;
 
-    updateBsTimers();
+    if (typeof updateBsTimers === "function") {
+      updateBsTimers();
+    }
+}
+
+function refreshNextSessionQRImmediately() {
+  if (!sessionConfig || !sessionConfig.nextSessionCode) return;
+
+  // Si le grand écran est ouvert dans ce navigateur,
+  // on force un vrai rendu final immédiatement.
+  if (
+    typeof renderBigScreen === "function" &&
+    typeof getBigScreenLayoutKey === "function" &&
+    isBigScreenActive
+  ) {
+    renderBigScreen();
+    bsLastLayoutKey = getBigScreenLayoutKey();
+
+    if (typeof updateBsTimers === "function") {
+      updateBsTimers();
+    }
+
+    return;
+  }
+
+  // Sinon, on tente au moins de remplir le container s'il existe.
+  renderNextSessionQR();
 }
 
 
