@@ -8220,8 +8220,12 @@ function isChallengeOpenForPlayerAction(cIndex, options = {}) {
   return true;
 }
 
-// Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
-// Fonction globale pour envoyer les données sur le réseau avec gestion d'erreur
+function resetNextSessionLink() {
+  sessionConfig.nextSessionCode = "";
+  sessionConfig.nextSessionStartTime = 0;
+  sessionConfig.nextSessionEndTime = 0;
+}
+
 function saveToCloud() {
   const payload = {
     sessionConfig: sessionConfig,
@@ -9028,9 +9032,13 @@ if (!isValid) {
   game.challenges.forEach(ch => initBaseVotes(ch, initialB));
 
 // Reset des variables de jeu
-  game.players = [];
-  game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
-  game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
+game.players = [];
+game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
+game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
+
+// IMPORTANT : une nouvelle session ne doit jamais hériter
+// de la session suivante liée à l'ancienne partie.
+resetNextSessionLink();
 selectedAnswers = new Array(game.challenges.length).fill(null);
 selectedBets = new Array(game.challenges.length).fill(0);
 selectedBetTypes = new Array(game.challenges.length).fill('YES');
@@ -12755,14 +12763,18 @@ if (!allResolved) {
 }
 
 // On verrouille le jeu
-  game.isResolved = true;
-  saveToCloud(); 
+game.isResolved = true;
+game.resolvedAt = Date.now();
+saveToCloud();
 
   // NOUVEAU : Clôture synchronisée pour l'autre mode (Gestion Commune)
   if (sessionConfig.mode === 'both' && window.isCommonManagement) {
      const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
      if (otherCode) {
-         db.ref('sessions/' + otherCode + '/gameData/isResolved').set(true);
+         db.ref('sessions/' + otherCode + '/gameData').update({
+  isResolved: true,
+  resolvedAt: Date.now()
+});
      }
   }
 
@@ -14947,6 +14959,52 @@ function formatAdminTimelineTime(ts) {
   });
 }
 
+function getSafeAdminChallengeAnswers(ch) {
+  if (ch && Array.isArray(ch.answers) && ch.answers.length) {
+    return ch.answers.map((answer, idx) => {
+      const clean = String(answer || "").trim();
+      return clean || `Réponse ${idx + 1}`;
+    });
+  }
+
+  if (ch && Array.isArray(ch.votes) && ch.votes.length) {
+    return ch.votes.map((_, idx) => `Réponse ${idx + 1}`);
+  }
+
+  return ["Réponse 1", "Réponse 2"];
+}
+
+function getSafeAdminChallengeVotes(ch, answers) {
+  const safeAnswers = Array.isArray(answers) && answers.length
+    ? answers
+    : getSafeAdminChallengeAnswers(ch);
+
+  const rawVotes = ch && Array.isArray(ch.votes) ? ch.votes : [];
+
+  return safeAnswers.map((_, idx) => {
+    const n = Number(rawVotes[idx]);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
+
+function repairAdminChallengeShape(ch, index) {
+  const safeCh = ch && typeof ch === "object" ? ch : {};
+
+  const answers = getSafeAdminChallengeAnswers(safeCh);
+  const votes = getSafeAdminChallengeVotes(safeCh, answers);
+
+  safeCh.category = safeCh.category || `Question ${Number(index) + 1}`;
+  safeCh.question = safeCh.question || "Question sans intitulé";
+  safeCh.answers = answers;
+  safeCh.votes = votes;
+
+  if (!safeCh.status) safeCh.status = "pending";
+  if (!Number.isFinite(Number(safeCh.startTime))) safeCh.startTime = Date.now();
+  if (!Number.isFinite(Number(safeCh.endTime))) safeCh.endTime = safeCh.startTime + 60000;
+
+  return safeCh;
+}
+
 function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
   const events = [];
@@ -15069,6 +15127,23 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
 
 function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
+  if (!container) return;
+
+  if (!game || typeof game !== "object") {
+    game = { players: [], challenges: [] };
+  }
+
+  if (!Array.isArray(game.players)) {
+    game.players = [];
+  }
+
+  if (!Array.isArray(game.challenges)) {
+    game.challenges = [];
+  }
+
+  game.challenges = game.challenges
+    .filter(ch => ch && typeof ch === "object")
+    .map((ch, idx) => repairAdminChallengeShape(ch, idx));
 
   if (typeof renderAdminPlayersPanel === "function") {
     renderAdminPlayersPanel();
@@ -15080,9 +15155,15 @@ function renderManageDashboard() {
       container.innerHTML = "";
   }
 
-  game.challenges.forEach((ch, i) => {
-    const effStatus = getEffectiveStatus(ch);
-    let block = document.getElementById(`manage-challenge-${i}`);
+game.challenges.forEach((ch, i) => {
+  ch = repairAdminChallengeShape(ch, i);
+  game.challenges[i] = ch;
+
+  const answers = getSafeAdminChallengeAnswers(ch);
+  const votes = getSafeAdminChallengeVotes(ch, answers);
+
+  const effStatus = getEffectiveStatus(ch);
+  let block = document.getElementById(`manage-challenge-${i}`);
     
     // 1. Création de la structure statique si elle n'existe pas encore
     if (!block) {
@@ -15138,7 +15219,7 @@ function renderManageDashboard() {
           <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px;">
             <label style="color:#3b82f6; margin-bottom:8px; display:block; font-size:12px;">Saisir le résultat gagnant :</label>
             <select id="res-${i}" style="margin-bottom:8px; background:#020617; color:white; border:1px solid #3b82f6; border-radius:8px; width:100%;">
-              ${ch.answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
+              ${answers.map((a,idx)=>`<option value="${idx}">${a}</option>`).join('')}
             </select>
             <button onclick="resolveChallenge(${i})" style="background:#3b82f6; margin:0; padding:8px; font-size:12px; width:100%;">Publier & Créditer les gains</button>
           </div>
@@ -15146,7 +15227,7 @@ function renderManageDashboard() {
 } else if (effStatus === "resolved") {
   controlsHtml = `
     <div style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; padding:10px; border-radius:8px; text-align:center;">
-      <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${ch.answers[ch.correct]}</strong></div>
+      <div style="font-size:12px; color:#3b82f6; margin-bottom:8px;">✅ Résultat validé : <strong>${answers[Number(ch.correct)] || "Réponse inconnue"}</strong></div>
       <button onclick="undoResolveChallenge(${i})" style="background:none; border:1px solid #ef4444; color:#ef4444; margin:0; padding:8px; font-size:11px; width:100%;">Annuler et modifier ce résultat</button>
     </div>
   `;
@@ -15155,15 +15236,16 @@ function renderManageDashboard() {
     }
 
     // 4. Mise à jour des Mises et Pourcentages (En continu)
-    let probs = [];
-    if (typeof getLMSRProbs === 'function') {
-        probs = getLMSRProbs(ch.votes);
-    } else {
-        const totalVotes = ch.votes.reduce((a,b) => a+b, 0) || 1;
-        probs = ch.votes.map(v => v / totalVotes);
-    }
+let probs = [];
 
-    let answersHtml = ch.answers.map((ans, idx) => {
+if (typeof getLMSRProbs === 'function') {
+    probs = getLMSRProbs(votes);
+} else {
+    const totalVotes = votes.reduce((a,b) => a + b, 0) || 1;
+    probs = votes.map(v => v / totalVotes);
+}
+
+let answersHtml = answers.map((ans, idx) => {
       const pct = (probs[idx] * 100).toFixed(1);
       return `<div style="font-size:12px; display:flex; justify-content:space-between; margin-bottom:4px;">
                 <span>${ans}</span> <strong style="color:#f97316">${pct}%</strong>
@@ -15190,11 +15272,21 @@ function renderManageDashboard() {
 
 function renderValidationList() {
   const list = document.getElementById("adminValidationList");
+  if (!list) return;
+
   list.innerHTML = "";
+
+  if (!game || !Array.isArray(game.challenges)) return;
+
   game.challenges.forEach((ch, i) => {
-    let options = ch.answers.map((ans, idx) => 
+    ch = repairAdminChallengeShape(ch, i);
+    game.challenges[i] = ch;
+
+    const answers = getSafeAdminChallengeAnswers(ch);
+
+    let options = answers.map((ans, idx) => 
       `<option value="${idx}">${ans}</option>`
-    ).join('');
+    ).join("");
     
     list.innerHTML += `
       <div style="margin-bottom:10px;">
@@ -17932,6 +18024,8 @@ function getBigScreenLayoutKey() {
     bsRightIndex,
     bsTrendRangeMs,
     sessionConfig.nextSessionCode || "",
+    sessionConfig.nextSessionStartTime || "",
+    sessionConfig.nextSessionEndTime || "",
     challengeStateKey
   ].join("::");
 }
@@ -18139,18 +18233,40 @@ function checkBigScreenAccess() {
     // et pour récupérer aussi les changements de configuration,
     // notamment la session suivante liée après promulgation.
     sessionRef.off('value');
-    sessionRef.on('value', (liveSnap) => {
-      if (liveSnap.exists()) {
-          const liveData = liveSnap.val() || {};
+sessionRef.on('value', (liveSnap) => {
+  if (liveSnap.exists()) {
+      const liveData = liveSnap.val() || {};
 
-          const previousNextSessionKey = [
-          sessionConfig && sessionConfig.nextSessionCode,
-          sessionConfig && sessionConfig.nextSessionStartTime,
-          sessionConfig && sessionConfig.nextSessionEndTime
-        ].join("|");
+      const wasResolved = !!(game && game.isResolved);
 
-          sessionConfig = liveData.sessionConfig || sessionConfig;
-          game = liveData.gameData || game;
+      const previousNextSessionKey = [
+        sessionConfig && sessionConfig.nextSessionCode,
+        sessionConfig && sessionConfig.nextSessionStartTime,
+        sessionConfig && sessionConfig.nextSessionEndTime
+      ].join("|");
+
+      sessionConfig = liveData.sessionConfig || sessionConfig;
+      game = liveData.gameData || game;
+
+      const isNowResolved = !!(game && game.isResolved);
+
+      // IMPORTANT : quand l'admin promulgue, on relance toujours
+      // l'animation finale, même si cet onglet avait déjà vu une ancienne finale.
+      if (!wasResolved && isNowResolved) {
+        clearBsFinalRevealTimers();
+        window.bsFinalRevealDone = false;
+        window.bsFinalRevealRunning = false;
+        bsLastLayoutKey = "";
+
+        renderBigScreen();
+        bsLastLayoutKey = getBigScreenLayoutKey();
+
+        if (typeof updateBsTimers === "function") {
+          updateBsTimers();
+        }
+
+        return;
+      }
 
           if (!game.players) game.players = [];
 
@@ -18162,20 +18278,21 @@ const currentNextSessionKey = [
 
 const nextSessionChanged = previousNextSessionKey !== currentNextSessionKey;
 
-          if (isBigScreenActive) {
-            // Si la session suivante vient d'être liée alors que les résultats sont déjà affichés,
-            // on force un rendu immédiat pour afficher le QR sans attendre la rotation suivante.
-            if (nextSessionChanged && game.isResolved) {
-              renderBigScreen();
-              bsLastLayoutKey = getBigScreenLayoutKey();
+if (isBigScreenActive) {
+  // Si la session suivante est liée alors que l'écran final est déjà affiché,
+  // on force le QR immédiatement.
+  // Si elle est liée avant, on mémorise seulement : le QR apparaîtra à la promulgation.
+  if (nextSessionChanged && game.isResolved) {
+    renderBigScreen();
+    bsLastLayoutKey = getBigScreenLayoutKey();
 
-              if (typeof updateBsTimers === "function") {
-                updateBsTimers();
-              }
-            } else {
-              requestBigScreenDataRefresh();
-            }
-          }
+    if (typeof updateBsTimers === "function") {
+      updateBsTimers();
+    }
+  } else {
+    requestBigScreenDataRefresh();
+  }
+}
       }
     });
   }).catch((error) => {
@@ -18530,7 +18647,8 @@ function computeBsTimedHistory(cIndex, rangeMs = bsTrendRangeMs) {
 }
 
 function renderBigScreen() {
-  if (!game || !game.challenges) return;
+  if (!game) return;
+  if (!Array.isArray(game.challenges)) game.challenges = [];
   
   // CORRECTION SÉCURITÉ : On s'assure que le conteneur du Grand Écran est bien visible au cas où
   const bsScreen = document.getElementById('bigScreen');
@@ -18582,13 +18700,14 @@ const bsNextSessionHeader = document.getElementById("bsNextSessionHeaderContaine
 
 const hasLinkedNextSession = !!(sessionConfig && sessionConfig.nextSessionCode);
 
-// Le QR de la session suivante n'apparaît que quand les résultats finaux
-// ont été officiellement promulgués.
-const isFinalBigScreen = game.isResolved;
-const shouldShowNextSessionOnly = hasLinkedNextSession && isFinalBigScreen;
+// Le QR de session suivante doit apparaître uniquement sur l'écran final.
+// Si la session est liée avant, elle reste mémorisée et apparaîtra dès la promulgation.
+const isFinalBigScreen = !!game.isResolved;
+const shouldShowNextSessionQR = hasLinkedNextSession && isFinalBigScreen;
+const shouldHideStatsForNextSession = hasLinkedNextSession && isFinalBigScreen;
 
 if (bsStats) {
-  if (shouldShowNextSessionOnly) {
+  if (shouldHideStatsForNextSession) {
     // En affichage final, si une session suivante est liée,
     // on retire totalement les stats ET leur cadre.
     bsStats.classList.remove("bs-stats-card");
@@ -18617,7 +18736,7 @@ if (bsStats) {
   }
 }
 
-if (shouldShowNextSessionOnly) {
+if (shouldShowNextSessionQR) {
   renderNextSessionQR();
 } else if (bsNextSessionHeader) {
   bsNextSessionHeader.innerHTML = "";
@@ -18846,8 +18965,8 @@ if (bsRightWaiting) {
   bsRightWaiting.innerHTML = "";
 }
 
-// Pendant l'attente de promulgation, on ne montre pas encore
-// le QR de la session suivante.
+// Pendant l'attente de promulgation, le QR de session suivante reste masqué.
+// Il apparaîtra automatiquement dès que les résultats seront promulgués.
 document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
 
 const resolvedCount = (game.challenges || []).filter(ch => ch.correct !== undefined && ch.correct !== null).length;
@@ -18951,9 +19070,12 @@ document.getElementById("bsLeft").style.overflowY = "hidden";
 document.getElementById("bsMiddle").style.overflowY = "hidden";
 document.getElementById("bsRight").style.overflowY = "hidden";
 
+// Pendant le live, on ne montre jamais le QR de la session suivante.
 document.getElementById("bsNextSessionHeaderContainer").innerHTML = "";
 
-const currentIndex = bsLeftIndex;
+// CORRECTION : l'index de la question principale avait disparu.
+// Sans cette ligne, le rendu du grand écran s'arrête avec une erreur JS.
+const currentIndex = Number.isInteger(Number(bsLeftIndex)) ? Number(bsLeftIndex) : 0;
 const currentCh = game.challenges[currentIndex];
 
 let trendIndex = bsRightIndex;
@@ -20248,10 +20370,19 @@ function renderNextSessionQR() {
 }
 
 function refreshNextSessionQRImmediately() {
-  if (!sessionConfig || !sessionConfig.nextSessionCode) return;
+  const container = document.getElementById("bsNextSessionHeaderContainer");
 
-  // Si le grand écran est ouvert dans ce navigateur,
-  // on force un vrai rendu final immédiatement.
+  if (!sessionConfig || !sessionConfig.nextSessionCode) {
+    if (container) container.innerHTML = "";
+    return;
+  }
+
+  // Le QR de session suivante ne doit apparaître que sur l'écran final.
+  if (!game || !game.isResolved) {
+    if (container) container.innerHTML = "";
+    return;
+  }
+
   if (
     typeof renderBigScreen === "function" &&
     typeof getBigScreenLayoutKey === "function" &&
@@ -20267,10 +20398,8 @@ function refreshNextSessionQRImmediately() {
     return;
   }
 
-  // Sinon, on tente au moins de remplir le container s'il existe.
   renderNextSessionQR();
 }
-
 
 // ==========================================
 // MISE À JOUR EN DIRECT (SANS SAUT DE PAGE)
