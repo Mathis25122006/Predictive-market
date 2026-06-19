@@ -6362,7 +6362,7 @@ body.has-app-top-logo #playerAuth.join-card {
 <div id="manageGame" class="card" style="display:none">
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2>Gestion en temps réel</h2>
-    <div id="gameTimer" style="font-weight:800; color:#f97316; font-size:18px; font-family:monospace;">00:00:00</div>
+    <div id="gameTimer" style="font-weight:800; color:#f97316; font-size:13px; font-family:monospace; text-align:right; line-height:1.2;">00:00:00</div>
   </div>
 <div style="display:flex; gap:10px; margin-top:10px; margin-bottom:15px;">
     <button onclick="goBack()" style="margin:0; font-size:12px;">Retour</button>
@@ -7267,6 +7267,7 @@ function continueFromSessionCode() {
     }
 
 window.pendingJoinMode = detectedMode;
+currentPlayerMode = detectedMode; // CORRECTION : Mise à jour du mode de pari
 window.pendingJoinQuestionsPerPlayer =
   data.sessionConfig && data.sessionConfig.n
     ? data.sessionConfig.n
@@ -7545,7 +7546,9 @@ function startFreshJoinSession() {
   }
 
   // On ferme les panneaux éventuels.
-  if (typeof closeBetPanel === "function") closeBetPanel();
+if (typeof closeBetPanel === "function") {
+  closeBetPanel({ suppressTuto: true, skipUnconfirmedClear: true });
+}
   if (typeof closeSellPanel === "function") closeSellPanel();
   if (typeof stopQRScanner === "function") stopQRScanner();
 
@@ -7669,9 +7672,13 @@ function reconnectPreviousSession() {
     playMsg.className = "msg";
   }
 
-  // Flag anti-flash : showScreen('play') ne doit pas afficher la saisie du code.
+// Flag anti-flash : showScreen('play') ne doit pas afficher la saisie du code.
   window.isReconnectingPreviousSession = true;
   window.hasSeenWelcomeCode = true;
+  
+  if (previous.mode) {
+    currentPlayerMode = previous.mode; // CORRECTION : Restauration du mode
+  }
 
   showScreen('play', false, true);
 
@@ -7776,13 +7783,7 @@ if (!skipUrlUpdate) {
     if (screenId === 'home') {
 window.currentTutoStep = 0;
       
-      if (typeof bsInterval !== 'undefined' && bsInterval) clearInterval(bsInterval);
-      if (typeof bsTimerInterval !== 'undefined' && bsTimerInterval) clearInterval(bsTimerInterval);
-      if (typeof isBigScreenActive !== 'undefined') isBigScreenActive = false;
-      
-      if (typeof sessionConfig !== 'undefined' && sessionConfig && sessionConfig.code) {
-        db.ref('sessions/' + sessionConfig.code).off();
-      }
+stopLiveSessionContext();
       if (typeof stopQRScanner === 'function') {
         stopQRScanner();
       }
@@ -8113,6 +8114,8 @@ function isSessionTradingClosed() {
 }
 
 function getEffectiveStatus(ch) {
+  if (!ch) return "closed";
+
   const now = Date.now();
 
   if (ch.status === "resolved") return "resolved";
@@ -8121,8 +8124,13 @@ function getEffectiveStatus(ch) {
   // toutes les questions doivent se comporter comme clôturées côté joueur.
   if (isSessionTradingClosed()) return "closed";
 
-  if (now < ch.startTime) return "pending";
-  if (now >= ch.startTime && now < ch.endTime) return "open";
+  const startTime = Number(ch.startTime || 0);
+  const endTime = Number(ch.endTime || 0);
+
+  if (!startTime || !endTime) return "closed";
+
+  if (now < startTime) return "pending";
+  if (now >= startTime && now < endTime) return "open";
   return "closed";
 }
 
@@ -8226,20 +8234,39 @@ function resetNextSessionLink() {
   sessionConfig.nextSessionEndTime = 0;
 }
 
-function saveToCloud() {
+function cloneForFirebase(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function saveToCloud(targetCode) {
+  const activeCode = targetCode || window.currentActiveSessionCode || (sessionConfig && sessionConfig.code);
+
+  if (!activeCode || !sessionConfig || !game) {
+    return Promise.resolve(false);
+  }
+
   const payload = {
-    sessionConfig: sessionConfig,
-    gameData: game
+    sessionConfig: cloneForFirebase(sessionConfig),
+    gameData: cloneForFirebase(game)
   };
 
-  // NOUVEAU : On sauvegarde UNIQUEMENT sur la partie active en cours
-  const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+  const allowedCodes = [
+    payload.sessionConfig.code,
+    payload.sessionConfig.codeAdvanced
+  ].filter(Boolean);
 
-  if (activeCode) {
-    db.ref('sessions/' + activeCode).set(payload).catch(err => {
-      console.error("Erreur de sauvegarde Cloud:", err);
+  if (!allowedCodes.includes(activeCode)) {
+    console.warn("Sauvegarde Firebase bloquée : code actif incohérent avec la session locale.", {
+      activeCode,
+      allowedCodes
     });
+    return Promise.resolve(false);
   }
+
+  return db.ref('sessions/' + activeCode).set(payload).catch(err => {
+    console.error("Erreur de sauvegarde Cloud:", err);
+    return false;
+  });
 }
 // ------------------------------
 
@@ -8260,6 +8287,99 @@ let game = {
   isResolved: false,
   gameMode: "easy" 
 };
+
+window.liveSessionCodes = window.liveSessionCodes || new Set();
+
+function rememberLiveSessionCode(code) {
+  if (code) window.liveSessionCodes.add(String(code));
+}
+
+function stopLiveSessionContext() {
+  const codes = new Set([
+    ...(window.liveSessionCodes ? Array.from(window.liveSessionCodes) : []),
+    window.currentActiveSessionCode,
+    sessionConfig && sessionConfig.code,
+    sessionConfig && sessionConfig.codeAdvanced
+  ].filter(Boolean));
+
+  codes.forEach(code => {
+    try {
+      db.ref("sessions").child(code).off();
+    } catch (e) {
+      console.warn("Impossible de couper l'écoute Firebase :", code, e);
+    }
+  });
+
+  if (window.liveSessionCodes) window.liveSessionCodes.clear();
+
+  if (typeof timerInterval !== "undefined" && timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  if (typeof adminDashboardTimerInterval !== "undefined" && adminDashboardTimerInterval) {
+    clearInterval(adminDashboardTimerInterval);
+    adminDashboardTimerInterval = null;
+  }
+
+  if (typeof bsInterval !== "undefined" && bsInterval) {
+    clearInterval(bsInterval);
+    bsInterval = null;
+  }
+
+  if (typeof bsTimerInterval !== "undefined" && bsTimerInterval) {
+    clearInterval(bsTimerInterval);
+    bsTimerInterval = null;
+  }
+
+  if (typeof playerTimerInterval !== "undefined" && playerTimerInterval) {
+    clearInterval(playerTimerInterval);
+    playerTimerInterval = null;
+  }
+
+  if (typeof recapTimerInterval !== "undefined" && recapTimerInterval) {
+    clearInterval(recapTimerInterval);
+    recapTimerInterval = null;
+  }
+
+  if (typeof isBigScreenActive !== "undefined") {
+    isBigScreenActive = false;
+  }
+}
+
+function resetLocalSessionForSetup(mode) {
+  stopLiveSessionContext();
+
+  window.currentActiveSessionCode = "";
+  window.isCommonManagement = false;
+
+  currentPlayChallengeIndex = 0;
+  currentAdminChallengeIndex = 0;
+
+  sessionConfig = {
+    code: "",
+    codeAdvanced: "",
+    mode: mode,
+    initialBalance: 100,
+    expiresAt: null,
+    durationMinutes: 60,
+    gameStartTime: null,
+    gameEndTime: null,
+    nextSessionCode: "",
+    nextSessionStartTime: 0,
+    nextSessionEndTime: 0
+  };
+
+  game = {
+    challenges: [],
+    players: [],
+    maxPlayers: 10,
+    currentPlayerName: "",
+    isResolved: false,
+    messages: [],
+    gameMode: mode
+  };
+}
 
 // --- VÉRITABLE MOTEUR PRÉDICTIF PROPORTIONNEL (VIRTUAL LIQUIDITY POOL) ---
 // Ce modèle garantit que les probabilités correspondent EXACTEMENT à la proportion d'argent misé.
@@ -8893,22 +9013,33 @@ window.markSetupChanged = function() {
     // On compare l'état actuel en direct avec l'état sauvegardé
     const currentState = window.getCurrentSetupState();
     window.hasSetupChanged = (currentState !== window.originalSetupState);
-    updateSetupBtnState();
+  } else {
+    // Si on est sur une nouvelle création, le bouton doit toujours rester en mode création.
+    window.hasSetupChanged = true;
   }
+
+  updateSetupBtnState();
 };
 
 function updateSetupBtnState() {
   const btn = document.getElementById("setupBtn");
   if (!btn) return;
-  if (window.isSessionGenerated && !window.hasSetupChanged) {
+
+  if (window.isSessionGenerated === true && window.hasSetupChanged === false) {
     // Si généré ET exactement identique : on propose juste de revoir les QR
     btn.textContent = "Revenir aux QR code";
-    btn.onclick = function() { showScreen('sessionInfo'); };
-  } else {
-    // Sinon (modifié), on remet le bouton à son état normal de création
-    btn.textContent = "Lancer le jeu";
-    btn.onclick = function() { setupNext(); };
+    btn.onclick = function() {
+      showScreen('sessionInfo');
+    };
+    return;
   }
+
+  // Dans tous les autres cas, surtout une nouvelle création,
+  // le bouton doit recréer un vrai nouveau jeu.
+  btn.textContent = "Lancer le jeu";
+  btn.onclick = function() {
+    setupNext();
+  };
 }
 
 function setupNext() {
@@ -9035,6 +9166,10 @@ if (!isValid) {
 game.players = [];
 game.messages = []; // NOUVEAU : On vide l'historique des messages pour la nouvelle partie !
 game.isResolved = false; // INDISPENSABLE : On remet le jeu à zéro
+game.gameMode = sessionConfig.mode;
+
+// CORRECTION : Appliquer le mode localement pour le créateur qui teste
+currentPlayerMode = sessionConfig.mode === 'both' ? 'advanced' : sessionConfig.mode;
 
 // IMPORTANT : une nouvelle session ne doit jamais hériter
 // de la session suivante liée à l'ancienne partie.
@@ -9126,7 +9261,7 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
   }
 
 // SAUVEGARDE SUR LE SERVEUR (Mode Facile ou par défaut)
-  saveToCloud();
+saveToCloud(sessionConfig.code);
 
   // NOUVEAU : Création de la copie 100% indépendante pour le mode Avancé
   if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
@@ -9167,15 +9302,47 @@ sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance"
 }
 
 function startSetup(mode) {
-  sessionConfig.mode = mode;
+  resetLocalSessionForSetup(mode);
+
+  // Nouvelle création = on oublie l'état QR précédent
+  window.isSessionGenerated = false;
+  window.hasSetupChanged = true;
+  window.originalSetupState = "";
+  savedSetupData = null;
+
+  // On force le bouton à redevenir un bouton de création,
+  // même s'il était resté sur "Revenir aux QR code".
+  if (typeof updateSetupBtnState === "function") {
+    updateSetupBtnState();
+  }
+
+  const stepQty = document.getElementById("setupStepQty");
+  const stepFields = document.getElementById("setupStepFields");
+  const dynamicContainer = document.getElementById("dynamicSetupContainer");
+
+  if (stepQty) stepQty.classList.remove("hidden");
+  if (stepFields) stepFields.classList.add("hidden");
+  if (dynamicContainer) dynamicContainer.innerHTML = "";
+
   const advParams = document.getElementById("advancedParams");
   
-  if (mode === 'advanced' || mode === 'both') {
-    advParams.classList.remove("hidden");
-  } else {
-    advParams.classList.add("hidden");
+  if (advParams) {
+    if (mode === 'advanced' || mode === 'both') {
+      advParams.classList.remove("hidden");
+    } else {
+      advParams.classList.add("hidden");
+    }
   }
+
+  const setupMsg = document.getElementById("setupMsg");
+  if (setupMsg) setupMsg.textContent = "";
+
   showScreen('setup');
+
+  // Sécurité : showScreen peut toucher le DOM, donc on réapplique après affichage.
+  if (typeof updateSetupBtnState === "function") {
+    updateSetupBtnState();
+  }
 }
 
 function initBaseVotes(ch, customB) {
@@ -9432,9 +9599,10 @@ function startPlayScreenTimers() {
           else openTimer.textContent = formatTimeDiff(diff);
         } else { needsRefresh = true; } // Devrait être ouvert mais affiche encore le pending
       }
-      // 3. PASSAGE AU STATUT CLOS
+// 3. PASSAGE AU STATUT CLOS
       else if (effStatus === "closed") {
-        if (openTimer || document.getElementById(`answers-ch${i}`)) needsRefresh = true;
+        // CORRECTION : Détection de fermeture depuis le récapitulatif
+        if (openTimer || document.getElementById(`answers-ch${i}`) || document.getElementById(`recap-timer-${i}`)) needsRefresh = true;
       }
     });
 
@@ -9442,10 +9610,15 @@ function startPlayScreenTimers() {
     game.challenges.forEach((ch, i) => {
         const pTimer = document.getElementById(`pending-timer-${i}`);
         const oTimer = document.getElementById(`open-timer-${i}`);
+        const rTimer = document.getElementById(`recap-timer-${i}`); // CORRECTION : Cible le timer du récap
         const effStatus = getEffectiveStatus(ch);
 
         if (effStatus === "pending" && pTimer) pTimer.textContent = formatTimeDiff(ch.startTime - now);
-        if (effStatus === "open" && oTimer) oTimer.textContent = formatTimeDiff(ch.endTime - now);
+        if (effStatus === "open") {
+            const diff = ch.endTime - now;
+            if (oTimer) oTimer.textContent = formatTimeDiff(diff);
+            if (rTimer) rTimer.textContent = "⏱️ " + formatTimeDiff(diff); // CORRECTION : Mise à jour du timer récap
+        }
     });
 
 // On ne reconstruit PAS les cartes pendant les premières étapes du tuto,
@@ -9462,6 +9635,11 @@ if (!window.isCardDragging && typeof updatePlayChallengesLive === "function") {
 }
 
 if (needsRefresh && !window.isCardDragging && !shouldFreezeTutoDom) {
+    // CORRECTION : Rafraîchir le récapitulatif pour forcer l'affichage "Mises closes" quand le temps est écoulé
+    if (document.getElementById("playerRecap") && document.getElementById("playerRecap").style.display !== "none") {
+        if (typeof renderPlayerRecap === "function") renderPlayerRecap(game.currentPlayerName);
+    }
+
     const pendingReplacementCIndex = window.pendingActiveReplacementCIndex;
 
     if (Number.isInteger(pendingReplacementCIndex)) {
@@ -9578,6 +9756,7 @@ function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protecte
   if (!game || !Array.isArray(game.challenges)) return null;
 
   const oldIndex = Number(activeCIndex);
+  const myIndices = (player && Array.isArray(player.assignedIndices)) ? player.assignedIndices.map(Number) : []; // NOUVEAU
 
   const candidates = game.challenges
     .map((ch, idx) => {
@@ -9594,6 +9773,9 @@ function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protecte
     .filter(item => {
       if (!item.ch || !Number.isInteger(item.idx)) return false;
       if (item.idx === oldIndex) return false;
+
+      // CORRECTION : On exclut les questions déjà prévues dans la main du joueur
+      if (myIndices.includes(item.idx)) return false;
 
       // On évite de reproposer une question déjà vue / protégée.
       if (protectedQuestionIndices && protectedQuestionIndices.has(item.idx)) return false;
@@ -9627,6 +9809,20 @@ function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protecte
 
   if (soonestPendingQuestions.length) {
     return soonestPendingQuestions[0].idx;
+  }
+
+  // CORRECTION : Priorité 3 :
+  // le dernier recours, une question ouverte qui ferme dans moins d'une minute
+  const urgentOpenQuestions = candidates
+    .filter(item => item.status === "open" && (item.endTime - now) <= 60000)
+    .sort((a, b) => {
+        const endDiff = a.endTime - b.endTime;
+        if (endDiff !== 0) return endDiff;
+        return a.idx - b.idx;
+    });
+
+  if (urgentOpenQuestions.length) {
+      return urgentOpenQuestions[0].idx;
   }
 
   return null;
@@ -9811,13 +10007,30 @@ window.getPlayerDisplayIndices = function(player) {
     return 4;
   };
 
-  return uniqueIndices.sort((a, b) => {
-    const priorityDiff = statusPriority(a) - statusPriority(b);
-    if (priorityDiff !== 0) return priorityDiff;
+return uniqueIndices.sort((a, b) => {
+  const priorityDiff = statusPriority(a) - statusPriority(b);
+  if (priorityDiff !== 0) return priorityDiff;
 
-    // Dans chaque groupe, on respecte l'ordre d'apparition réel des questions.
-    return Number(a) - Number(b);
-  });
+  const chA = game.challenges[a];
+  const chB = game.challenges[b];
+
+  const statusA = chA ? getEffectiveStatus(chA) : "unknown";
+  const statusB = chB ? getEffectiveStatus(chB) : "unknown";
+
+  // Si plusieurs cartes sont en attente, on montre d'abord celle qui ouvre le plus vite.
+  if (statusA === "pending" && statusB === "pending") {
+    const startDiff = Number(chA.startTime || 0) - Number(chB.startTime || 0);
+    if (startDiff !== 0) return startDiff;
+  }
+
+  // Si plusieurs cartes sont ouvertes, on montre d'abord celle qui se termine le plus vite.
+  if (statusA === "open" && statusB === "open") {
+    const endDiff = Number(chA.endTime || 0) - Number(chB.endTime || 0);
+    if (endDiff !== 0) return endDiff;
+  }
+
+  return Number(a) - Number(b);
+});
 };
 
 function renderPlayChallenges(){
@@ -10671,9 +10884,19 @@ if (typeof window.canPassCurrentCard === 'function' && window.canPassCurrentCard
 }
 
 function renderAnswersForChallenge(cIndex){
-  const ch = game.challenges[cIndex];
+  const challenges = game && Array.isArray(game.challenges) ? game.challenges : [];
+  const ch = challenges[cIndex];
   const box = document.getElementById("answers-ch"+cIndex);
   if (!box) return;
+
+  if (!ch || !Array.isArray(ch.answers)) {
+    box.innerHTML = "";
+    return;
+  }
+
+  if (!Array.isArray(ch.votes)) {
+    ch.votes = new Array(ch.answers.length).fill(0);
+  }
 
   const answerCardStatus = getEffectiveStatus(ch);
   const answersAreTradeable = answerCardStatus === "open";
@@ -12022,14 +12245,22 @@ function clearUnconfirmedAdvancedSelection() {
   if (currentPlayerMode !== "advanced") return;
   if (tempBetCIndex === null || tempBetCIndex === undefined) return;
 
-  if (selectedAnswers[tempBetCIndex] === tempBetAnsIndex) {
-    selectedAnswers[tempBetCIndex] = null;
-    selectedBets[tempBetCIndex] = 0;
-    selectedBetTypes[tempBetCIndex] = null;
+  const cIndex = tempBetCIndex;
+  const ch = game && Array.isArray(game.challenges) ? game.challenges[cIndex] : null;
+
+  if (selectedAnswers && selectedAnswers[cIndex] === tempBetAnsIndex) {
+    selectedAnswers[cIndex] = null;
+    if (selectedBets) selectedBets[cIndex] = 0;
+    if (selectedBetTypes) selectedBetTypes[cIndex] = null;
   }
 
-  if (typeof renderAnswersForChallenge === "function") {
-    renderAnswersForChallenge(tempBetCIndex);
+  tempBetCIndex = null;
+  tempBetAnsIndex = null;
+  tempBetType = "YES";
+  tempBetOpenedAt = 0;
+
+  if (ch && typeof renderAnswersForChallenge === "function") {
+    renderAnswersForChallenge(cIndex);
   }
 }
 
@@ -12039,7 +12270,10 @@ function closeBetPanel(options = {}) {
 
 document.body.classList.remove("bet-panel-open");
 
-if (!options || options.betConfirmed !== true) {
+if (
+  (!options || options.betConfirmed !== true) &&
+  (!options || options.skipUnconfirmedClear !== true)
+) {
   clearUnconfirmedAdvancedSelection();
 }
 
@@ -12435,12 +12669,14 @@ if (existingBet) {
    existingBet.pctAtBet = pctAtBet;
    existingBet.validatedAt = betTime;
 
-   existingBet.events.push({
-     bet: val,
-     pts: pointsPotentiels,
-     type: tempBetType,
-     validatedAt: betTime
-   });
+existingBet.events.push({
+  bet: val,
+  pts: pointsPotentiels,
+  ansIndex: tempBetAnsIndex,
+  type: tempBetType,
+  pctAtBet: pctAtBet,
+  validatedAt: betTime
+});
 } else {
 player.portfolio.push({
   cIndex: tempBetCIndex,
@@ -12451,12 +12687,14 @@ player.portfolio.push({
            type: tempBetType,
            pctAtBet: pctAtBet,
            validatedAt: betTime,
-           events: [{
-             bet: val,
-             pts: pointsPotentiels,
-             type: tempBetType,
-             validatedAt: betTime
-           }]
+events: [{
+  bet: val,
+  pts: pointsPotentiels,
+  ansIndex: tempBetAnsIndex,
+  type: tempBetType,
+  pctAtBet: pctAtBet,
+  validatedAt: betTime
+}]
          });
       }
 
@@ -13809,7 +14047,82 @@ function evaluatePseudo(pseudo, email, feedback) {
     feedback.textContent = "Pseudo disponible ✅";
     feedback.style.color = "#4ade80";
 }
-// ------------------------------------------------------
+
+function isPlayerSessionBeforeStart() {
+  const startTime = Number(sessionConfig && sessionConfig.gameStartTime || 0);
+  return startTime > Date.now() && !(game && game.isResolved);
+}
+
+function getSoonestUpcomingQuestionIndices(limit) {
+  if (!game || !Array.isArray(game.challenges)) return [];
+
+  const maxCards = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.floor(Number(limit)))
+    : Math.max(1, Number(sessionConfig && sessionConfig.n) || 1);
+
+  const now = Date.now();
+
+  return game.challenges
+    .map((ch, idx) => {
+      const status = ch ? getEffectiveStatus(ch) : "closed";
+
+      return {
+        idx,
+        ch,
+        status,
+        startTime: Number(ch && ch.startTime || 0),
+        endTime: Number(ch && ch.endTime || 0)
+      };
+    })
+    .filter(item => {
+      if (!item.ch) return false;
+
+      // Avant le début, on veut surtout les questions à venir.
+      // Après le début, ce helper reste utile : ouvertes d'abord, puis prochaines à ouvrir.
+      return item.status === "open" || item.status === "pending";
+    })
+    .sort((a, b) => {
+      const aPriority = a.status === "open" ? 0 : 1;
+      const bPriority = b.status === "open" ? 0 : 1;
+
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      const aTime = a.status === "open"
+        ? Math.max(0, a.endTime - now)
+        : Math.max(0, a.startTime - now);
+
+      const bTime = b.status === "open"
+        ? Math.max(0, b.endTime - now)
+        : Math.max(0, b.startTime - now);
+
+      if (aTime !== bTime) return aTime - bTime;
+
+      return a.idx - b.idx;
+    })
+    .slice(0, maxCards)
+    .map(item => item.idx);
+}
+
+function ensurePlayerHasPreStartCards(player) {
+  if (!player || !isPlayerSessionBeforeStart()) return false;
+
+  const n = Math.max(1, Number(sessionConfig && sessionConfig.n) || 1);
+  const nextIndices = getSoonestUpcomingQuestionIndices(n);
+
+  if (!nextIndices.length) return false;
+
+  const previous = Array.isArray(player.assignedIndices)
+    ? player.assignedIndices.map(Number).filter(i => Number.isInteger(i))
+    : [];
+
+  const changed = previous.join("|") !== nextIndices.join("|");
+
+  if (changed) {
+    player.assignedIndices = nextIndices;
+  }
+
+  return changed;
+}
 
 function checkAccess() {
   const pseudoInput = document.getElementById("pseudo").value.trim();
@@ -14009,35 +14322,57 @@ if (finalPlayer) {
       me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [], assignedIndices: [] };
       
 const n = sessionConfig.n || 1;
-      const marginMs = 60 * 1000; // 1 minute
-      
-      let poolOpenSafe = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) >= marginMs);
-      let poolPendingSoon = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) < marginMs);
-      let poolOpenUrgent = game.challenges.map((ch, idx) => ({idx, ch})).filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
-      
-      // On cherche d'abord le Fil Rouge dans l'un des 3 pools
-      const golden = poolOpenSafe.find(item => item.ch.isGolden) || poolPendingSoon.find(item => item.ch.isGolden) || poolOpenUrgent.find(item => item.ch.isGolden);
-      
-      let finalSelection = [];
-      if (golden) {
-        finalSelection.push(golden.idx);
-        poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
-        poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
-        poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
-      }
-      
-      poolOpenSafe.sort(() => 0.5 - Math.random());
-      poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime); // Celle qui ouvre le plus tôt d'abord
-      poolOpenUrgent.sort(() => 0.5 - Math.random());
-      
-      // La priorité : Ouvertes Sûres > Bientôt Ouvertes (Décompte) > Ouvertes Urgentes (Moins d'1min)
-      let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent];
-      let additionalQuestions = [];
-      while (finalSelection.length + additionalQuestions.length < n && prioritizedIndices.length > 0) {
-        additionalQuestions.push(prioritizedIndices.shift().idx);
-      }
-      
-      me.assignedIndices = finalSelection.concat(additionalQuestions);
+
+if (isPlayerSessionBeforeStart()) {
+  // Si la session n'a pas encore commencé :
+  // le joueur reçoit directement les N questions qui ouvriront le plus vite.
+  me.assignedIndices = getSoonestUpcomingQuestionIndices(n);
+} else {
+  const marginMs = 60 * 1000; // 1 minute
+
+  let poolOpenSafe = game.challenges
+    .map((ch, idx) => ({idx, ch}))
+    .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) >= marginMs);
+
+  let poolPendingSoon = game.challenges
+    .map((ch, idx) => ({idx, ch}))
+    .filter(item => getEffectiveStatus(item.ch) === "pending" && (item.ch.startTime - now) < marginMs);
+
+  let poolOpenUrgent = game.challenges
+    .map((ch, idx) => ({idx, ch}))
+    .filter(item => getEffectiveStatus(item.ch) === "open" && (item.ch.endTime - now) < marginMs);
+
+  // On cherche d'abord le Fil Rouge dans l'un des 3 pools
+  const golden =
+    poolOpenSafe.find(item => item.ch.isGolden) ||
+    poolPendingSoon.find(item => item.ch.isGolden) ||
+    poolOpenUrgent.find(item => item.ch.isGolden);
+
+  let finalSelection = [];
+
+  if (golden) {
+    finalSelection.push(golden.idx);
+    poolOpenSafe = poolOpenSafe.filter(item => item.idx !== golden.idx);
+    poolPendingSoon = poolPendingSoon.filter(item => item.idx !== golden.idx);
+    poolOpenUrgent = poolOpenUrgent.filter(item => item.idx !== golden.idx);
+  }
+
+  poolOpenSafe.sort(() => 0.5 - Math.random());
+  poolPendingSoon.sort((a,b) => a.ch.startTime - b.ch.startTime);
+  poolOpenUrgent.sort(() => 0.5 - Math.random());
+
+  // La priorité en live :
+  // ouvertes sûres > bientôt ouvertes > ouvertes urgentes.
+  let prioritizedIndices = [...poolOpenSafe, ...poolPendingSoon, ...poolOpenUrgent];
+
+  let additionalQuestions = [];
+
+  while (finalSelection.length + additionalQuestions.length < n && prioritizedIndices.length > 0) {
+    additionalQuestions.push(prioritizedIndices.shift().idx);
+  }
+
+  me.assignedIndices = finalSelection.concat(additionalQuestions);
+}
 me.lastLocalUpdate = Date.now();
 window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
       game.players.push(me);
@@ -14053,8 +14388,20 @@ window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
       finalPseudo = me.name; 
     }
 
-currentPlayerMode = modeToPlay;
-game.currentPlayerName = finalPseudo;
+const connectedPlayer = (game.players || []).find(p => p.name === finalPseudo);
+
+if (connectedPlayer && ensurePlayerHasPreStartCards(connectedPlayer)) {
+  window.currentCardIndex = 0;
+  window.maxCardIndexSeen = 0;
+
+  const pIdx = game.players.findIndex(p => p.name === connectedPlayer.name && p.email === connectedPlayer.email);
+
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+    db.ref(
+      'sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx + '/assignedIndices'
+    ).set(connectedPlayer.assignedIndices);
+  }
+}
 
 saveLastPlayerSession(inputCode, finalPseudo, emailInput, modeToPlay);
 
@@ -14436,7 +14783,10 @@ function checkManageAccess() {
     return;
   }
 
-  const sessionRef = db.ref("sessions").child(input);
+  stopLiveSessionContext();
+rememberLiveSessionCode(input);
+
+const sessionRef = db.ref("sessions").child(input);
 
   msg.textContent = "Connexion au serveur...";
   msg.className = "msg ok";
@@ -14487,14 +14837,20 @@ function checkManageAccess() {
     renderManageDashboard();
 
     // ON ACTIVE LE TEMPS RÉEL : On écoute les futures mises
-    sessionRef.on('value', (liveSnap) => {
-      if (liveSnap.exists()) {
-        const liveData = liveSnap.val();
-        game = liveData.gameData;
-        if (!game.players) game.players = [];
-        renderManageDashboard();
-      }
-    });
+sessionRef.off('value');
+
+sessionRef.on('value', (liveSnap) => {
+  if (window.currentActiveSessionCode !== input) return;
+
+  if (liveSnap.exists()) {
+    const liveData = liveSnap.val() || {};
+    sessionConfig = liveData.sessionConfig || sessionConfig;
+    game = liveData.gameData || game;
+
+    if (!game.players) game.players = [];
+    renderManageDashboard();
+  }
+});
 
   }).catch(err => {
     msg.textContent = "Erreur : " + err.message;
@@ -14504,37 +14860,63 @@ function checkManageAccess() {
 
 function startManageTimer() {
   if (timerInterval) clearInterval(timerInterval);
-  
+
+  function formatAdminCountdown(diff) {
+    const safeDiff = Math.max(0, Number(diff || 0));
+    const h = Math.floor(safeDiff / 3600000);
+    const m = Math.floor((safeDiff % 3600000) / 60000);
+    const s = Math.floor((safeDiff % 60000) / 1000);
+
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  }
+
   timerInterval = setInterval(() => {
     const now = Date.now();
-    // On utilise la vraie fin du jeu (ou expiresAt par sécurité si c'est une vieille partie)
-    const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
-    const diff = targetTime - now;
 
-    // NOUVEAU : On vérifie si TOUTES les questions sont clôturées ou publiées
-    const allClosedOrResolved = game.challenges.every(ch => {
+    const timerEl = document.getElementById("gameTimer");
+    const finalZone = document.getElementById("finalValidationZone");
+
+    if (!timerEl || !sessionConfig) return;
+
+    const startTime = Number(sessionConfig.gameStartTime || 0);
+    const endTime = Number(sessionConfig.gameEndTime || sessionConfig.expiresAt || 0);
+
+    const challenges = game && Array.isArray(game.challenges) ? game.challenges : [];
+
+    const allClosedOrResolved = challenges.length > 0 && challenges.every(ch => {
       const status = getEffectiveStatus(ch);
       return status === "closed" || status === "resolved";
     });
 
-    // Gestion de l'affichage du temps global
-    if (diff <= 0) {
-      clearInterval(timerInterval);
-      document.getElementById("gameTimer").textContent = "TERMINÉ";
-    } else {
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      document.getElementById("gameTimer").textContent = 
-        `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+    // 1. La session n'a pas encore commencé
+    if (startTime && now < startTime) {
+      timerEl.textContent = `Session démarre dans ${formatAdminCountdown(startTime - now)}`;
+      timerEl.style.color = "#10b981";
+
+      if (finalZone) finalZone.classList.add("hidden");
+      return;
     }
 
-    // Apparition du bouton final : Si le temps est écoulé OU si l'admin a tout fermé manuellement
-    const finalZone = document.getElementById("finalValidationZone");
-    if (diff <= 0 || allClosedOrResolved) {
-      finalZone.classList.remove("hidden");
-    } else {
-      finalZone.classList.add("hidden");
+    // 2. La session est terminée
+    if (!endTime || now >= endTime) {
+      clearInterval(timerInterval);
+      timerEl.textContent = "SESSION TERMINÉE";
+      timerEl.style.color = "#fb7185";
+
+      if (finalZone) finalZone.classList.remove("hidden");
+      return;
+    }
+
+    // 3. La session est en cours
+    timerEl.textContent = `Session se termine dans ${formatAdminCountdown(endTime - now)}`;
+    timerEl.style.color = "#f97316";
+
+    if (finalZone) {
+      if (allClosedOrResolved) {
+        finalZone.classList.remove("hidden");
+      } else {
+        finalZone.classList.add("hidden");
+      }
     }
   }, 1000);
 }
@@ -14659,14 +15041,60 @@ function renderAdminResultsDropdown(cIndex) {
   `;
 }
 
-function getAdminSnapOriginalStake(snap) {
+function getPortfolioDisplayedStake(snap) {
   if (!snap) return 0;
 
+  const round = typeof roundBetAmount === "function"
+    ? roundBetAmount
+    : (v) => Math.round(Number(v || 0) * 100) / 100;
+
+  // Format récent : les mises positives et les cashouts négatifs
+  // sont enregistrés dans events.
   if (Array.isArray(snap.events) && snap.events.length) {
-    return snap.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0);
+    const total = snap.events.reduce((sum, ev) => {
+      return sum + Number(ev.bet || 0);
+    }, 0);
+
+    return round(Math.max(0, total));
   }
 
-  return Number(snap.bet || 0) + Number(snap.cashedOutAmount || 0);
+  // Fallback ancien format.
+  let stake = Number(
+    snap.originalStake ??
+    snap.initialStake ??
+    snap.bet ??
+    0
+  );
+
+  if (!Number.isFinite(stake) || stake < 0) stake = 0;
+
+  // Si on a l'historique des cashouts, on retire la mise au prorata
+  // de la valeur de marché liquidée.
+  if (Array.isArray(snap.cashoutEvents) && snap.cashoutEvents.length) {
+    snap.cashoutEvents
+      .slice()
+      .sort((a, b) => Number(a.validatedAt || 0) - Number(b.validatedAt || 0))
+      .forEach(ev => {
+        const amount = Number(ev.amount || 0);
+        const valueBefore = Number(
+          ev.valueBeforeCashout ??
+          (Number(ev.amount || 0) + Number(ev.remainingValue || 0))
+        );
+
+        if (!(amount > 0) || !(valueBefore > 0)) return;
+
+        const fractionSold = Math.min(1, Math.max(0, amount / valueBefore));
+        const stakeSold = stake * fractionSold;
+
+        stake = round(Math.max(0, stake - stakeSold));
+      });
+  }
+
+  return round(Math.max(0, stake));
+}
+
+function getAdminSnapOriginalStake(snap) {
+  return getPortfolioDisplayedStake(snap);
 }
 
 function getAdminPositionCurrentValue(ch, snap) {
@@ -14710,7 +15138,7 @@ function buildAdminPlayerPortfolioHtml(player) {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
 
   if (!player || !Array.isArray(player.portfolio) || player.portfolio.length === 0) {
-    return `<div style="font-size:12px; color:#94a3b8; margin-top:10px;">Aucune position enregistrée.</div>`;
+    return `<div style="font-size:12px; color:#94a3b8; margin-top:10px;">Aucune mise enregistrée.</div>`;
   }
 
   return player.portfolio.map(snap => {
@@ -14724,69 +15152,77 @@ function buildAdminPlayerPortfolioHtml(player) {
       ? ch.answers[snap.ansIndex]
       : "Réponse inconnue";
 
-    const originalStake = getAdminSnapOriginalStake(snap);
+    const stakeValue = typeof getPortfolioDisplayedStake === "function"
+      ? getPortfolioDisplayedStake(snap)
+      : getAdminSnapOriginalStake(snap);
+
     const currentValue = getAdminPositionCurrentValue(ch, snap);
-    const delta = currentValue - originalStake;
-    const deltaColor = delta >= 0 ? "#4ade80" : "#f87171";
-
-    const effStatus = getEffectiveStatus(ch);
-    const statusLabel =
-      snap.cashedOut ? "Cash out total" :
-      effStatus === "resolved" ? "Résultat publié" :
-      effStatus === "closed" ? "Mises closes" :
-      effStatus === "pending" ? "Pas encore ouverte" :
-      "En cours";
-
-    const cashouts = Array.isArray(snap.cashoutEvents)
-      ? snap.cashoutEvents
-      : [];
-
-    const cashoutsHtml = cashouts.length
-      ? `
-        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.10);">
-          ${cashouts.map(ev => `
-            <div style="font-size:11px; color:#fdba74; margin-top:4px;">
-              Cash out : <strong>${Number(ev.amount || 0).toFixed(2)} 💰</strong>
-              <span style="color:#94a3b8;">· reste ${Number(ev.remainingValue || 0).toFixed(2)} 💰</span>
-            </div>
-          `).join("")}
-        </div>
-      `
-      : "";
 
     return `
-      <div style="background:rgba(15,23,42,0.72); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px; margin-top:8px;">
-        <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-          <div style="min-width:0;">
-            <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:900;">${safe(ch.category || "Question")}</div>
-            <div style="font-size:12px; color:#fff; font-weight:850; margin-top:3px; line-height:1.25;">${safe(ch.question || "")}</div>
-            <div style="font-size:11px; color:#cbd5e1; margin-top:5px;">Réponse : <strong>${safe(ansLabel)}</strong></div>
-          </div>
-
-          <div style="text-align:right; flex-shrink:0;">
-            <div style="font-size:10px; color:#94a3b8;">Statut</div>
-            <div style="font-size:11px; color:#bfdbfe; font-weight:900;">${statusLabel}</div>
-          </div>
+      <div style="
+        background:rgba(15,23,42,0.72);
+        border:1px solid rgba(255,255,255,0.08);
+        border-radius:12px;
+        padding:10px;
+        margin-top:8px;
+      ">
+        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
+          ${safe(ch.category || "Question")}
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px;">
-          <div>
-            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Mise initiale</div>
-            <div style="font-size:12px; color:#fde047; font-weight:950;">${originalStake.toFixed(2)} 💰</div>
-          </div>
-
-          <div style="text-align:center;">
-            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Valeur actuelle</div>
-            <div style="font-size:12px; color:#38bdf8; font-weight:950;">${currentValue.toFixed(2)} 💰</div>
-          </div>
-
-          <div style="text-align:right;">
-            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Écart</div>
-            <div style="font-size:12px; color:${deltaColor}; font-weight:950;">${delta >= 0 ? "+" : ""}${delta.toFixed(2)} 💰</div>
-          </div>
+        <div style="font-size:12px; color:#fff; font-weight:850; margin-top:3px; line-height:1.25;">
+          ${safe(ch.question || "")}
         </div>
 
-        ${cashoutsHtml}
+        <div style="
+          margin-top:9px;
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:8px;
+        ">
+          <div style="
+            grid-column:1 / -1;
+            background:rgba(255,255,255,0.04);
+            border-radius:10px;
+            padding:8px;
+          ">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
+              A misé sur
+            </div>
+            <div style="font-size:13px; color:#ffffff; font-weight:950; margin-top:2px;">
+              ${safe(ansLabel)}
+            </div>
+          </div>
+
+          <div style="
+            background:rgba(251,191,36,0.08);
+            border:1px solid rgba(251,191,36,0.18);
+            border-radius:10px;
+            padding:8px;
+          ">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
+              Mise
+            </div>
+            <div style="font-size:13px; color:#fde047; font-weight:950; margin-top:2px;">
+              ${Number(stakeValue || 0).toFixed(2)} 💰
+            </div>
+          </div>
+
+          <div style="
+            background:rgba(56,189,248,0.08);
+            border:1px solid rgba(56,189,248,0.18);
+            border-radius:10px;
+            padding:8px;
+            text-align:right;
+          ">
+            <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
+              Valeur actuelle
+            </div>
+            <div style="font-size:13px; color:#38bdf8; font-weight:950; margin-top:2px;">
+              ${Number(currentValue || 0).toFixed(2)} 💰
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }).join("");
@@ -14855,28 +15291,15 @@ function renderAdminPlayersPanel() {
           </div>
 
           <div style="text-align:right; flex-shrink:0;">
-            <div style="font-size:10px; color:#94a3b8;">Parts actuelles</div>
-            <div style="font-size:14px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
-            <div style="font-size:10px; color:#cbd5e1;">Total : ${totalValue.toFixed(2)} 💰</div>
+<div style="font-size:10px; color:#94a3b8;">Valeur actuelle</div>
+<div style="font-size:14px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
           </div>
         </div>
 
         ${isOpen ? `
-          <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-              <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:8px;">
-                <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Solde disponible</div>
-                <div style="font-size:13px; color:#fde047; font-weight:950;">${balance.toFixed(2)} 💰</div>
-              </div>
-
-              <div style="background:rgba(255,255,255,0.04); border-radius:10px; padding:8px; text-align:right;">
-                <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">Valeur parts</div>
-                <div style="font-size:13px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
-              </div>
-            </div>
-
-            ${buildAdminPlayerPortfolioHtml(p)}
-          </div>
+<div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+  ${buildAdminPlayerPortfolioHtml(p)}
+</div>
         ` : ""}
       </div>
     `;
@@ -14884,20 +15307,7 @@ function renderAdminPlayersPanel() {
 }
 
 function getAdminEvolutionOriginalStake(b) {
-  if (!b) return 0;
-
-  if (b.originalStake !== undefined && b.originalStake !== null) {
-    return Number(b.originalStake || 0);
-  }
-
-  if (Array.isArray(b.events) && b.events.length) {
-    return b.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0);
-  }
-
-  // Fallback pour les anciens tickets :
-  // après cash out, b.bet = valeur restante.
-  // Donc mise de départ = valeur restante + déjà cashout.
-  return Number(b.bet || 0) + Number(b.cashedOutAmount || 0);
+  return getPortfolioDisplayedStake(b);
 }
 
 function getAdminCashoutEvents(b) {
@@ -15017,12 +15427,17 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
       : "Réponse inconnue";
   };
 
+  const formatPct = (value) => {
+    if (value === undefined || value === null || value === "") return "—";
+    const n = Number(String(value).replace("%", ""));
+    return Number.isFinite(n) ? `${n.toFixed(1)}%` : "—";
+  };
+
   const pushBetEvent = (player, snap, ev = null) => {
     const amount = Number(ev?.bet ?? snap.originalStake ?? snap.bet ?? 0);
     if (!(amount > 0)) return;
 
     const ansIndex = Number(ev?.ansIndex ?? snap.ansIndex);
-    const eventType = ev?.type || snap.type || "YES";
     const t = Number(ev?.validatedAt ?? snap.validatedAt ?? sessionConfig.gameStartTime ?? 0);
 
     activePlayers.add(String(player.name || "Joueur"));
@@ -15032,10 +15447,8 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
       t,
       playerName: player.name || "Joueur",
       amount,
-      pts: Number(ev?.pts ?? snap.pts ?? 0),
       ansLabel: getAnswerLabel(ansIndex),
-      type: eventType,
-      remainingNow: Number(snap.bet || 0)
+      pct: ev?.pctAtBet ?? snap.pctAtBet ?? ""
     });
   };
 
@@ -15061,8 +15474,7 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
             playerName: player.name || "Joueur",
             amount,
             ansLabel: getAnswerLabel(ev.ansIndex ?? snap.ansIndex),
-            valueBeforeCashout: Number(ev.valueBeforeCashout || 0),
-            remainingValue: Number(ev.remainingValue || 0)
+            pct: ev.pctAtCashout ?? ""
           });
         });
       });
@@ -15074,34 +15486,53 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
     ? events.map(ev => {
         const isCashout = ev.kind === "cashout";
         const icon = isCashout ? "↩️" : "🎯";
-        const title = isCashout ? "Cash out" : "Mise validée";
+        const title = isCashout ? "Cashout" : "Mise";
         const color = isCashout ? "#fdba74" : "#93c5fd";
 
         return `
-          <div style="display:grid; grid-template-columns:74px 1fr; gap:10px; padding:10px 0; border-top:1px dashed rgba(255,255,255,0.10);">
+          <div style="
+            display:grid;
+            grid-template-columns:74px 1fr;
+            gap:10px;
+            padding:10px 0;
+            border-top:1px dashed rgba(255,255,255,0.10);
+          ">
             <div style="font-size:10px; color:#94a3b8; font-family:monospace; padding-top:2px;">
               ${formatAdminTimelineTime(ev.t)}
             </div>
 
             <div style="border-left:3px solid ${color}; padding-left:10px;">
-              <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-                <strong style="color:#ffffff; font-size:12px;">${icon} ${title}</strong>
-                <span style="color:${color}; font-size:11px; font-weight:900; white-space:nowrap;">
-                  ${formatAdminMoney(ev.amount)} 💰
+              <div style="
+                display:flex;
+                justify-content:space-between;
+                gap:8px;
+                align-items:flex-start;
+              ">
+                <strong style="color:#ffffff; font-size:12px;">
+                  ${icon} ${title}
+                </strong>
+
+                <span style="
+                  color:${color};
+                  font-size:11px;
+                  font-weight:950;
+                  white-space:nowrap;
+                ">
+                  ${formatPct(ev.pct)}
                 </span>
               </div>
 
-              <div style="margin-top:3px; color:#cbd5e1; font-size:11px; line-height:1.35;">
+              <div style="
+                margin-top:4px;
+                color:#cbd5e1;
+                font-size:11px;
+                line-height:1.4;
+              ">
                 <strong>${safe(ev.playerName)}</strong>
-                ${isCashout ? "a retiré de" : "a misé sur"}
-                « ${safe(ev.ansLabel)} »
-              </div>
-
-              <div style="margin-top:4px; color:#94a3b8; font-size:10px; line-height:1.35;">
-                ${isCashout
-                  ? `Valeur avant cash out : ${formatAdminMoney(ev.valueBeforeCashout)} 💰 · reste : ${formatAdminMoney(ev.remainingValue)} 💰`
-                  : `Parts obtenues : ${Number(ev.pts || 0).toFixed(2)} · valeur restante ticket : ${formatAdminMoney(ev.remainingNow)} 💰`
-                }
+                ${isCashout ? "a cashout" : "a misé"}
+                <strong style="color:${color};">${formatAdminMoney(ev.amount)} 💰</strong>
+                sur « <strong>${safe(ev.ansLabel)}</strong> »
+                à <strong style="color:${color};">${formatPct(ev.pct)}</strong>
               </div>
             </div>
           </div>
@@ -15457,89 +15888,203 @@ attachRecapJumpHandlers();
 
 let recapTimerInterval = null;
 
+function getRecapSessionStartMs() {
+  return Number(
+    sessionConfig &&
+    (
+      sessionConfig.gameStartTime ||
+      sessionConfig.startTime ||
+      0
+    )
+  );
+}
+
+function getRecapSessionEndMs() {
+  return Number(
+    sessionConfig &&
+    (
+      sessionConfig.gameEndTime ||
+      sessionConfig.expiresAt ||
+      0
+    )
+  );
+}
+
+function isRecapBeforeSessionStart() {
+  const startMs = getRecapSessionStartMs();
+  return startMs > Date.now() && !(game && game.isResolved);
+}
+
+function setRecapSessionTimerDisplay(labelText, timeText) {
+  const labelEl = document.getElementById("recapSessionTimerLabel");
+  const timerEl = document.getElementById("recapSessionTimer");
+
+  if (labelEl) labelEl.textContent = labelText;
+  if (timerEl) timerEl.textContent = timeText;
+}
+
+function refreshRecapPendingQuestionTimers() {
+  let recapNeedsRefresh = false;
+
+  document.querySelectorAll("[data-recap-pending-timer]").forEach(el => {
+    const cIndex = Number(el.getAttribute("data-recap-pending-timer"));
+    const ch = game && game.challenges ? game.challenges[cIndex] : null;
+
+    if (!ch) return;
+
+    const effStatus = getEffectiveStatus(ch);
+
+    if (effStatus === "open") {
+      recapNeedsRefresh = true;
+      return;
+    }
+
+    if (effStatus === "pending") {
+      const diffToOpen = Number(ch.startTime || 0) - Date.now();
+
+      if (diffToOpen <= 0) {
+        recapNeedsRefresh = true;
+      } else {
+        el.textContent = formatRecapCountdown(diffToOpen);
+      }
+    }
+  });
+
+  document.querySelectorAll("[data-recap-close-timer]").forEach(el => {
+    const cIndex = Number(el.getAttribute("data-recap-close-timer"));
+    const ch = game && game.challenges ? game.challenges[cIndex] : null;
+
+    if (!ch) return;
+
+    const effStatus = getEffectiveStatus(ch);
+    const closeTime = Number(
+      ch.endTime ||
+      sessionConfig.gameEndTime ||
+      sessionConfig.expiresAt ||
+      0
+    );
+
+    const diffToClose = closeTime - Date.now();
+
+    if (effStatus !== "open" || diffToClose <= 0) {
+      recapNeedsRefresh = true;
+      return;
+    }
+
+    el.textContent = formatRecapCountdown(diffToClose);
+  });
+
+  if (
+    recapNeedsRefresh &&
+    game &&
+    game.currentPlayerName &&
+    typeof updateRecapUI === "function"
+  ) {
+    setTimeout(() => updateRecapUI(game.currentPlayerName), 0);
+  }
+
+  return recapNeedsRefresh;
+}
+
 function startRecapSessionTimer() {
   if (recapTimerInterval) clearInterval(recapTimerInterval);
 
-  // On stocke la mécanique du chronomètre dans une variable
   const tick = () => {
     const timerEl = document.getElementById("recapSessionTimer");
     if (!timerEl) return;
 
     const now = Date.now();
-    const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
+
+    const startMs = getRecapSessionStartMs();
+    const endMs = getRecapSessionEndMs();
+
+    const beforeStart = startMs > now && !(game && game.isResolved);
+    const targetTime = beforeStart ? startMs : endMs;
     const diff = targetTime - now;
 
-if (diff <= 0) {
-  clearInterval(recapTimerInterval);
-  timerEl.textContent = "SESSION TERMINÉE";
-
-  // Si un panneau Cash out était ouvert, on le ferme.
-  if (typeof closeSellPanel === "function") {
-    closeSellPanel();
-  }
-
-  // Le récap a peut-être été rendu AVANT la fin de session.
-  // On le reconstruit une seule fois pour supprimer réellement les boutons Cash out du DOM.
-  if (!window.recapSessionEndRefreshDone) {
-    window.recapSessionEndRefreshDone = true;
-
-    setTimeout(() => {
-      const playerName = game && game.currentPlayerName;
-      const recapEl = document.getElementById("playerRecap");
-
-      if (
-        playerName &&
-        recapEl &&
-        recapEl.style.display === "block" &&
-        typeof updateRecapUI === "function"
-      ) {
-        updateRecapUI(playerName);
-      }
-    }, 0);
-  }
-} else {
+if (beforeStart) {
   window.recapSessionEndRefreshDone = false;
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      // Affichage propre (cache les heures s'il reste moins d'1h)
-      timerEl.textContent = `${h > 0 ? h.toString().padStart(2,'0') + ':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-    }
-        let recapNeedsRefresh = false;
+  window.recapSessionStartRefreshDone = false;
 
-    document.querySelectorAll("[data-recap-pending-timer]").forEach(el => {
-      const cIndex = Number(el.getAttribute("data-recap-pending-timer"));
-      const ch = game && game.challenges ? game.challenges[cIndex] : null;
+  setRecapSessionTimerDisplay(
+    "Session démarre dans",
+    formatTimeDiff(diff)
+  );
 
-      if (!ch) return;
+  // IMPORTANT :
+  // même si la session globale n'a pas encore commencé,
+  // les cartes du récap doivent continuer à compter vers leur ouverture.
+  refreshRecapPendingQuestionTimers();
 
-      const effStatus = getEffectiveStatus(ch);
+  return;
+}
 
-      if (effStatus === "open") {
-        recapNeedsRefresh = true;
-        return;
-      }
+    // Si la page récap était affichée avant le démarrage,
+    // on force une seule reconstruction quand la session démarre.
+    // Cela remet les boutons, statuts et cartes dans l'état live correct.
+    if (!window.recapSessionStartRefreshDone) {
+      window.recapSessionStartRefreshDone = true;
 
-      if (effStatus === "pending") {
-        const diffToOpen = Number(ch.startTime || 0) - Date.now();
+      setRecapSessionTimerDisplay(
+        "Temps de jeu restant",
+        formatTimeDiff(diff)
+      );
 
-        if (diffToOpen <= 0) {
-          recapNeedsRefresh = true;
-        } else {
-          el.textContent = formatRecapCountdown(diffToOpen);
+      setTimeout(() => {
+        const playerName = game && game.currentPlayerName;
+        const recapEl = document.getElementById("playerRecap");
+
+        if (
+          playerName &&
+          recapEl &&
+          recapEl.style.display === "block" &&
+          typeof updateRecapUI === "function"
+        ) {
+          updateRecapUI(playerName);
         }
-      }
-    });
+      }, 0);
 
-    if (recapNeedsRefresh && game.currentPlayerName && typeof updateRecapUI === "function") {
-      setTimeout(() => updateRecapUI(game.currentPlayerName), 0);
+      return;
     }
+
+    if (diff <= 0) {
+      clearInterval(recapTimerInterval);
+      setRecapSessionTimerDisplay("", "SESSION TERMINÉE");
+
+      if (typeof closeSellPanel === "function") {
+        closeSellPanel();
+      }
+
+      if (!window.recapSessionEndRefreshDone) {
+        window.recapSessionEndRefreshDone = true;
+
+        setTimeout(() => {
+          const playerName = game && game.currentPlayerName;
+          const recapEl = document.getElementById("playerRecap");
+
+          if (
+            playerName &&
+            recapEl &&
+            recapEl.style.display === "block" &&
+            typeof updateRecapUI === "function"
+          ) {
+            updateRecapUI(playerName);
+          }
+        }, 0);
+      }
+    } else {
+      window.recapSessionEndRefreshDone = false;
+
+      setRecapSessionTimerDisplay(
+        "Temps de jeu restant",
+        formatTimeDiff(diff)
+      );
+    }
+
+refreshRecapPendingQuestionTimers();
   };
 
-  // 1. On force l'affichage IMMÉDIAT du temps (corrige le bug du --:--:--)
   tick();
-
-  // 2. On lance la boucle qui tournera toutes les secondes
   recapTimerInterval = setInterval(tick, 1000);
 }
 
@@ -15732,6 +16277,57 @@ function formatRecapCountdown(diff) {
   return `${h > 0 ? h.toString().padStart(2, "0") + ":" : ""}${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+function buildRecapCloseCountdownHtml(cIndex, ch, effStatus) {
+  const sessionClosedForRecap =
+    typeof isSessionTradingClosed === "function"
+      ? isSessionTradingClosed()
+      : (
+          Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt)) > 0 &&
+          Date.now() >= Number(sessionConfig && (sessionConfig.gameEndTime || sessionConfig.expiresAt))
+        );
+
+  const closeTime = Number(
+    ch && (
+      ch.endTime ||
+      sessionConfig.gameEndTime ||
+      sessionConfig.expiresAt ||
+      0
+    )
+  );
+
+  const diffToClose = closeTime - Date.now();
+
+  if (effStatus !== "open" || sessionClosedForRecap || diffToClose <= 0) {
+    return "";
+  }
+
+  return `
+    <div style="
+      margin-top:8px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:rgba(59,130,246,0.10);
+      border:1px solid rgba(59,130,246,0.28);
+      color:#93c5fd;
+      font-size:10px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:0.04em;
+    ">
+      ⏱ Ferme dans
+      <span
+        data-recap-close-timer="${cIndex}"
+        style="font-family:monospace; color:#bfdbfe; font-size:11px;"
+      >
+        ${formatRecapCountdown(diffToClose)}
+      </span>
+    </div>
+  `;
+}
+
 function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
   const sessionClosedForRecap =
@@ -15765,14 +16361,15 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
         </div>
       </div>
     `
-    : canTradeQuestion
-      ? `
-        <div style="margin-top:10px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.38); padding:10px 12px; border-radius:12px;">
-          <div style="font-size:11px; color:#93c5fd; font-weight:950; text-transform:uppercase;">
-            👆 Touchez cette carte pour miser maintenant
-          </div>
-        </div>
-      `
+: canTradeQuestion
+  ? `
+    <div style="margin-top:10px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.38); padding:10px 12px; border-radius:12px;">
+      <div style="font-size:11px; color:#93c5fd; font-weight:950; text-transform:uppercase;">
+        👆 Touchez cette carte pour miser maintenant
+      </div>
+      ${buildRecapCloseCountdownHtml(cIndex, ch, effStatus)}
+    </div>
+  `
       : `
         <div style="margin-top:10px; background:rgba(100,116,139,0.12); border:1px solid rgba(148,163,184,0.28); padding:10px 12px; border-radius:12px;">
           <div style="font-size:11px; color:#cbd5e1; font-weight:950; text-transform:uppercase;">
@@ -15940,7 +16537,9 @@ const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
     </div>
 
     <div style="text-align:center; margin-bottom:15px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
-      <div style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">Temps de jeu restant</div>
+      <div id="recapSessionTimerLabel" style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">
+        Temps de jeu restant
+      </div>
       <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
     </div>
     
@@ -16168,9 +16767,11 @@ const selectedValueColor = "#93c5fd";
                <div style="font-size:10px; color:#9ca3af; text-transform:uppercase;">${ch.category}</div>
                <button onclick="toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Voir détails</button>
             </div>
-            <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+<div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+
+${buildRecapCloseCountdownHtml(cIndex, ch, effStatus)}
             
-            <div id="summary-ch-${cIndex}" class="${summaryClass}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+<div id="summary-ch-${cIndex}" class="${summaryClass}" style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
               <div style="color:#e2e8f0; font-size:13px; font-weight:bold; width:65%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${selectedAnswerIcon}${ch.answers[snap.ansIndex]}</div>
               <div style="color:${selectedValueColor}; font-size:13px; font-weight:bold;">${selectedValueLabel}</div>
             </div>
@@ -16224,9 +16825,7 @@ const advancedDetailsHtml =
           let betsListHtml = '';
 
 snaps.forEach(snap => {
-             const originalStake = Array.isArray(snap.events) && snap.events.length
-               ? snap.events.reduce((sum, ev) => sum + Number(ev.bet || 0), 0)
-               : Number(snap.bet || 0);
+const originalStake = getPortfolioDisplayedStake(snap);
 
              const currentResaleValue = typeof window.getAMMValue === "function"
                ? Number(window.getAMMValue(ch, snap) || 0)
@@ -16296,7 +16895,7 @@ snaps.forEach(snap => {
                 <div style="margin-top:6px; margin-bottom:8px; background:rgba(249,115,22,0.05); border:1px solid rgba(249,115,22,0.2); padding:8px 10px; border-radius:10px;">
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                     <div>
-                      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:850;">Mise initiale</div>
+                      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:850;">Mise</div>
                       <div style="font-size:13px; color:#fde047; font-weight:950;">${originalStake.toFixed(2)} 💰</div>
                     </div>
 
@@ -16336,9 +16935,11 @@ snaps.forEach(snap => {
                 <button onclick="event.stopPropagation(); toggleDetails(${cIndex})" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#e2e8f0 !important; font-size:10px; padding:4px 8px; border-radius:6px; margin:0; width:auto; box-shadow:none !important;">Détails 🔽</button>
               </div>
 
-              <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
+                <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
 
-              <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
+                ${buildRecapCloseCountdownHtml(cIndex, ch, effStatus)}
+
+                <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
                 <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
                     ${betsListHtml}
                 </div>
@@ -16714,9 +17315,23 @@ function confirmSell() {
 
   const ch = game.challenges[tempSellCIndex];
 
-  // Valeur restante exacte voulue.
-  // Exemple : valeur actuelle 50, cash out 25 => valeur restante 25 pile.
-  const isFullCashOut = desiredMoney >= maxMoneyBeforeSell - 0.01;
+// Pourcentage du marché au moment du cashout, AVANT de retirer l'argent.
+const probsBeforeCashout =
+  window.PredictiveMath && typeof window.PredictiveMath.getProbs === "function"
+    ? window.PredictiveMath.getProbs(ch.votes)
+    : (
+        typeof getLMSRProbs === "function"
+          ? getLMSRProbs(ch.votes)
+          : ch.votes.map(v => v / Math.max(1, ch.votes.reduce((a, b) => a + b, 0)))
+      );
+
+const pctAtCashout = Number.isFinite(Number(probsBeforeCashout[tempSellAnsIndex]))
+  ? (Number(probsBeforeCashout[tempSellAnsIndex]) * 100).toFixed(1)
+  : "";
+
+// Valeur restante exacte voulue.
+// Exemple : valeur actuelle 50, cash out 25 => valeur restante 25 pile.
+const isFullCashOut = desiredMoney >= maxMoneyBeforeSell - 0.01;
   const remainingMoney = isFullCashOut
     ? 0
     : roundBetAmount(maxMoneyBeforeSell - desiredMoney);
@@ -16733,34 +17348,70 @@ function confirmSell() {
   currentPlayerBalance = roundBetAmount(currentPlayerBalance + desiredMoney);
   updateGlobalBalance();
 
-  // Mise à jour du portefeuille :
-  // on garde une mise de départ immuable pour l'évolution admin.
-  const originalStakeBeforeCashout = roundBetAmount(getAdminEvolutionOriginalStake(tempSellSnap));
-  const valueBeforeCashout = maxMoneyBeforeSell;
+// Mise à jour du portefeuille :
+// "Mise" = argent réellement engagé sur cette question,
+// indépendamment des gains/pertes de marché.
+const stakeBeforeCashout = roundBetAmount(getPortfolioDisplayedStake(tempSellSnap));
+const valueBeforeCashout = maxMoneyBeforeSell;
 
-  if (tempSellSnap.originalStake === undefined || tempSellSnap.originalStake === null) {
-    tempSellSnap.originalStake = originalStakeBeforeCashout;
-  }
+const fractionSold = valueBeforeCashout > 0
+  ? Math.min(1, Math.max(0, desiredMoney / valueBeforeCashout))
+  : 0;
 
-  if (!Array.isArray(tempSellSnap.cashoutEvents)) {
-    tempSellSnap.cashoutEvents = [];
-  }
+const stakeSold = roundBetAmount(stakeBeforeCashout * fractionSold);
+const stakeAfterCashout = isFullCashOut
+  ? 0
+  : roundBetAmount(Math.max(0, stakeBeforeCashout - stakeSold));
 
-  tempSellSnap.cashoutEvents.push({
-    amount: desiredMoney,
-    initialStake: tempSellSnap.originalStake,
-    valueBeforeCashout: valueBeforeCashout,
-    remainingValue: remainingMoney,
-    ansIndex: tempSellAnsIndex,
+if (tempSellSnap.originalStake === undefined || tempSellSnap.originalStake === null) {
+  tempSellSnap.originalStake = stakeBeforeCashout;
+}
+
+if (!Array.isArray(tempSellSnap.cashoutEvents)) {
+  tempSellSnap.cashoutEvents = [];
+}
+
+const cashoutValidatedAt = Date.now();
+
+tempSellSnap.cashoutEvents.push({
+  amount: desiredMoney,
+  initialStake: stakeBeforeCashout,
+  stakeSold: stakeSold,
+  remainingStake: stakeAfterCashout,
+  valueBeforeCashout: valueBeforeCashout,
+  remainingValue: remainingMoney,
+  ansIndex: tempSellAnsIndex,
+type: tempSellType || "YES",
+pctAtCashout: pctAtCashout,
+validatedAt: cashoutValidatedAt
+});
+
+// On force la valeur cashoutée à être exactement l'argent récupéré.
+tempSellSnap.cashedOutAmount = roundBetAmount((tempSellSnap.cashedOutAmount || 0) + desiredMoney);
+
+// On inscrit une ligne négative dans events pour que la stat "Mise"
+// diminue proportionnellement au cashout.
+if (!Array.isArray(tempSellSnap.events)) {
+  tempSellSnap.events = [{
+    bet: stakeBeforeCashout,
+    pts: Number(tempSellSnap.pts || 0),
     type: tempSellType || "YES",
-    validatedAt: Date.now()
-  });
+    validatedAt: Number(tempSellSnap.validatedAt || sessionConfig.gameStartTime || cashoutValidatedAt)
+  }];
+}
 
-  // on force la valeur restante à être exactement la valeur monétaire restante.
-  tempSellSnap.cashedOutAmount = roundBetAmount((tempSellSnap.cashedOutAmount || 0) + desiredMoney);
+tempSellSnap.events.push({
+  bet: -stakeSold,
+  pts: 0,
+  type: tempSellType || "YES",
+  validatedAt: cashoutValidatedAt,
+cashoutAmount: desiredMoney,
+valueBeforeCashout: valueBeforeCashout,
+pctAtCashout: pctAtCashout
+});
 
   if (remainingMoney > 0) {
-    tempSellSnap.bet = remainingMoney;
+    tempSellSnap.bet = stakeAfterCashout;
     tempSellSnap.pts = window.PredictiveMath.calcSharesToSellForMoney(
       ch.votes,
       tempSellAnsIndex,
@@ -18002,12 +18653,84 @@ let bsRefreshRaf = null;
 let bsChartRefreshTimer = null;
 let bsLastLayoutKey = "";
 
+function isBigScreenSessionNotStarted() {
+  if (!sessionConfig || !game || game.isResolved) return false;
+
+  const startTime = getBsSessionStartMs();
+  return Number(startTime || 0) > Date.now();
+}
+
+function formatBigScreenCountdown(diff) {
+  const safeDiff = Math.max(0, Number(diff || 0));
+
+  const h = Math.floor(safeDiff / 3600000);
+  const m = Math.floor((safeDiff % 3600000) / 60000);
+  const s = Math.floor((safeDiff % 60000) / 1000);
+
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function renderBigScreenPreStartPanel(title, subtitle) {
+  return `
+    <div style="
+      height:100%;
+      min-height:0;
+      display:grid;
+      place-items:center;
+      text-align:center;
+      padding:clamp(24px,3vw,46px);
+      box-sizing:border-box;
+    ">
+      <div>
+        <div style="
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:74px;
+          height:74px;
+          border-radius:24px;
+          margin-bottom:22px;
+          background:rgba(96,165,250,0.12);
+          border:1px solid rgba(96,165,250,0.28);
+          font-size:34px;
+        ">
+          ⏳
+        </div>
+
+        <div style="
+          color:#ffffff;
+          font-size:clamp(28px,2.4vw,42px);
+          line-height:1.05;
+          font-weight:950;
+          letter-spacing:-0.04em;
+          margin-bottom:10px;
+        ">
+          ${title}
+        </div>
+
+        <div style="
+          color:#a7adc8;
+          font-size:clamp(15px,1.1vw,20px);
+          line-height:1.35;
+          font-weight:750;
+          max-width:520px;
+          margin:0 auto;
+        ">
+          ${subtitle}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function getBigScreenLayoutKey() {
   if (!game || !game.challenges || !sessionConfig) return "";
 
   const now = Date.now();
+  const sessionStart = getBsSessionStartMs();
   const limit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
-  const isWaitingForResults = now >= limit && !game.isResolved;
+  const isBeforeStart = sessionStart > now && !game.isResolved;
+  const isWaitingForResults = now >= limit && !game.isResolved && !isBeforeStart;
 
   const challengeStateKey = (game.challenges || []).map((ch, i) => {
     return [
@@ -18019,7 +18742,9 @@ function getBigScreenLayoutKey() {
   }).join("|");
 
   return [
-    game.isResolved ? "resolved" : isWaitingForResults ? "waiting" : "live",
+    game.isResolved ? "resolved" : isBeforeStart ? "prestart" : isWaitingForResults ? "waiting" : "live",
+    sessionConfig.gameStartTime || "",
+    sessionConfig.gameEndTime || sessionConfig.expiresAt || "",
     bsLeftIndex,
     bsRightIndex,
     bsTrendRangeMs,
@@ -18204,7 +18929,10 @@ function checkBigScreenAccess() {
     return;
   }
 
-  const sessionRef = db.ref("sessions").child(input);
+  stopLiveSessionContext();
+rememberLiveSessionCode(input);
+
+const sessionRef = db.ref("sessions").child(input);
 
   msg.textContent = "Connexion au serveur..."; 
   msg.className = "msg ok";
@@ -18232,8 +18960,11 @@ function checkBigScreenAccess() {
     // On relance l'écoute continue pour la mise à jour fluide des jauges
     // et pour récupérer aussi les changements de configuration,
     // notamment la session suivante liée après promulgation.
-    sessionRef.off('value');
+sessionRef.off('value');
+
 sessionRef.on('value', (liveSnap) => {
+  if (window.currentActiveSessionCode !== input || !isBigScreenActive) return;
+
   if (liveSnap.exists()) {
       const liveData = liveSnap.val() || {};
 
@@ -18317,6 +19048,14 @@ let trendElapsedSeconds = 0;
   // CORRECTION : Horloge universelle de 5 secondes qui s'adapte instantanément à l'état du jeu
   bsInterval = setInterval(() => {
     elapsedSeconds += 5;
+
+    // Tant que la session n'a pas commencé, on ne fait pas tourner les cartes.
+    // Le passage au live est géré par updateBsTimers(), sans recharger la page.
+    if (isBigScreenSessionNotStarted()) {
+      elapsedSeconds = 0;
+      trendElapsedSeconds = 0;
+      return;
+    }
 
     if (game.isResolved) {
       // MODE FIN DE PARTIE : Rotation toutes les 15 secondes
@@ -18742,9 +19481,55 @@ if (shouldShowNextSessionQR) {
   bsNextSessionHeader.innerHTML = "";
 }
       const bsGridEl = document.querySelector(".bs-grid");
+      const bsRightEl = document.getElementById("bsRight");
+      const isBeforeStart = isBigScreenSessionNotStarted();
+
+      if (isBeforeStart) {
+        window.bsScreenWaitingForStart = true;
+
+        if (bsGridEl) bsGridEl.classList.remove("bs-grid-final");
+
+        const bsLeftPre = document.getElementById("bsLeft");
+        const bsMiddlePre = document.getElementById("bsMiddle");
+        const bsRightPre = document.getElementById("bsRight");
+
+        if (bsLeftPre) {
+          bsLeftPre.className = "bs-panel";
+          bsLeftPre.style.display = "flex";
+          bsLeftPre.innerHTML = renderBigScreenPreStartPanel(
+            "La session n’a pas encore commencé",
+            "Les questions apparaîtront automatiquement dès le lancement."
+          );
+        }
+
+        if (bsMiddlePre) {
+          bsMiddlePre.className = "bs-panel";
+          bsMiddlePre.style.display = "flex";
+          bsMiddlePre.innerHTML = renderBigScreenPreStartPanel(
+            "Préparez-vous",
+            "Les participants peuvent déjà scanner le QR code pour rejoindre."
+          );
+        }
+
+        if (bsRightPre) {
+          bsRightPre.className = "bs-panel";
+          bsRightPre.style.display = "flex";
+          bsRightPre.innerHTML = renderBigScreenPreStartPanel(
+            "Début imminent",
+            "Le grand écran passera automatiquement en mode live à 00:00:00."
+          );
+        }
+
+        if (bsNextSessionHeader) {
+          bsNextSessionHeader.innerHTML = "";
+        }
+
+        updateBsTimers();
+        return;
+      }
+
       if (bsGridEl) bsGridEl.classList.toggle("bs-grid-final", game.isResolved || isWaitingForResults);
 
-      const bsRightEl = document.getElementById("bsRight");
       if (bsRightEl && !game.isResolved) {
         bsRightEl.style.display = "";
       }
@@ -19754,12 +20539,41 @@ function updateBsTimers() {
   // 1. MISE À JOUR DU CHRONO GLOBAL
   const globalEl = document.getElementById("bsGlobalTimer");
   const now = Date.now();
-  const targetTime = sessionConfig.gameEndTime || sessionConfig.expiresAt;
-  const globalDiff = targetTime - now;
+
+  const sessionStart = getBsSessionStartMs();
+  const targetTime = Number(sessionConfig.gameEndTime || sessionConfig.expiresAt || 0);
+
+  const isBeforeStart = sessionStart > now && !game.isResolved;
+  const globalDiff = isBeforeStart
+    ? sessionStart - now
+    : targetTime - now;
 
   if (globalEl) {
     const globalLabel = document.getElementById("bsGlobalTimerLabel");
     const globalPill = globalEl.closest(".bs-session-pill");
+
+    if (isBeforeStart) {
+      window.bsScreenWaitingForStart = true;
+
+      if (globalLabel) globalLabel.textContent = "La session commence dans";
+      if (globalPill) globalPill.classList.remove("is-ended");
+
+      globalEl.textContent = formatBigScreenCountdown(globalDiff);
+
+      return;
+    }
+
+    // Passage automatique de l'écran d'attente vers l'écran live,
+    // sans changer de page et sans reload.
+    if (window.bsScreenWaitingForStart && !game.isResolved) {
+      window.bsScreenWaitingForStart = false;
+      bsLastLayoutKey = "";
+      updateBsIndices(true);
+      renderBigScreen();
+      bsLastLayoutKey = getBigScreenLayoutKey();
+      return;
+    }
+
     const isSessionEnded = game.isResolved || globalDiff <= 0;
 
     if (isSessionEnded) {
@@ -19768,19 +20582,18 @@ function updateBsTimers() {
 
       globalEl.textContent = "SESSION TERMINÉE";
 
-      // NOUVEAU : Si la session vient d'expirer, on force un rafraîchissement immédiat de la mise en page
+      // Si la session vient d'expirer, on force un rafraîchissement immédiat
+      // vers l'attente de promulgation.
       if (!window.bsScreenSwitchedToWaiting && !game.isResolved) {
         window.bsScreenSwitchedToWaiting = true;
         renderBigScreen();
+        bsLastLayoutKey = getBigScreenLayoutKey();
       }
     } else {
       if (globalLabel) globalLabel.textContent = "Fin de la session dans";
       if (globalPill) globalPill.classList.remove("is-ended");
 
-      const h = Math.floor(globalDiff / 3600000);
-      const m = Math.floor((globalDiff % 3600000) / 60000);
-      const s = Math.floor((globalDiff % 60000) / 1000);
-      globalEl.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+      globalEl.textContent = formatBigScreenCountdown(globalDiff);
     }
   }
   
