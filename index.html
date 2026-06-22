@@ -12652,31 +12652,39 @@ if (existingBet) {
 
    const previousOriginalStake = getAdminEvolutionOriginalStake(existingBet);
 
-   if (!existingBet.events) {
+   if (!Array.isArray(existingBet.events) || !existingBet.events.length) {
      existingBet.events = [{
-       bet: Number(existingBet.bet || 0),
+       bet: Number(existingBet.bet || existingBet.originalStake || 0),
        pts: Number(existingBet.pts || 0),
+       ansIndex: Number(existingBet.ansIndex),
        type: existingBet.type || tempBetType,
+       pctAtBet: existingBet.pctAtBet ?? pctAtBet,
        validatedAt: Number(existingBet.validatedAt || sessionConfig.gameStartTime || betTime)
      }];
    }
 
    existingBet.originalStake = roundBetAmount(previousOriginalStake + val);
-
    existingBet.bet = roundBetAmount(Number(existingBet.bet || 0) + val);
    existingBet.pts = Number(existingBet.pts || 0) + pointsPotentiels;
    existingBet.type = tempBetType;
-   existingBet.pctAtBet = pctAtBet;
-   existingBet.validatedAt = betTime;
+   existingBet.lastBetAt = betTime;
 
-existingBet.events.push({
-  bet: val,
-  pts: pointsPotentiels,
-  ansIndex: tempBetAnsIndex,
-  type: tempBetType,
-  pctAtBet: pctAtBet,
-  validatedAt: betTime
-});
+   existingBet.events.push({
+     bet: val,
+     pts: pointsPotentiels,
+     ansIndex: tempBetAnsIndex,
+     type: tempBetType,
+     pctAtBet: pctAtBet,
+     validatedAt: betTime
+   });
+
+   const weightedPctAtBet = getPortfolioWeightedPctAtBet(existingBet);
+   if (weightedPctAtBet !== null) {
+     existingBet.pctAtBet = weightedPctAtBet.toFixed(1);
+   }
+
+   const firstValidatedAt = Number(existingBet.validatedAt || 0);
+   existingBet.validatedAt = firstValidatedAt > 0 ? firstValidatedAt : betTime;
 } else {
 player.portfolio.push({
   cIndex: tempBetCIndex,
@@ -15041,6 +15049,37 @@ function renderAdminResultsDropdown(cIndex) {
   `;
 }
 
+function getPortfolioWeightedPctAtBet(snap) {
+  if (!snap) return null;
+
+  const events = Array.isArray(snap.events) && snap.events.length
+    ? snap.events
+    : [{
+        bet: Number(snap.originalStake ?? snap.bet ?? 0),
+        pctAtBet: snap.pctAtBet
+      }];
+
+  let totalStake = 0;
+  let weightedPctSum = 0;
+
+  events.forEach(ev => {
+    const bet = Number(ev.bet || 0);
+    const pct = Number(String(ev.pctAtBet ?? "").replace("%", ""));
+
+    if (bet > 0 && Number.isFinite(pct)) {
+      totalStake += bet;
+      weightedPctSum += bet * pct;
+    }
+  });
+
+  if (totalStake > 0) {
+    return weightedPctSum / totalStake;
+  }
+
+  const fallback = Number(String(snap.pctAtBet ?? "").replace("%", ""));
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
 function getPortfolioDisplayedStake(snap) {
   if (!snap) return 0;
 
@@ -16163,28 +16202,87 @@ const stats = typeof getQuestionBettorStats === "function"
     !s.cashedOut
   );
 
-  const myPositionsHtml = activeSnaps.length > 0
-    ? activeSnaps.map(snap => {
-        const ans = ch.answers && ch.answers[snap.ansIndex] !== undefined
-          ? ch.answers[snap.ansIndex]
+  const currentPlayerForDetails = game && Array.isArray(game.players)
+  ? game.players.find(p => p.name === game.currentPlayerName)
+  : null;
+
+const currentBalanceForDetails = Number(
+  currentPlayerForDetails && currentPlayerForDetails.balance !== undefined
+    ? currentPlayerForDetails.balance
+    : (typeof currentPlayerBalance !== "undefined" ? currentPlayerBalance : 0)
+);
+
+const myPositionsHtml = activeSnaps.length > 0
+  ? activeSnaps.flatMap(snap => {
+      const positiveBetEvents = Array.isArray(snap.events)
+        ? snap.events.filter(ev => Number(ev.bet || 0) > 0)
+        : [];
+
+      const betEvents = positiveBetEvents.length > 0
+        ? positiveBetEvents
+        : [{
+            bet: Number(snap.bet || snap.originalStake || 0),
+            pts: Number(snap.pts || 0),
+            ansIndex: snap.ansIndex,
+            type: snap.type || "YES",
+            pctAtBet: snap.pctAtBet,
+            validatedAt: snap.validatedAt
+          }];
+
+      return betEvents.map((ev, evIndex) => {
+        const ansIndex = Number(ev.ansIndex ?? snap.ansIndex);
+
+        const ans = ch.answers && ch.answers[ansIndex] !== undefined
+          ? ch.answers[ansIndex]
           : "Réponse inconnue";
 
-        const typeLabel = snap.type === "NO" ? "NON" : "OUI";
+        const type = ev.type || snap.type || "YES";
+        const typeLabel = type === "NO" ? "NON" : "OUI";
+
+        const eventSnap = {
+          ...snap,
+          ansIndex: ansIndex,
+          type: type,
+          bet: Number(ev.bet || 0),
+          originalStake: Number(ev.bet || 0),
+          pts: Number(ev.pts || 0),
+          pctAtBet: ev.pctAtBet ?? snap.pctAtBet,
+          validatedAt: ev.validatedAt ?? snap.validatedAt
+        };
+
         const currentValue = typeof window.getAMMValue === "function"
-          ? window.getAMMValue(ch, snap)
+          ? window.getAMMValue(ch, eventSnap)
           : 0;
 
-        const pctAtBet = Number(snap.pctAtBet);
+        const pctAtBet = Number(String(eventSnap.pctAtBet ?? "").replace("%", ""));
         const pctAtBetHtml = Number.isFinite(pctAtBet)
-          ? `<div style="font-size:10px; color:#94a3b8; margin-top:2px;">Marché à votre mise : ${pctAtBet.toFixed(1)}%</div>`
+          ? `<div style="font-size:10px; color:#94a3b8; margin-top:2px;">Marché à cette mise : ${pctAtBet.toFixed(1)}%</div>`
           : "";
+
+        const timeLabel = eventSnap.validatedAt
+          ? new Date(Number(eventSnap.validatedAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "";
+
+        const betNumberLabel = betEvents.length > 1
+          ? `Mise ${evIndex + 1}/${betEvents.length}`
+          : "Mise";
 
         return `
           <div style="background:rgba(255,255,255,0.055); border:1px solid rgba(255,255,255,0.10); border-radius:10px; padding:9px 10px; margin-top:6px;">
             <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
               <div style="min-width:0;">
-                <div style="font-size:11px; color:#a78bfa; font-weight:900;">${typeLabel} · ${safe(ans)}</div>
-                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">Mise : ${Number(snap.bet || 0).toFixed(0)} 💰</div>
+                <div style="font-size:10px; color:#93c5fd; font-weight:950; text-transform:uppercase; letter-spacing:0.06em;">
+                  ${betNumberLabel}${timeLabel ? ` · ${timeLabel}` : ""}
+                </div>
+
+                <div style="font-size:11px; color:#a78bfa; font-weight:900; margin-top:3px;">
+                  ${typeLabel} · ${safe(ans)}
+                </div>
+
+                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">
+                  Mise : ${Number(ev.bet || 0).toFixed(0)} 💰
+                </div>
+
                 ${pctAtBetHtml}
               </div>
 
@@ -16195,8 +16293,9 @@ const stats = typeof getQuestionBettorStats === "function"
             </div>
           </div>
         `;
-      }).join("")
-    : `<div style="font-size:11px; color:#94a3b8; font-style:italic;">Vous n'avez pas encore misé sur cette question.</div>`;
+      });
+    }).join("")
+  : `<div style="font-size:11px; color:#94a3b8; font-style:italic;">Vous n'avez pas encore misé sur cette question.</div>`;
 
   const answersHtml = (ch.answers || []).map((ans, aIdx) => {
     const pct = ((probs[aIdx] || 0) * 100).toFixed(1);
@@ -16250,15 +16349,28 @@ const stats = typeof getQuestionBettorStats === "function"
 
   return `
     <div style="background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.10)); border:1px solid rgba(96,165,250,0.26); border-radius:14px; padding:12px; margin-top:10px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
-        <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:900; letter-spacing:0.08em;">Vos positions</div>
-        <div style="font-size:10px; color:#94a3b8; text-align:right;">
-          ${totalBettorText}
-          <div style="margin-top:2px; color:#c4b5fd;">
-            Total misé : <strong style="color:#fde047;">${totalBetOnQuestion.toFixed(0)} 💰</strong>
-          </div>
-        </div>
-      </div>
+<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">
+  <div>
+    <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:900; letter-spacing:0.08em;">
+      Vos positions
+    </div>
+
+    <div style="margin-top:7px; display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border-radius:999px; background:rgba(34,197,94,0.10); border:1px solid rgba(34,197,94,0.28); color:#bbf7d0; font-size:11px; font-weight:950;">
+      Solde actuel :
+      <span id="live-score-details-${cIndex}" style="color:#ffffff;">
+        ${Number(currentBalanceForDetails || 0).toFixed(0)}
+      </span>
+      💰
+    </div>
+  </div>
+
+  <div style="font-size:10px; color:#94a3b8; text-align:right;">
+    ${totalBettorText}
+    <div style="margin-top:2px; color:#c4b5fd;">
+      Total misé : <strong style="color:#fde047;">${totalBetOnQuestion.toFixed(0)} 💰</strong>
+    </div>
+  </div>
+</div>
 
       ${myPositionsHtml}
 
@@ -16461,6 +16573,14 @@ function updateRecapUI(pseudo) {
 // C'est exactement cette valeur qui sert au classement provisoire.
 const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
 
+const remainingBalanceToBet = Number(
+  player && player.balance !== undefined
+    ? player.balance
+    : currentPlayerBalance
+);
+
+
+
 // GÉNÉRATION DU CLASSEMENT PROVISOIRE MTM
   const provLeaderboard = (game.players || []).map(p => {
     return { name: p.name, score: window.calculatePlayerScore(p, game) };
@@ -16536,12 +16656,34 @@ const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
       <button onclick="window.copyRecapSessionCode(this)" style="background:rgba(255,255,255,0.1) !important; border:1px solid rgba(255,255,255,0.2) !important; padding:4px 10px; border-radius:6px; font-size:11px; color:#fff !important; width:auto; box-shadow:none !important; margin:0; font-weight:bold;">Copier</button>
     </div>
 
-    <div style="text-align:center; margin-bottom:15px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
-      <div id="recapSessionTimerLabel" style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">
-        Temps de jeu restant
+<div style="text-align:center; margin-bottom:12px; background:rgba(248,113,113,0.1); padding:8px; border-radius:10px; border:1px solid rgba(248,113,113,0.3);">
+  <div id="recapSessionTimerLabel" style="font-size:10px; color:#f87171; text-transform:uppercase; font-weight:bold; letter-spacing:1px;">
+    Temps de jeu restant
+  </div>
+  <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
+</div>
+
+${
+  currentPlayerMode === 'advanced'
+    ? `
+      <div style="margin-bottom:15px; background:linear-gradient(135deg, rgba(34,197,94,0.13), rgba(59,130,246,0.10)); border:1px solid rgba(34,197,94,0.34); border-radius:14px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px; box-shadow:0 10px 24px rgba(0,0,0,0.28);">
+        <div>
+          <div style="font-size:10px; color:#bbf7d0; text-transform:uppercase; font-weight:950; letter-spacing:0.08em;">
+            Solde restant à parier
+          </div>
+          <div style="font-size:11px; color:#94a3b8; margin-top:3px;">
+            Disponible pour vos prochaines mises
+          </div>
+        </div>
+
+        <div style="font-size:24px; color:#ffffff; font-weight:950; white-space:nowrap;">
+          <span id="live-score-recap-balance">${Number(remainingBalanceToBet || 0).toFixed(0)}</span>
+          <span style="font-size:16px;">💰</span>
+        </div>
       </div>
-      <div id="recapSessionTimer" style="font-size:22px; font-weight:800; color:#f87171; font-family:monospace;">${timerText}</div>
-    </div>
+    `
+    : ``
+}
     
     <div style="background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid #3b82f6; border-radius:15px; padding:20px; margin-bottom:20px; box-shadow:0 10px 25px rgba(0,0,0,0.5); text-align:center;">
       <div style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px;">
@@ -17154,9 +17296,9 @@ function updateGlobalBalance() {
   const balAmt = document.getElementById("globalBalanceAmt");
   
   // CORRECTION : On met TOUJOURS à jour le chiffre du solde en haut de toutes les cartes affichées
-  document.querySelectorAll("[id^='live-score-']").forEach(el => {
-      el.textContent = currentPlayerBalance;
-  });
+document.querySelectorAll("[id^='live-score-']").forEach(el => {
+    el.textContent = Number(currentPlayerBalance || 0).toFixed(0);
+});
 
   // Affichage de la bulle globale flottante (Seulement en mode Avancé)
   if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
