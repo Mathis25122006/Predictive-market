@@ -4253,6 +4253,22 @@ body.has-app-top-logo #playerAuth.join-card {
   text-align: center;
 }
 
+.join-tuto-slide {
+  order: 20;
+}
+
+.join-tuto-intro {
+  order: 1;
+}
+
+.join-tuto-slide--capital {
+  order: 2;
+}
+
+.join-tuto-slide--question-count {
+  order: 3;
+}
+
 .join-tuto-intro .ui-subtitle {
   margin-bottom: 22px;
 }
@@ -5714,6 +5730,151 @@ body.has-app-top-logo #playerAuth.join-card {
   font-weight: 850 !important;
 }
 
+#playerRecap {
+  position: relative;
+}
+
+.recap-message-tab {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 9px 13px !important;
+  border-radius: 999px 999px 999px 12px !important;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.24), transparent 34%),
+    linear-gradient(135deg, rgba(168,85,247,0.98), rgba(59,130,246,0.92)) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,0.35),
+    0 0 22px rgba(168,85,247,0.24) !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.01em;
+  z-index: 5;
+}
+
+.recap-message-tab::after {
+  display: none !important;
+  content: none !important;
+}
+
+.recap-message-tab:hover {
+  transform: translateY(-1px) !important;
+  filter: brightness(1.06);
+}
+
+.recap-message-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 950;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+}
+
+.in-game-message-toast {
+  position: fixed;
+  top: calc(max(8px, env(safe-area-inset-top)) + 8px);
+  left: 12px;
+  right: 12px;
+  z-index: 20000;
+  max-width: 520px;
+  width: auto !important;
+  margin: 0 auto !important;
+  padding: 10px 12px !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,0.96) !important;
+  color: #111827 !important;
+  border: 1px solid rgba(15,23,42,0.08) !important;
+  box-shadow:
+    0 18px 45px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.80) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  transform: translate3d(0, -135%, 0) scale(0.98);
+  opacity: 0;
+  pointer-events: auto;
+  transition:
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.24s ease;
+}
+
+.in-game-message-toast.show {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 1;
+}
+
+.in-game-message-toast:hover {
+  transform: translate3d(0, 0, 0) scale(1) !important;
+  background: rgba(255,255,255,0.98) !important;
+  border: 1px solid rgba(15,23,42,0.10) !important;
+  box-shadow:
+    0 18px 45px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.80) !important;
+}
+
+.in-game-message-toast-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #ffffff;
+  font-size: 20px;
+  box-shadow: 0 8px 18px rgba(34,197,94,0.28);
+}
+
+.in-game-message-toast-content {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.in-game-message-toast-title {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+.in-game-message-toast-text {
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 750;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.in-game-message-toast-time {
+  align-self: start;
+  padding-top: 2px;
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
 /* Retire les effets trop colorés des états gagné/perdu */
 #playerRecap #recapSummary div[style*="GAGNÉ"],
 #playerRecap #recapSummary div[style*="PERDU"] {
@@ -5831,6 +5992,112 @@ body.has-app-top-logo #playerAuth.join-card {
   cursor: not-allowed !important;
   transform: none !important;
   box-shadow: none !important;
+}
+
+.play-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.play-card-progress-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(96,165,250,0.14);
+  border: 1px solid rgba(96,165,250,0.32);
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.play-card-media {
+  flex-shrink: 0;
+  margin-bottom: clamp(4px, 1vh, 10px);
+}
+
+.play-card-media-tabs {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.play-card-media-tab {
+  width: 28px !important;
+  height: 24px !important;
+  min-width: 28px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  background: rgba(255,255,255,0.055) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  color: #a7adc8 !important;
+  box-shadow: none !important;
+  display: inline-grid !important;
+  place-items: center !important;
+}
+
+.play-card-media-tab.is-active {
+  background: rgba(255,255,255,0.92) !important;
+  color: #050816 !important;
+  border-color: rgba(255,255,255,0.95) !important;
+}
+
+.play-card-media-body {
+  height: clamp(72px, 13vh, 138px);
+  min-height: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.play-card-media-panel {
+  width: 100%;
+  height: 100%;
+  display: none;
+}
+
+.play-card-media-panel--image {
+  display: block;
+}
+
+.play-card-media.is-chart .play-card-media-panel--image {
+  display: none;
+}
+
+.play-card-media.is-chart .play-card-media-panel--chart {
+  display: block;
+}
+
+.play-card-media-panel img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.play-card-chart-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(96,165,250,0.10), transparent 42%),
+    rgba(5,10,24,0.92);
 }
 
 .closed-question-card-layout {
@@ -6063,6 +6330,7 @@ body.has-app-top-logo #playerAuth.join-card {
   display: none;
 }
 
+
 </style>
 </head>
 <body>
@@ -6150,7 +6418,7 @@ body.has-app-top-logo #playerAuth.join-card {
 </section>
 
 
-<section class="join-tuto-slide">
+<section class="join-tuto-slide join-tuto-slide--question-count" data-mode="easy advanced polymarket">
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Votre partie</span>
@@ -6175,7 +6443,58 @@ body.has-app-top-logo #playerAuth.join-card {
   </p>
 </section>
 
-<section class="join-tuto-slide" data-mode="advanced">
+<section class="join-tuto-slide" data-mode="polymarket">
+  <div class="fake-card-image">
+    <div class="fake-card-top">
+      <span>Marché</span>
+      <strong>Polymarket style</strong>
+    </div>
+
+<div class="fake-big-number">
+  <strong class="join-questions-per-player">N</strong>
+  <span>questions de marché</span>
+</div>
+
+
+<h1 class="join-tuto-title">
+  Vos <span class="join-questions-per-player">N</span> questions au même endroit
+</h1>
+<p class="join-tuto-text">
+  Vous arrivez directement sur votre liste de questions.
+</p>
+</section>
+
+<section class="join-tuto-slide" data-mode="polymarket">
+  <div class="fake-card-image">
+    <div class="fake-card-top">
+      <span>Question ouverte</span>
+      <strong>👆 Miser</strong>
+    </div>
+
+    <div class="fake-card-question">
+      Touchez une question ouverte pour accéder au marché.
+    </div>
+
+    <div class="fake-answer selected">
+      <span><b>A</b> Oui</span>
+      <strong><span class="bet-odds-x">x</span>1,64</strong>
+    </div>
+
+    <div class="fake-answer">
+      <span><b>B</b> Non</span>
+      <strong><span class="bet-odds-x">x</span>2,35</strong>
+    </div>
+
+  </div>
+
+  <h1 class="join-tuto-title">Cliquez, misez, revenez au marché</h1>
+  <p class="join-tuto-text">
+Une fois votre mise placée, vous revenez au récapitulatif pour suivre vos questions,
+vos positions et les opportunités encore ouvertes.
+  </p>
+</section>
+
+<section class="join-tuto-slide join-tuto-slide--capital" data-mode="advanced polymarket">
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Capital</span>
@@ -6349,7 +6668,7 @@ body.has-app-top-logo #playerAuth.join-card {
 </p>
 </section>
 
-<section class="join-tuto-slide" data-mode="advanced">
+<section class="join-tuto-slide" data-mode="advanced polymarket">
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Cotes du marché</span>
@@ -6395,7 +6714,7 @@ body.has-app-top-logo #playerAuth.join-card {
 </p>
 </section>
 
-<section class="join-tuto-slide" data-mode="advanced">
+<section class="join-tuto-slide" data-mode="advanced polymarket">
   <div class="fake-card-image">
     <div class="fake-bet-sheet">
       <div class="fake-bet-sheet-head">
@@ -6507,7 +6826,7 @@ body.has-app-top-logo #playerAuth.join-card {
   </p>
 </section>
 
-<section class="join-tuto-slide" data-mode="advanced">
+<section class="join-tuto-slide" data-mode="advanced polymarket">
   <div class="fake-card-image">
     <div class="fake-card-top">
       <span>Cash out</span>
@@ -6572,10 +6891,57 @@ body.has-app-top-logo #playerAuth.join-card {
 <div id="adminMenu" class="card" style="display:none">
   <h2>Menu Administrateur</h2>
   <p class="subtitle">Session déverrouillée. Choisissez une option :</p>
-  <button onclick="askResume()">Créer un nouveau jeu</button>
-  <button onclick="showScreen('manageAuth')" class="btn-secondary btn-spacing">Gérer un jeu existant</button>
+<button onclick="askResume()">Créer un nouveau jeu</button>
+<button onclick="openFDJTestGameSetup()" class="btn-primary btn-spacing">🧪 Lancer le jeu test</button>
+<button onclick="showScreen('manageAuth')" class="btn-secondary btn-spacing">Gérer un jeu existant</button>
   <button onclick="showScreen('bigScreenAuth')" class="btn-primary btn-spacing">Affichage Grand Écran</button>
   <button onclick="showScreen('simulationSetup')" class="btn-warning btn-spacing">Simulateur de Joueurs</button>
+  <div style="display:flex; gap:10px; margin-top:15px;">
+    <button onclick="goBack()" style="margin:0;">Retour</button>
+    <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
+  </div>
+</div>
+
+<div id="testGameSetup" class="card" style="display:none">
+  <h2>Jeu test FDJ</h2>
+  <p class="subtitle">
+    Session rapide de 5 questions, toutes ouvertes dès le lancement et fermées à la fin de la session.
+  </p>
+
+  <label>Mode du jeu test</label>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:15px;">
+    <button type="button" data-test-mode="easy" onclick="selectFDJTestMode('easy')" style="margin:0;">Facile</button>
+    <button type="button" data-test-mode="advanced" onclick="selectFDJTestMode('advanced')" style="margin:0;">Avancé</button>
+    <button type="button" data-test-mode="polymarket" onclick="selectFDJTestMode('polymarket')" style="margin:0;">Polymarket</button>
+    <button type="button" data-test-mode="both" onclick="selectFDJTestMode('both')" style="margin:0;">Facile + Avancé</button>
+  </div>
+
+  <label>Durée de la session</label>
+  <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:15px;">
+    <button type="button" data-test-duration="5" onclick="setFDJTestDuration(5)" style="margin:0;">5 min</button>
+    <button type="button" data-test-duration="10" onclick="setFDJTestDuration(10)" style="margin:0;">10 min</button>
+    <button type="button" data-test-duration="15" onclick="setFDJTestDuration(15)" style="margin:0;">15 min</button>
+  </div>
+
+  <div id="testAdvancedBalanceBlock" style="margin-bottom:15px;">
+    <label>Crédits de départ par joueur</label>
+    <input type="number" id="testInitialBalance" value="100" min="10">
+  </div>
+
+  <div style="margin-bottom:15px;">
+    <label>Probabilités initiales</label>
+    <p class="subtitle" style="font-size:11px; margin-bottom:8px;">
+      Ajustez les probabilités de départ si besoin. Elles seront normalisées automatiquement par le moteur.
+    </p>
+    <div id="testProbabilitiesContainer"></div>
+  </div>
+
+  <button onclick="launchFDJTestGame()" style="background:linear-gradient(135deg,#22c55e,#16a34a);">
+    Générer le jeu test
+  </button>
+
+  <div id="testGameMsg" class="msg"></div>
+
   <div style="display:flex; gap:10px; margin-top:15px;">
     <button onclick="goBack()" style="margin:0;">Retour</button>
     <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
@@ -6614,9 +6980,10 @@ body.has-app-top-logo #playerAuth.join-card {
 <div id="selectMode" class="card" style="display:none">
   <h2>Type de jeu</h2>
   <p class="subtitle">Comment souhaitez-vous que les joueurs misent ?</p>
-  <button onclick="startSetup('easy')">Créer un jeu Facile</button>
-  <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé</button>
-  <button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
+<button onclick="startSetup('easy')">Créer un jeu Facile</button>
+<button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé</button>
+<button onclick="startSetup('polymarket')" class="btn-spacing">Créer un jeu Polymarket style</button>
+<button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
   <div style="display:flex; gap:10px; margin-top:15px;">
     <button onclick="goBack()" style="margin:0;">Retour</button>
     <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
@@ -7102,6 +7469,11 @@ body.has-app-top-logo #playerAuth.join-card {
   </div>
 </div>
 <div id="playerRecap" class="card" style="display:none; padding-bottom: 100px;">
+  <button id="recapMessageTab" class="recap-message-tab" onclick="openMessagePanel()" type="button">
+    💬 <span>Messages</span>
+    <span id="msgUnreadBadgeRecap" class="recap-message-badge hidden">0</span>
+  </button>
+
   <h2>Vos Prédictions</h2>
   <p class="subtitle">Voici le résumé de vos mises et l'évolution en temps réel.</p>
   
@@ -7275,6 +7647,7 @@ const ROUTE_BY_SCREEN = {
   manageAuth: "/admin/gerer",
   manageGame: "/admin/gestion",
   simulationSetup: "/admin/simulateur",
+  testGameSetup: "/admin/jeu-test",
   play: "/jouer",
   playerRecap: "/recap",
   playerResult: "/fin",
@@ -7571,7 +7944,15 @@ if (codeInput) codeInput.value = code;
 
 function getVisibleJoinTutoSlides() {
   return Array.from(document.querySelectorAll("#joinTutoScroll .join-tuto-slide"))
-    .filter(slide => !slide.classList.contains("is-hidden-by-mode"));
+    .filter(slide => !slide.classList.contains("is-hidden-by-mode"))
+    .sort((a, b) => {
+      const orderA = Number(window.getComputedStyle(a).order || 0);
+      const orderB = Number(window.getComputedStyle(b).order || 0);
+
+      if (orderA !== orderB) return orderA - orderB;
+
+      return Array.from(a.parentNode.children).indexOf(a) - Array.from(b.parentNode.children).indexOf(b);
+    });
 }
 
 function applyJoinTutoMode() {
@@ -7579,9 +7960,13 @@ function applyJoinTutoMode() {
   const slides = document.querySelectorAll("#joinTutoScroll .join-tuto-slide");
 
   slides.forEach(slide => {
-    const slideMode = slide.getAttribute("data-mode");
-    const shouldHide = slideMode && slideMode !== mode;
-    slide.classList.toggle("is-hidden-by-mode", shouldHide);
+const slideMode = slide.getAttribute("data-mode");
+const allowedModes = slideMode
+  ? slideMode.split(/\s+/).map(v => v.trim()).filter(Boolean)
+  : [];
+
+const shouldHide = allowedModes.length > 0 && !allowedModes.includes(mode);
+slide.classList.toggle("is-hidden-by-mode", shouldHide);
   });
 
   rebuildJoinTutoDots();
@@ -8034,7 +8419,7 @@ if (!skipUrlUpdate) {
 }
 
     // Liste des écrans gérés
-    const screens = ['home', 'onboarding', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup'];
+    const screens = ['home', 'onboarding', 'adminMenu', 'selectMode', 'setup', 'play', 'admin', 'results', 'sessionInfo', 'manageAuth', 'manageGame', 'playerRecap', 'bigScreenAuth', 'bigScreen', 'playerResult', 'simulationSetup', 'testGameSetup'];
     // On cache le canvas de confettis si on quitte l'écran de résultat personnel
     if (screenId !== 'playerResult') {
        const canvas = document.getElementById("confettiCanvas");
@@ -8170,10 +8555,16 @@ let currentPlayChallengeIndex = 0;
 let currentAdminChallengeIndex = 0;
 let savedSetupData = null; 
 let playerReadMessagesCount = 0; // NOUVEAU : Suit le nombre de messages déjà lus par le joueur
+window.lastPlayerMessageToastCount = 0;
+window.inGameMessageToastTimer = null;
 
-let currentPlayerMode = "easy"; 
-let currentPlayerBalance = 0;
-window.localPlayerSnapshot = null;
+function isPolymarketStyleMode(mode = currentPlayerMode) {
+  return mode === "polymarket";
+}
+
+function isAdvancedLikeMode(mode = currentPlayerMode) {
+  return mode === "advanced" || mode === "polymarket";
+}
 
 window.easyValidationConfirmDisabled = false;
 window.easyValidationConfirmOpen = false;
@@ -9433,7 +9824,7 @@ if (!isValid) {
   const bAdv = sessionConfig.initialBalance / 2;
   
   // CORRECTION : On utilise le paramètre de liquidité (B) correspondant au VRAI mode choisi
-  const initialB = (sessionConfig.mode === 'advanced') ? bAdv : bEasy;
+const initialB = (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'polymarket') ? bAdv : bEasy;
 
   // 2. Initialisation des votes (parts) pour chaque challenge
   game.challenges.forEach(ch => initBaseVotes(ch, initialB));
@@ -9603,11 +9994,11 @@ function startSetup(mode) {
   const advParams = document.getElementById("advancedParams");
   
   if (advParams) {
-    if (mode === 'advanced' || mode === 'both') {
-      advParams.classList.remove("hidden");
-    } else {
-      advParams.classList.add("hidden");
-    }
+if (mode === 'advanced' || mode === 'both' || mode === 'polymarket') {
+  advParams.classList.remove("hidden");
+} else {
+  advParams.classList.add("hidden");
+}
   }
 
   const setupMsg = document.getElementById("setupMsg");
@@ -9620,6 +10011,269 @@ function startSetup(mode) {
     updateSetupBtnState();
   }
 }
+
+const FDJ_TEST_GAME_QUESTIONS = [
+  {
+    category: "Fun facts",
+    question: "Pendant la session, un joueur recevra-t-il un appel ou un message qu’il n’a pas provoqué ?",
+    answers: ["Oui", "Non"],
+    initialPcts: [50, 50]
+  },
+  {
+    category: "Fun facts",
+    question: "La prochaine personne qui entrera dans la pièce et qui ne participe pas au jeu portera-t-elle du noir ?",
+    answers: ["Oui", "Non"],
+    initialPcts: [50, 50]
+  },
+  {
+    category: "Trend signals",
+    question: "Dans les 5 prochaines minutes, l’indice CAC 40 sera-t-il en hausse, stable ou en baisse par rapport à son niveau au lancement ?",
+    answers: ["Hausse", "Stable (+ ou - 10 points)", "Baisse"],
+    initialPcts: [33, 34, 33]
+  },
+  {
+    category: "Live traffic",
+    question: "Dans les 5 prochaines minutes, comment le temps de trajet entre 3 quai du Point du Jour et Bistro Hasard évoluera-t-il ?",
+    answers: ["Il augmente", "Il ne change pas", "Il baisse"],
+    initialPcts: [33, 34, 33]
+  },
+  {
+    category: "Trend signals",
+    question: "À la fin de la session, quelle réponse aura reçu le plus de mises ?",
+    answers: ["Réponse A", "Réponse B", "Égalité ou quasi-égalité"],
+    initialPcts: [33, 34, 33]
+  }
+];
+
+window.fdjTestGameState = window.fdjTestGameState || {
+  mode: "easy",
+  durationMinutes: 5
+};
+
+function makeFDJTestSessionCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return code;
+}
+
+function openFDJTestGameSetup() {
+  window.fdjTestGameState = {
+    mode: "easy",
+    durationMinutes: 5
+  };
+
+  showScreen("testGameSetup");
+  renderFDJTestGameSetup();
+}
+
+function selectFDJTestMode(mode) {
+  window.fdjTestGameState = window.fdjTestGameState || {};
+  window.fdjTestGameState.mode = mode;
+  renderFDJTestGameSetup();
+}
+
+function setFDJTestDuration(minutes) {
+  window.fdjTestGameState = window.fdjTestGameState || {};
+  window.fdjTestGameState.durationMinutes = Number(minutes) || 5;
+  renderFDJTestGameSetup();
+}
+
+function renderFDJTestGameSetup() {
+  const state = window.fdjTestGameState || {};
+  const mode = state.mode || "easy";
+  const duration = Number(state.durationMinutes || 5);
+
+  document.querySelectorAll("[data-test-mode]").forEach(btn => {
+    const active = btn.dataset.testMode === mode;
+    btn.style.background = active
+      ? "linear-gradient(135deg,#a855f7,#6366f1)"
+      : "rgba(255,255,255,0.07)";
+    btn.style.color = "#ffffff";
+    btn.style.border = active
+      ? "1px solid rgba(168,85,247,0.85)"
+      : "1px solid rgba(255,255,255,0.14)";
+  });
+
+  document.querySelectorAll("[data-test-duration]").forEach(btn => {
+    const active = Number(btn.dataset.testDuration) === duration;
+    btn.style.background = active
+      ? "linear-gradient(135deg,#22c55e,#16a34a)"
+      : "rgba(255,255,255,0.07)";
+    btn.style.color = "#ffffff";
+    btn.style.border = active
+      ? "1px solid rgba(34,197,94,0.85)"
+      : "1px solid rgba(255,255,255,0.14)";
+  });
+
+  const balanceBlock = document.getElementById("testAdvancedBalanceBlock");
+  if (balanceBlock) {
+    balanceBlock.style.display = (mode === "advanced" || mode === "both" || mode === "polymarket")
+      ? "block"
+      : "none";
+  }
+
+  const container = document.getElementById("testProbabilitiesContainer");
+  if (!container) return;
+
+  container.innerHTML = FDJ_TEST_GAME_QUESTIONS.map((q, qIndex) => `
+    <div style="margin-bottom:12px; padding:12px; border-radius:14px; background:rgba(15,23,42,0.78); border:1px solid rgba(255,255,255,0.10);">
+      <div style="font-size:12px; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:8px;">
+        ${qIndex + 1}. ${window.escapeHtml(q.question)}
+      </div>
+
+      ${q.answers.map((answer, aIndex) => `
+        <div style="display:grid; grid-template-columns:minmax(0,1fr) 82px; gap:8px; align-items:center; margin-bottom:6px;">
+          <div style="font-size:12px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${window.escapeHtml(answer)}
+          </div>
+          <input
+            type="number"
+            id="test-prob-${qIndex}-${aIndex}"
+            class="dynamic-pct"
+            data-ch="fdj-test-${qIndex}"
+            value="${q.initialPcts[aIndex]}"
+            min="0.1"
+            max="99.9"
+            step="0.1"
+            inputmode="decimal"
+            oninput="updateNextPct('fdj-test-${qIndex}', this)"
+            style="margin:0; padding:8px; font-size:13px;"
+          >
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+}
+
+function getFDJTestInitialPcts(questionIndex) {
+  const q = FDJ_TEST_GAME_QUESTIONS[questionIndex];
+
+  return q.answers.map((answer, answerIndex) => {
+    const input = document.getElementById(`test-prob-${questionIndex}-${answerIndex}`);
+    let value = input ? parseFloat(input.value) : q.initialPcts[answerIndex];
+
+    if (!Number.isFinite(value) || value <= 0) value = q.initialPcts[answerIndex] || 1;
+
+    return Math.max(0.1, value);
+  });
+}
+
+function buildFDJTestChallenges(startTime, endTime, initialB) {
+  return FDJ_TEST_GAME_QUESTIONS.map((item, index) => {
+    const ch = {
+      category: item.category,
+      question: item.question,
+      answers: [...item.answers],
+      initialPcts: getFDJTestInitialPcts(index),
+      votes: [],
+      baseVotes: [],
+      correct: null,
+      status: "pending",
+      startTime,
+      endTime,
+      isGolden: index === FDJ_TEST_GAME_QUESTIONS.length - 1,
+      imageUrl: getRandomCategoryImage(item.category)
+    };
+
+    initBaseVotes(ch, initialB);
+
+    return ch;
+  });
+}
+
+function launchFDJTestGame() {
+  const msg = document.getElementById("testGameMsg");
+  const state = window.fdjTestGameState || {};
+  const mode = state.mode || "easy";
+  const durationMinutes = Number(state.durationMinutes || 5);
+  const initialBalanceInput = document.getElementById("testInitialBalance");
+
+  const initialBalance = Math.max(
+    10,
+    parseInt(initialBalanceInput && initialBalanceInput.value, 10) || 100
+  );
+
+  resetLocalSessionForSetup(mode);
+
+  const now = Date.now();
+  const startTime = now;
+  const endTime = now + durationMinutes * 60 * 1000;
+
+  sessionConfig.mode = mode;
+  sessionConfig.n = 5;
+  sessionConfig.initialBalance = initialBalance;
+  sessionConfig.durationMinutes = durationMinutes;
+  sessionConfig.gameStartTime = startTime;
+  sessionConfig.gameEndTime = endTime;
+  sessionConfig.expiresAt = endTime + 30 * 60 * 1000;
+  sessionConfig.code = makeFDJTestSessionCode();
+  sessionConfig.codeAdvanced = mode === "both" ? makeFDJTestSessionCode() : "";
+
+  const bEasy = sessionConfig.n / 2;
+  const bAdv = sessionConfig.initialBalance / 2;
+  const initialB = (mode === "advanced" || mode === "polymarket") ? bAdv : bEasy;
+
+  game.challenges = buildFDJTestChallenges(startTime, endTime, initialB);
+  game.players = [];
+  game.messages = [];
+  game.maxPlayers = 50;
+  game.currentPlayerName = "";
+  game.isResolved = false;
+  game.gameMode = mode;
+  game.isTestGame = true;
+
+  selectedAnswers = new Array(game.challenges.length).fill(null);
+  selectedBets = new Array(game.challenges.length).fill(0);
+  selectedBetTypes = new Array(game.challenges.length).fill("YES");
+  selectedAnswerTimes = new Array(game.challenges.length).fill(null);
+
+  currentPlayChallengeIndex = 0;
+  currentAdminChallengeIndex = 0;
+  currentPlayerMode = mode === "both" ? "advanced" : mode;
+
+  resetNextSessionLink();
+
+  window.currentActiveSessionCode = sessionConfig.code;
+
+  if (msg) {
+    msg.textContent = "Création du jeu test...";
+    msg.className = "msg ok";
+  }
+
+  saveToCloud(sessionConfig.code);
+
+  if (mode === "both" && sessionConfig.codeAdvanced) {
+    const ratio = bAdv / bEasy;
+
+    const advPayload = {
+      sessionConfig: JSON.parse(JSON.stringify(sessionConfig)),
+      gameData: JSON.parse(JSON.stringify(game))
+    };
+
+    advPayload.gameData.challenges.forEach(ch => {
+      if (ch.votes) ch.votes = ch.votes.map(v => v * ratio);
+      if (ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
+    });
+
+    db.ref("sessions/" + sessionConfig.codeAdvanced)
+      .set(advPayload)
+      .catch(err => console.error(err));
+  }
+
+  localStorage.setItem("savedSessionConfig", JSON.stringify(sessionConfig));
+
+  window.isSessionGenerated = true;
+  window.hasSetupChanged = false;
+  window.originalSetupState = "";
+
+  showSessionInfo();
+}
+
 
 function initBaseVotes(ch, customB) {
   const sumPcts = ch.initialPcts.reduce((a, b) => a + b, 0) || 1;
@@ -9668,14 +10322,17 @@ function showSessionInfo() {
       </div>`;
   }
 
-  // Bloc Mode Avancé
-  if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both') {
-    const codeAdv = sessionConfig.mode === 'both' ? sessionConfig.codeAdvanced : sessionConfig.code;
-    const urlAdv = getPlayerJoinUrl(codeAdv);
-    const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
-    html += `
-      <div class="card" style="border-color:#f97316; margin-bottom:15px; padding-bottom:15px; text-align:center;">
-        <div style="color:#f97316; font-weight:bold; margin-bottom:15px; letter-spacing:1px;">MODE AVANCÉ</div>
+// Bloc Mode Avancé / Polymarket
+if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both' || sessionConfig.mode === 'polymarket') {
+  const codeAdv = sessionConfig.mode === 'both' ? sessionConfig.codeAdvanced : sessionConfig.code;
+  const urlAdv = getPlayerJoinUrl(codeAdv);
+  const qrAdv = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlAdv)}`;
+  const modeLabel = sessionConfig.mode === 'polymarket' ? 'POLYMARKET STYLE' : 'MODE AVANCÉ';
+  const modeColor = sessionConfig.mode === 'polymarket' ? '#60a5fa' : '#f97316';
+
+  html += `
+    <div class="card" style="border-color:${modeColor}; margin-bottom:15px; padding-bottom:15px; text-align:center;">
+      <div style="color:${modeColor}; font-weight:bold; margin-bottom:15px; letter-spacing:1px;">${modeLabel}</div>
         
         <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
             <div style="display:flex; justify-content:center; align-items:center; gap:12px; background:rgba(0,0,0,0.3); padding:8px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
@@ -10066,7 +10723,7 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
     if (snaps.length > 0) {
        snaps.forEach(snap => {
            // CORRECTION : Le bouton Cash Out est maintenant aligné sur la même ligne (flexbox) pour économiser la moitié de la hauteur !
-          const cashOutBtn = (currentPlayerMode === 'advanced' && effStatus === "open" && !isSessionTradingClosed()) 
+          const cashOutBtn = (isAdvancedLikeMode() && effStatus === "open" && !isSessionTradingClosed())
             ? `<button onclick="event.preventDefault(); event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}'); return false;" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
             : "";
            
@@ -10085,6 +10742,150 @@ window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
 function getQuestionsPerPlayerLimit() {
   const n = Number(sessionConfig && sessionConfig.n);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : Infinity;
+}
+
+function getPolymarketQuestionSelection(limit, previousIndices = [], now = Date.now()) {
+  if (!game || !Array.isArray(game.challenges)) return [];
+
+  const maxCards = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.floor(Number(limit)))
+    : Math.max(1, Number(sessionConfig && sessionConfig.n) || 1);
+
+  const toItem = (idx) => {
+    const numericIdx = Number(idx);
+    const ch = game.challenges[numericIdx];
+    if (!ch || !Number.isInteger(numericIdx)) return null;
+
+    const status = getEffectiveStatus(ch);
+
+    return {
+      idx: numericIdx,
+      ch,
+      status,
+      startTime: Number(ch.startTime || 0),
+      endTime: Number(ch.endTime || 0)
+    };
+  };
+
+  const isEligible = (item) => {
+    if (!item || !item.ch) return false;
+
+    // Question ouverte : on ne l'affiche que s'il reste au moins 1 minute.
+    if (item.status === "open") {
+      return (item.endTime - now) >= 60000;
+    }
+
+    // Question à venir : elle peut être affichée dans la liste du marché.
+    return item.status === "pending";
+  };
+
+  const selected = [];
+  const used = new Set();
+
+  // On garde d'abord les questions déjà attribuées qui sont encore valides.
+  (Array.isArray(previousIndices) ? previousIndices : []).forEach(idx => {
+    const item = toItem(idx);
+    if (!isEligible(item)) return;
+    if (used.has(item.idx)) return;
+
+    selected.push(item.idx);
+    used.add(item.idx);
+  });
+
+  const candidates = game.challenges
+    .map((ch, idx) => toItem(idx))
+    .filter(item => {
+      if (!isEligible(item)) return false;
+      if (used.has(item.idx)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aPriority = a.status === "open" ? 0 : 1;
+      const bPriority = b.status === "open" ? 0 : 1;
+
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      const aTime = a.status === "open" ? a.endTime : a.startTime;
+      const bTime = b.status === "open" ? b.endTime : b.startTime;
+
+      if (aTime !== bTime) return aTime - bTime;
+
+      return a.idx - b.idx;
+    });
+
+  while (selected.length < maxCards && candidates.length) {
+    const next = candidates.shift();
+    selected.push(next.idx);
+    used.add(next.idx);
+  }
+
+  return selected.slice(0, maxCards);
+}
+
+function preparePolymarketPlayerQuestionList(player, now = Date.now(), mode = currentPlayerMode) {
+  if (!player || !isPolymarketStyleMode(mode)) return false;
+
+  const previousAssigned = Array.isArray(player.assignedIndices)
+    ? player.assignedIndices.map(Number).filter(i => Number.isInteger(i))
+    : [];
+
+  const previousRecap = Array.isArray(player.recapAssignedIndices)
+    ? player.recapAssignedIndices.map(Number).filter(i => Number.isInteger(i))
+    : [];
+
+  const beforeAssigned = previousAssigned.join("|");
+  const beforeRecap = previousRecap.join("|");
+
+  // IMPORTANT :
+  // En Polymarket style, une fois que le joueur a reçu ses questions,
+  // elles restent figées. On ne remplace PAS une question qui passe ensuite
+  // sous la minute.
+  if (previousAssigned.length > 0) {
+    player.assignedIndices = [...previousAssigned];
+
+    // Compatibilité avec les joueurs créés avant l'ajout de recapAssignedIndices.
+    player.recapAssignedIndices = previousRecap.length
+      ? [...previousRecap]
+      : [...previousAssigned];
+
+    return beforeAssigned !== player.assignedIndices.join("|") ||
+           beforeRecap !== player.recapAssignedIndices.join("|");
+  }
+
+  // Cas unique où on choisit les questions :
+  // première arrivée du joueur dans la session.
+  // Ici seulement, on exclut les questions qui expirent dans moins d'une minute.
+  const limit = getQuestionsPerPlayerLimit();
+  const nextIndices = getPolymarketQuestionSelection(limit, [], now);
+
+  player.assignedIndices = [...nextIndices];
+  player.recapAssignedIndices = [...nextIndices];
+
+  return beforeAssigned !== player.assignedIndices.join("|") ||
+         beforeRecap !== player.recapAssignedIndices.join("|");
+}
+
+function syncPolymarketPlayerQuestionList(player, now = Date.now(), mode = currentPlayerMode) {
+  if (!player || !isPolymarketStyleMode(mode) || game.isResolved) return false;
+
+  const changed = preparePolymarketPlayerQuestionList(player, now, mode);
+  if (!changed) return false;
+
+  const pIdx = game.players.findIndex(p =>
+    p.name === player.name &&
+    p.email === player.email
+  );
+
+  if (pIdx !== -1 && window.currentActiveSessionCode) {
+    db.ref(
+      'sessions/' + window.currentActiveSessionCode + '/gameData/players/' + pIdx
+    ).update({
+      assignedIndices: player.assignedIndices,
+      recapAssignedIndices: player.recapAssignedIndices
+    });
+  }
+
+  return true;
 }
 
 function getPlayerPortfolioQuestionIndices(player) {
@@ -10356,6 +11157,17 @@ function getPlayerRecapIndices(player) {
 
   const limit = getQuestionsPerPlayerLimit();
 
+  if (isPolymarketStyleMode()) {
+    const assignedIndices = Array.isArray(player.assignedIndices)
+      ? player.assignedIndices.map(Number)
+      : [];
+
+    const cleanAssigned = [...new Set(assignedIndices)]
+      .filter(i => Number.isInteger(i) && game.challenges && game.challenges[i]);
+
+    return Number.isFinite(limit) ? cleanAssigned.slice(0, limit) : cleanAssigned;
+  }
+
   const recapIndices = Array.isArray(player.recapAssignedIndices)
     ? player.recapAssignedIndices.map(Number)
     : [];
@@ -10476,7 +11288,7 @@ function stopPlayNavEvent(event) {
 }
 
 function buildPlayCardNavHtml(options = {}) {
-  const isAdvancedMode = currentPlayerMode === "advanced";
+  const isAdvancedMode = isAdvancedLikeMode();
 
   // En mode facile, sur une carte non ouverte / close :
   // aucun bouton Suivant / Valider ne doit apparaître.
@@ -10691,6 +11503,163 @@ function buildClosedQuestionStatsHtml(cIndex, ch, snap, effStatus) {
   `;
 }
 
+function shouldShowPlayCardMedia() {
+  return currentPlayerMode === "easy" || isAdvancedLikeMode();
+}
+
+function shouldShowPlayCardProgress() {
+  return (currentPlayerMode === "easy" || currentPlayerMode === "advanced") && !window.isRebetting;
+}
+
+function buildPlayCardProgressHtml(displayPos, totalCards) {
+  if (!shouldShowPlayCardProgress()) return "";
+
+  const current = Number(displayPos) + 1;
+  const total = Math.max(1, Number(totalCards || 1));
+
+  return `<div class="play-card-progress-badge">${current}/${total}</div>`;
+}
+
+function buildPlayCardMediaHtml(cIndex, ch, displayPos) {
+  if (!shouldShowPlayCardMedia()) {
+    const fallbackImageUrl = getQuestionCardImageUrl(ch.imageUrl, ch.category);
+
+    if (!fallbackImageUrl) return "";
+
+    return `
+      <img
+        src="${getAssetUrl(fallbackImageUrl)}"
+        style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);"
+      >
+    `;
+  }
+
+  let displayImageUrl = getRealisticCardImageUrl(ch.imageUrl);
+
+  if (!displayImageUrl) {
+    displayImageUrl = getQuestionCardImageUrl(ch.imageUrl, ch.category);
+  }
+
+  const imageHtml = displayImageUrl
+    ? `<img src="${getAssetUrl(displayImageUrl)}" alt="">`
+    : `<div style="height:100%; display:grid; place-items:center; color:#64748b; font-weight:800; font-size:12px;">Aucune image</div>`;
+
+const canvasId = `play-card-trend-${cIndex}-${displayPos}`;
+
+window.playCardMediaViews = window.playCardMediaViews || {};
+
+const savedMediaView =
+  window.playCardMediaViews[Number(cIndex)] === "chart"
+    ? "chart"
+    : "image";
+
+const mediaClass = savedMediaView === "chart"
+  ? "play-card-media is-chart"
+  : "play-card-media";
+
+return `
+  <div class="${mediaClass}" data-play-card-media="${cIndex}">
+      <div class="play-card-media-tabs">
+<button
+  type="button"
+  class="play-card-media-tab ${savedMediaView === "image" ? "is-active" : ""}"
+  data-media-tab="image"
+  title="Voir l'image"
+  aria-label="Voir l'image"
+  onpointerdown="stopPlayNavEvent(event)"
+  ontouchstart="stopPlayNavEvent(event)"
+  onmousedown="stopPlayNavEvent(event)"
+  onclick="togglePlayCardMedia(event, ${Number(cIndex)}, 'image')"
+>
+  🖼️
+</button>
+
+<button
+  type="button"
+  class="play-card-media-tab ${savedMediaView === "chart" ? "is-active" : ""}"
+  data-media-tab="chart"
+  title="Voir le graphique"
+  aria-label="Voir le graphique"
+  onpointerdown="stopPlayNavEvent(event)"
+  ontouchstart="stopPlayNavEvent(event)"
+  onmousedown="stopPlayNavEvent(event)"
+  onclick="togglePlayCardMedia(event, ${Number(cIndex)}, 'chart')"
+>
+  📈
+</button>
+      </div>
+
+      <div class="play-card-media-body">
+        <div class="play-card-media-panel play-card-media-panel--image">
+          ${imageHtml}
+        </div>
+
+        <div class="play-card-media-panel play-card-media-panel--chart">
+          <canvas id="${canvasId}" class="play-card-chart-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function drawPlayCardChartCanvas(canvas, cIndex) {
+  if (!canvas) return false;
+  if (typeof computeBsTimedHistory !== "function") return false;
+  if (typeof drawBsTrendChart !== "function") return false;
+
+  const numericIndex = Number(cIndex);
+  if (!Number.isInteger(numericIndex)) return false;
+
+  const trendData = computeBsTimedHistory(numericIndex, bsTrendRangeMs);
+  drawBsTrendChart(trendData, canvas.id, numericIndex);
+
+  return true;
+}
+
+function redrawVisiblePlayCardCharts() {
+  setTimeout(() => {
+    document
+      .querySelectorAll(".play-card-media.is-chart canvas.play-card-chart-canvas")
+      .forEach(canvas => {
+        const media = canvas.closest("[data-play-card-media]");
+        const cIndex = media ? Number(media.dataset.playCardMedia) : null;
+
+        drawPlayCardChartCanvas(canvas, cIndex);
+      });
+  }, 50);
+}
+
+
+window.togglePlayCardMedia = function(event, cIndex, view) {
+  stopPlayNavEvent(event);
+
+  window.playCardMediaViews = window.playCardMediaViews || {};
+  window.playCardMediaViews[Number(cIndex)] = view === "chart" ? "chart" : "image";
+
+  const activeCard =
+    document.querySelector(`#challengesPlay .challenge-block.active-card[data-c-index="${cIndex}"]`) ||
+    document.querySelector(`#challengesPlay .challenge-block[data-c-index="${cIndex}"]`);
+
+  if (!activeCard) return false;
+
+  const media = activeCard.querySelector(`[data-play-card-media="${cIndex}"]`);
+  if (!media) return false;
+
+  const showChart = view === "chart";
+  media.classList.toggle("is-chart", showChart);
+
+  media.querySelectorAll(".play-card-media-tab").forEach(btn => {
+    btn.classList.toggle("is-active", btn.dataset.mediaTab === view);
+  });
+
+  if (showChart) {
+    const canvas = media.querySelector("canvas");
+    setTimeout(() => drawPlayCardChartCanvas(canvas, cIndex), 40);
+  }
+
+  return false;
+};
+
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
@@ -10762,6 +11731,8 @@ const block = document.createElement("div");
     block.dataset.cardPos = String(displayPos);
 const effStatus = getEffectiveStatus(ch);
 
+const cardProgressHtml = buildPlayCardProgressHtml(displayPos, renderIndices.length);
+
 if (effStatus !== "open") {
   clearUnopenedQuestionDraft(cIndex);
 }
@@ -10813,10 +11784,14 @@ if (effStatus !== "open") {
       block.innerHTML = `
         <div class="closed-question-card-layout">
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="chip">${ch.category}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div class="chip">${ch.category}</div>
+
+            <div style="display:flex; align-items:center; gap:7px;">
+              ${cardProgressHtml}
               <div style="font-size:10px; font-weight:bold; color:#f87171;">${label}</div>
             </div>
+          </div>
 
             <div class="challenge-title" style="opacity:0.72; font-size:13px; margin-top:7px; line-height:1.25;">
               ${ch.question}
@@ -10852,17 +11827,7 @@ if (effStatus !== "open") {
     const myRank = myRankIdx >= 0 ? (myRankIdx + 1) : "-";
     const myRankSuffix = myRank === 1 ? "ST" : (myRank === 2 ? "ND" : (myRank === 3 ? "RD" : "TH"));
 
-let imgHtml = "";
-
-// Image question mobile : uniquement pour les cartes.
-// On utilise la catégorie pour retrouver le bon fichier, ex : Trend Signals -> trend_signal_realiste_question.png
-let mobileImageUrl = getQuestionCardImageUrl(ch.imageUrl, ch.category);
-
-if (mobileImageUrl) {
-  mobileImageUrl = getAssetUrl(mobileImageUrl);
-
-  imgHtml = `<img src="${mobileImageUrl}" style="width:100%; height:clamp(60px, 12vh, 140px); object-fit:cover; border-radius:12px; margin-bottom:clamp(4px, 1vh, 10px); box-shadow:0 4px 15px rgba(0,0,0,0.4);">`;
-}
+const mediaHtml = buildPlayCardMediaHtml(cIndex, ch, displayPos);
 
     // CORRECTION : La catégorie est plus petite, les textes et marges agissent comme des ressorts
     // CORRECTION : On conditionne l'affichage du solde pour le cacher en Mode Facile
@@ -10879,16 +11844,25 @@ const cardTimerText =
       ? formatTimeDiff(Number(ch.endTime || 0) - Date.now())
       : "00:00";
 
-header.innerHTML = `
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: clamp(2px, 0.5vh, 6px);">
+const leftHeaderHtml = `
+  <div class="play-card-head-left">
     ${scoreHtml}
-    <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
+    ${cardProgressHtml}
+  </div>
+`;
+
+
+
+header.innerHTML = `
+<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom: clamp(2px, 0.5vh, 6px);">
+  ${leftHeaderHtml}
+  <div style="text-align:right; display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:999px; border: 1px solid rgba(255,255,255,0.05);">
        <span style="font-size:10px; opacity:0.8;">⏱️</span>
        <div id="open-timer-${cIndex}" style="color:#fde047; font-size:13px; font-weight:900; font-family:monospace; margin-top:1px;">${cardTimerText}</div>
     </div>
   </div>
   <div style="font-size:clamp(14px, 2.5vh, 20px); font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:clamp(4px, 1vh, 10px); color:#f9fafb; text-shadow:0 2px 5px rgba(0,0,0,0.5); line-height:1.1;">${ch.category}</div>
-  ${imgHtml}
+  ${mediaHtml}
 `;
 
     // NOUVEAU : On regroupe la question et les réponses dans une même zone pour pouvoir les éclairer ensemble dans le tutoriel
@@ -10958,7 +11932,7 @@ const btnHtml = !cardIsActionable
          : `${buildPlayCardNavHtml({
               hasPrev: hasPrevCard,
               nextLabel: "Suivant",
-              nextOnclick: currentPlayerMode === "advanced" ? "goNextCardFromButton()" : "swipeNextCard()"
+              nextOnclick: isAdvancedLikeMode() ? "goNextCardFromButton()" : "swipeNextCard()"
             })}${hintText}`;
 
     // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
@@ -11097,7 +12071,7 @@ if (!ch || effStatus !== "open") {
 
     // Seul le mode avancé peut passer une carte non ouverte.
     // En mode facile, aucune navigation bouton / swipe ne doit permettre de contourner l'ouverture.
-    if (allowLockedSwipe && currentPlayerMode === "advanced") {
+    if (allowLockedSwipe && isAdvancedLikeMode()) {
         if (Number.isInteger(Number(cIndex)) && typeof rememberQuestionInPlayerRecap === "function") {
             rememberQuestionInPlayerRecap(Number(cIndex));
         }
@@ -11195,7 +12169,7 @@ window.goNextCardFromButton = function(options = {}) {
 
   // En avancé, les boutons Précédent / Suivant sont de la navigation pure.
   // Ils doivent marcher même si la question est pending ou close.
-  if (currentPlayerMode === "advanced") {
+  if (isAdvancedLikeMode()) {
     if (effStatus !== "open") {
       clearUnopenedQuestionDraft(cIndex);
 
@@ -11686,9 +12660,8 @@ else if (window.currentTutoStep === 7) {
 }
   }, true);
 
-  updateCardStack();
-
-  // --- NOUVEAU : Navigation au Clavier (Flèches Haut / Bas) sur Ordinateur ---
+updateCardStack();
+redrawVisiblePlayCardCharts();
   if (!window.keyboardNavAttached) {
       document.addEventListener('keydown', (e) => {
           if (document.getElementById('play').style.display === 'none') return;
@@ -12489,11 +13462,13 @@ if (step >= 1 && step <= 3) {
 
     const tutoText = document.getElementById("tutoStep3Text");
     if (tutoText) {
-       if (currentPlayerMode === 'easy') {
-           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les gains (💰) indiquent ce que vous pouvez remporter. Moins une réponse est jouée, plus elle rapporte !`;
-       } else {
-           tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> La cote affichée sous la forme <strong><span class="bet-odds-x">x</span>1,42</strong> indique combien 1 crédit peut rapporter, à titre indicatif. Le pourcentage en dessous montre la probabilité actuelle du marché.`;
-       }
+if (currentPlayerMode === 'easy') {
+    tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> Les gains (💰) indiquent ce que vous pouvez remporter. Moins une réponse est jouée, plus elle rapporte !`;
+} else if (isPolymarketStyleMode()) {
+    tutoText.innerHTML = `Vous êtes entré depuis le récapitulatif : choisissez une réponse, placez votre mise, puis revenez à la liste pour suivre toutes les questions du marché.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> La cote et le pourcentage évoluent avec les mises des autres joueurs.`;
+} else {
+    tutoText.innerHTML = `Touchez l'une des réponses pour faire votre prédiction.<br><br><span style="color:#fde047; font-weight:bold;">💡 À savoir :</span> La cote affichée sous la forme <strong><span class="bet-odds-x">x</span>1,42</strong> indique combien 1 crédit peut rapporter, à titre indicatif. Le pourcentage en dessous montre la probabilité actuelle du marché.`;
+}
     }
   } else if (step === 4) {
     // ÉTAPE 4 : LA GESTION DES PARIS (DANS LE PANNEAU DE MISE)
@@ -12516,8 +13491,12 @@ if (betPanel) {
     if (tutoBetZone) tutoBetZone.classList.add('tuto-highlight');
 
     const n = sessionConfig.n || 1;
-    const tutoNText = document.getElementById("tutoNText");
-    if (tutoNText) tutoNText.innerHTML = `Attention, gérez vos crédits intelligemment car vous avez <strong>${n} questions</strong> à disposition.`;
+const tutoNText = document.getElementById("tutoNText");
+if (tutoNText) {
+  tutoNText.innerHTML = isPolymarketStyleMode()
+    ? `Attention, gérez vos crédits intelligemment : vous avez <strong>${n} questions</strong> de marché à disposition. Une question trop proche de la fermeture est remplacée par une question à venir.`
+    : `Attention, gérez vos crédits intelligemment car vous avez <strong>${n} questions</strong> à disposition.`;
+}
     
 // On écoute la saisie numérique ET le curseur de mise.
 const betInput = document.getElementById('betInput');
@@ -12819,7 +13798,7 @@ window.finishPlayFromButton = function(event) {
   }
 
   // En avancé, Valider mes paris doit fonctionner même si la dernière carte est pending/closed.
-  if (currentPlayerMode === "advanced" && !window.isRebetting) {
+  if (isAdvancedLikeMode() && !window.isRebetting) {
     if (effStatus !== "open") {
       clearUnopenedQuestionDraft(cIndex);
 
@@ -12855,7 +13834,7 @@ function playNext() {
 
     // En mode avancé uniquement, une carte non ouverte peut être passée.
     // En mode facile, elle reste bloquée jusqu'à ouverture.
-    if (!window.isRebetting && currentPlayerMode === "advanced") {
+    if (!window.isRebetting && isAdvancedLikeMode()) {
         const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
           ? window.getActiveCardChallengeIndex()
           : myIndices[window.currentCardIndex];
@@ -13166,7 +14145,7 @@ if (betConfirmBtn) betConfirmBtn.disabled = true;
 }
 
 function clearUnconfirmedAdvancedSelection() {
-  if (currentPlayerMode !== "advanced") return;
+  if (!isAdvancedLikeMode()) return;
   if (tempBetCIndex === null || tempBetCIndex === undefined) return;
 
   const cIndex = tempBetCIndex;
@@ -13551,7 +14530,7 @@ const ch = betQuestion;
   // CORRECTION: On ajoute l'argent à la piscine de votes
   simulatedVotes[tempBetAnsIndex] += val;
 
-  if (currentPlayerMode === 'advanced') {
+  if (isAdvancedLikeMode()) {
       let player = game.players.find(p => p.name === game.currentPlayerName);
       if (!player) {
           player = { name: game.currentPlayerName, balance: currentPlayerBalance, portfolio: [] };
@@ -15250,12 +16229,17 @@ if (finalPlayer) {
 // Nouveau joueur : Création
       // CORRECTION : On utilise la variable 'modeToPlay' qui vient d'être identifiée, 
       // car 'currentPlayerMode' n'est pas encore actualisé à ce stade du code !
-      let startBal = (modeToPlay === 'advanced') ? (sessionConfig.initialBalance || 100) : 0;
+let startBal = isAdvancedLikeMode(modeToPlay) ? (sessionConfig.initialBalance || 100) : 0;
       me = { name: pseudoInput, email: emailInput, balance: startBal, portfolio: [], assignedIndices: [] };
       
 const n = sessionConfig.n || 1;
 
-if (isPlayerSessionBeforeStart()) {
+if (isPolymarketStyleMode(modeToPlay)) {
+  // Mode Polymarket : le joueur reçoit N questions, comme en mode avancé.
+  // Les questions ouvertes avec moins d'une minute restante sont exclues.
+  me.assignedIndices = getPolymarketQuestionSelection(n, [], now);
+  me.recapAssignedIndices = [...me.assignedIndices];
+} else if (isPlayerSessionBeforeStart()) {
   // Si la session n'a pas encore commencé :
   // le joueur reçoit directement les N questions qui ouvriront le plus vite.
   me.assignedIndices = getSoonestUpcomingQuestionIndices(n);
@@ -15322,7 +16306,11 @@ window.localPlayerSnapshot = JSON.parse(JSON.stringify(me));
 
 const connectedPlayer = (game.players || []).find(p => p.name === finalPseudo);
 
-if (connectedPlayer && ensurePlayerHasPreStartCards(connectedPlayer)) {
+if (connectedPlayer && isPolymarketStyleMode(modeToPlay)) {
+  // Polymarket style :
+  // les questions sont attribuées une seule fois à la première entrée du joueur.
+  // En cas de retour / refresh / reconnexion, on garde exactement la même liste.
+} else if (connectedPlayer && ensurePlayerHasPreStartCards(connectedPlayer)) {
   window.currentCardIndex = 0;
   window.maxCardIndexSeen = 0;
 
@@ -15359,12 +16347,34 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
         sessionConfig = data.sessionConfig;
 
         if (!game.players) game.players = [];
-        if (!game.messages) game.messages = []; 
+        if (!game.messages) game.messages = [];
+
+        const previousToastMessageCount = window.lastPlayerMessageToastCount || 0;
+        const incomingMessageCount = game.messages.length;
+        const latestMessage = incomingMessageCount > 0
+          ? game.messages[incomingMessageCount - 1]
+          : null;
+
         game.currentPlayerName = finalPseudo;
         currentPlayerMode = modeToPlay;
-        updateMessageBadges();
+
         const msgPanel = document.getElementById("messagePanel");
-        if (msgPanel && msgPanel.classList.contains("open")) {
+        const isMessagePanelOpen = msgPanel && msgPanel.classList.contains("open");
+
+        if (
+          !isFirstLoad &&
+          incomingMessageCount > previousToastMessageCount &&
+          shouldShowPlayerMessageToast() &&
+          !isMessagePanelOpen
+        ) {
+          showInGameMessageToast(latestMessage);
+        }
+
+        window.lastPlayerMessageToastCount = incomingMessageCount;
+
+        updateMessageBadges();
+
+        if (isMessagePanelOpen) {
           playerReadMessagesCount = game.messages.length;
           renderMessageList();
           updateMessageBadges();
@@ -15374,7 +16384,7 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
         if (currentPlayer) {
           currentPlayerBalance = currentPlayer.balance;
           updateGlobalBalance();
-        } else if (currentPlayerBalance === 0 && currentPlayerMode === 'advanced') {
+        } else if (currentPlayerBalance === 0 && isAdvancedLikeMode(modeToPlay)) {
           currentPlayerBalance = sessionConfig.initialBalance;
           updateGlobalBalance();
         }
@@ -15404,10 +16414,14 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
 
             if (game.isResolved) {
                 showPlayerResult(finalPseudo);
+            } else if (isPolymarketStyleMode(modeToPlay)) {
+                // Mode Polymarket : arrivée directe sur la liste de toutes les questions.
+                renderPlayerRecap(finalPseudo);
             } else if (hasFinished) {
                 // Le joueur avait fini de répondre -> Récapitulatif
                 renderPlayerRecap(finalPseudo);
             } else {
+                // Le joueur a été déconnecté avant la fin -> Retour sur sa question
                 // Le joueur a été déconnecté avant la fin -> Retour sur sa question
             const gameContent = document.getElementById("gameContent");
             if (gameContent) {
@@ -16891,6 +17905,7 @@ function setRecapSessionTimerDisplay(labelText, timeText) {
 
 function refreshRecapPendingQuestionTimers() {
   let recapNeedsRefresh = false;
+  const now = Date.now();
 
   document.querySelectorAll("[data-recap-pending-timer]").forEach(el => {
     const cIndex = Number(el.getAttribute("data-recap-pending-timer"));
@@ -16906,7 +17921,7 @@ function refreshRecapPendingQuestionTimers() {
     }
 
     if (effStatus === "pending") {
-      const diffToOpen = Number(ch.startTime || 0) - Date.now();
+      const diffToOpen = Number(ch.startTime || 0) - now;
 
       if (diffToOpen <= 0) {
         recapNeedsRefresh = true;
@@ -16930,7 +17945,7 @@ function refreshRecapPendingQuestionTimers() {
       0
     );
 
-    const diffToClose = closeTime - Date.now();
+    const diffToClose = closeTime - now;
 
     if (effStatus !== "open" || diffToClose <= 0) {
       recapNeedsRefresh = true;
@@ -16956,8 +17971,14 @@ function startRecapSessionTimer() {
   if (recapTimerInterval) clearInterval(recapTimerInterval);
 
   const tick = () => {
-    const timerEl = document.getElementById("recapSessionTimer");
-    if (!timerEl) return;
+  const timerEl = document.getElementById("recapSessionTimer");
+
+  // Même si le timer global du récap n'est pas présent,
+  // on continue à surveiller les cartes Polymarket.
+  if (!timerEl) {
+    refreshRecapPendingQuestionTimers();
+    return;
+  }
 
     const now = Date.now();
 
@@ -17447,9 +18468,8 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
 
 function updateRecapUI(pseudo) {
   let player = (game.players || []).find(p => p.name === pseudo) || (window.localPlayerSnapshot && window.localPlayerSnapshot.name === pseudo ? window.localPlayerSnapshot : null);
-  if (!player) {
-    player = { name: pseudo, balance: currentPlayerBalance, portfolio: [] };
-  }
+
+
   
   const summaryContainer = document.getElementById("recapSummary");
   if (!summaryContainer) return;
@@ -17487,7 +18507,7 @@ function updateRecapUI(pseudo) {
     summaryContainer.innerHTML = `
       <div style="background:rgba(15,23,42,0.8); border:1px solid #3b82f6; border-radius:15px; padding:40px 20px; text-align:center; margin: 20px auto; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
         <div style="font-size:18px; color:#f9fafb; margin-bottom:25px; font-weight:bold;">Vous n'avez pas encore saisi de pari.</div>
-        <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); padding:12px 24px; border-radius:999px; font-weight:bold; box-shadow:0 10px 20px rgba(59,130,246,0.3); border:none;">Retourner aux questions</button>
+        <button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); padding:12px 24px; border-radius:999px; font-weight:bold; box-shadow:0 10px 20px rgba(59,130,246,0.3); border:none;">${isPolymarketStyleMode() ? 'Voir toutes les questions' : 'Retourner aux questions'}</button>
       </div>
     `;
     return;
@@ -18035,19 +19055,20 @@ const originalStake = getPortfolioDisplayedStake(snap);
     }
   });
 
-  const returnBtnHtml = currentPlayerMode === 'easy' 
-      ? '' 
+const returnBtnHtml = currentPlayerMode === 'easy'
+    ? ''
+    : isPolymarketStyleMode()
+      ? `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Voir toutes les questions</button>`
       : `<button onclick="goToPlayScreen()" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6); margin:0; flex:1; font-size:14px; box-shadow:0 10px 20px rgba(59,130,246,0.3); border-radius:12px;">Retourner aux questions</button>`;
 
-  finalHtml += `
-    <div style="padding-bottom: 90px;"></div>
-    <div class="sticky-action-bar">
-      <button onclick="openMessagePanel()" style="background:rgba(168,85,247,0.1); border:1px solid #a855f7; color:#a855f7; ${currentPlayerMode === 'easy' ? 'flex:1' : 'flex:0.25'}; font-size:16px; padding:10px 5px; box-shadow:none; position:relative; border-radius:12px; display:flex; justify-content:center; align-items:center; gap:8px;">
-        💬 ${currentPlayerMode === 'easy' ? 'Messagerie' : ''} <span id="msgUnreadBadgeRecap" class="hidden" style="position:absolute; top:-6px; right:-6px; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.5);">0</span>
-      </button>
-      ${returnBtnHtml}
-    </div>
-  `;
+  if (returnBtnHtml) {
+    finalHtml += `
+      <div style="padding-bottom: 90px;"></div>
+      <div class="sticky-action-bar">
+        ${returnBtnHtml}
+      </div>
+    `;
+  }
 
   // Injection finale dans le DOM d'un seul coup (Aucun saut de page !)
   summaryContainer.innerHTML = finalHtml;
@@ -18669,10 +19690,10 @@ window.goToSpecificCard = function(cIndex) {
 
     const cardPos = displayIndices.map(Number).indexOf(cIndex);
 
-    if (cardPos === -1 && !window.isRebetting) {
-      showPlayerTradeClosedMessage("Cette question n'est pas disponible dans votre session joueur.");
-      return;
-    }
+if (cardPos === -1 && !window.isRebetting) {
+  showPlayerTradeClosedMessage("Cette question n'est pas disponible dans votre session joueur.");
+  return;
+}
 
     // Mode retour rapide : après validation, on revient automatiquement au récap.
     window.isRebetting = true;
@@ -19643,10 +20664,83 @@ const joinUrl = `${window.location.origin}/jouer?session=${sessionConfig.code}`;
   }).catch(err => console.error("Erreur Webhook Nouvelle Question :", err));
 }
 
+function shouldShowPlayerMessageToast() {
+  const playEl = document.getElementById("play");
+  const recapEl = document.getElementById("playerRecap");
+
+  const isPlayVisible = playEl && playEl.style.display !== "none";
+  const isRecapVisible = recapEl && recapEl.style.display !== "none";
+
+  return currentScreenId === "play" ||
+         currentScreenId === "playerRecap" ||
+         isPlayVisible ||
+         isRecapVisible;
+}
+
+function showInGameMessageToast(message) {
+  const text = message && message.text
+    ? String(message.text)
+    : "Vous avez reçu un nouveau message.";
+
+  const oldToast = document.getElementById("inGameMessageToast");
+  if (oldToast) oldToast.remove();
+
+  if (window.inGameMessageToastTimer) {
+    clearTimeout(window.inGameMessageToastTimer);
+    window.inGameMessageToastTimer = null;
+  }
+
+  const toast = document.createElement("button");
+  toast.type = "button";
+  toast.id = "inGameMessageToast";
+  toast.className = "in-game-message-toast";
+  toast.setAttribute("aria-label", "Ouvrir la messagerie");
+
+  toast.onclick = () => {
+    openMessagePanel();
+    toast.remove();
+  };
+
+  toast.innerHTML = `
+    <span class="in-game-message-toast-icon">💬</span>
+    <span class="in-game-message-toast-content">
+      <span class="in-game-message-toast-title">Message admin</span>
+      <span class="in-game-message-toast-text"></span>
+    </span>
+    <span class="in-game-message-toast-time">maintenant</span>
+  `;
+
+  const textEl = toast.querySelector(".in-game-message-toast-text");
+  if (textEl) textEl.textContent = text;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("show");
+  }, 30);
+
+  window.inGameMessageToastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 360);
+  }, 6200);
+}
+
 
 function openMessagePanel() {
+  const toast = document.getElementById("inGameMessageToast");
+  if (toast) toast.remove();
+
+  if (window.inGameMessageToastTimer) {
+    clearTimeout(window.inGameMessageToastTimer);
+    window.inGameMessageToastTimer = null;
+  }
+
   const messages = game.messages || [];
   playerReadMessagesCount = messages.length; // On marque tout comme lu
+  window.lastPlayerMessageToastCount = messages.length;
   updateMessageBadges(); // On cache les pastilles rouges
   renderMessageList(); // On dessine les messages
   
@@ -21491,19 +22585,23 @@ function drawBsTrendChart(trendData, canvasId, cIndex) {
     endTime = startTime + 60 * 1000;
   }
 
-  const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15","#14b8a6"];
-  const paddingLeft = 58;
-  const paddingRight = 24;
-  const paddingTop = 20;
-  const paddingBottom = 44;
-  const chartW = w - paddingLeft - paddingRight;
-  const chartH = h - paddingTop - paddingBottom;
+const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15","#14b8a6"];
+const isCompactChart = canvas.classList.contains("play-card-chart-canvas") || w < 420 || h < 220;
 
-  ctx.font = "14px Plus Jakarta Sans, system-ui";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
+const paddingLeft = isCompactChart ? 40 : 58;
+const paddingRight = isCompactChart ? 16 : 24;
+const paddingTop = isCompactChart ? 16 : 20;
+const paddingBottom = isCompactChart ? 18 : 16;
+const chartW = Math.max(20, w - paddingLeft - paddingRight);
+const chartH = Math.max(20, h - paddingTop - paddingBottom);
 
-  [100, 75, 50, 25, 0].forEach(v => {
+ctx.font = `${isCompactChart ? 8 : 14}px Plus Jakarta Sans, system-ui`;
+ctx.textAlign = "right";
+ctx.textBaseline = "middle";
+
+const yTicks = isCompactChart ? [100, 50, 0] : [100, 75, 50, 25, 0];
+
+yTicks.forEach(v => {
     const y = paddingTop + chartH - (v / 100) * chartH;
 
     ctx.strokeStyle = "rgba(148,163,184,0.09)";
@@ -21513,37 +22611,26 @@ function drawBsTrendChart(trendData, canvasId, cIndex) {
     ctx.lineTo(paddingLeft + chartW, y);
     ctx.stroke();
 
-    ctx.fillStyle = "#cbd5e1";
-    ctx.fillText(`${v}%`, paddingLeft - 14, y);
+ctx.fillStyle = "#cbd5e1";
+
+const labelY = isCompactChart
+  ? Math.max(paddingTop + 6, Math.min(paddingTop + chartH - 6, y))
+  : y;
+
+ctx.fillText(`${v}%`, paddingLeft - (isCompactChart ? 8 : 14), labelY);
   });
 
-  const formatAxisTime = ts => {
-    const d = new Date(ts);
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
+const xSteps = isCompactChart ? 2 : 4;
 
-    if ((endTime - startTime) >= 24 * 60 * 60 * 1000) {
-      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")} ${hh}:${mm}`;
-    }
+for (let i = 0; i <= xSteps; i++) {
+  const x = paddingLeft + (i / xSteps) * chartW;
 
-    return `${hh}:${mm}`;
-  };
-
-  for (let i = 0; i <= 4; i++) {
-    const x = paddingLeft + (i / 4) * chartW;
-    const labelTime = startTime + ((endTime - startTime) * i) / 4;
-
-    ctx.strokeStyle = "rgba(148,163,184,0.055)";
-    ctx.beginPath();
-    ctx.moveTo(x, paddingTop);
-    ctx.lineTo(x, paddingTop + chartH);
-    ctx.stroke();
-
-    ctx.fillStyle = "#a7adc8";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText(formatAxisTime(labelTime), x, paddingTop + chartH + 20);
-  }
+  ctx.strokeStyle = "rgba(148,163,184,0.055)";
+  ctx.beginPath();
+  ctx.moveTo(x, paddingTop);
+  ctx.lineTo(x, paddingTop + chartH);
+  ctx.stroke();
+}
 
   function xPos(ts) {
     const ratio = (Number(ts) - startTime) / Math.max(1, endTime - startTime);
@@ -21557,7 +22644,7 @@ function drawBsTrendChart(trendData, canvasId, cIndex) {
     const color = colors[ans % colors.length];
 
     ctx.beginPath();
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = isCompactChart ? 2.2 : 3.5;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.strokeStyle = color;
@@ -21586,7 +22673,7 @@ function drawBsTrendChart(trendData, canvasId, cIndex) {
     ctx.shadowBlur = 0;
 
     ctx.beginPath();
-    ctx.arc(lastX, lastY, 5.5, 0, Math.PI * 2);
+    ctx.arc(lastX, lastY, isCompactChart ? 3.2 : 5.5, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
 
