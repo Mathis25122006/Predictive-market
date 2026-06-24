@@ -5787,6 +5787,282 @@ body.has-app-top-logo #playerAuth.join-card {
   white-space: nowrap;
 }
 
+.play-card-nav-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 10px;
+  width: 100%;
+  margin-top: clamp(6px, 1vh, 12px);
+  pointer-events: auto;
+}
+
+.play-card-nav-row--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.play-card-nav-btn {
+  width: 100% !important;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  padding: clamp(14px, 1.8vh, 18px) clamp(10px, 2vw, 18px) !important;
+  font-size: clamp(11px, 1.6vh, 14px) !important;
+  text-transform: uppercase !important;
+  border: none !important;
+  transition: all 0.25s ease !important;
+}
+
+.play-card-nav-btn--prev {
+  background: rgba(255,255,255,0.075) !important;
+  color: #e5e7eb !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  box-shadow: none !important;
+}
+
+.play-card-nav-btn--next {
+  background: #ffffff !important;
+  color: #000000 !important;
+  box-shadow: 0 0 25px rgba(255,255,255,0.25) !important;
+}
+
+.play-card-nav-btn:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.closed-question-card-layout {
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(8px, 1.2vh, 14px);
+  overflow: hidden;
+}
+
+.closed-question-main {
+  min-height: 0;
+  max-height: 100%;
+  display: grid;
+  place-items: stretch;
+  overflow: hidden;
+}
+
+.closed-question-stats-card {
+  --closed-answer-count: 4;
+
+  min-height: 0;
+  max-height: 100%;
+  height: 100%;
+  width: 100%;
+  border-radius: 24px;
+  padding: clamp(10px, 1.5vh, 16px);
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(168,85,247,0.16), transparent 38%),
+    linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.030)),
+    rgba(8,13,28,0.90);
+  border: 1px solid rgba(255,255,255,0.11);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: clamp(6px, 0.9vh, 11px);
+  overflow: hidden;
+}
+
+.closed-question-stats-title {
+  text-align: center;
+  color: #ffffff;
+  font-size: clamp(15px, 1.9vh, 22px);
+  font-weight: 950;
+  line-height: 1.05;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-question-stats-subtitle {
+  text-align: center;
+  color: #9ca3af;
+  font-size: clamp(9px, 1.15vh, 12px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-question-summary-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(5px, 0.75vh, 8px);
+}
+
+.closed-question-summary-tile {
+  min-height: 0;
+  border-radius: 14px;
+  padding: clamp(6px, 0.9vh, 10px) 8px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.09);
+  text-align: center;
+  overflow: hidden;
+}
+
+.closed-question-summary-value {
+  color: #ffffff;
+  font-size: clamp(14px, 1.9vh, 22px);
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-question-summary-label {
+  margin-top: 4px;
+  color: #9ca3af;
+  font-size: clamp(8px, 0.95vh, 10px);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-answer-stats-list {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: repeat(var(--closed-answer-count), minmax(0, 1fr));
+  gap: clamp(4px, 0.65vh, 7px);
+  overflow: hidden;
+}
+
+.closed-answer-stat-row {
+  min-height: 0;
+  border-radius: 13px;
+  padding: clamp(6px, 0.85vh, 9px) 9px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+
+  display: grid;
+  grid-template-rows: auto auto auto;
+  align-content: center;
+}
+
+.closed-answer-stat-main {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.closed-answer-stat-name {
+  min-width: 0;
+  color: #f8fafc;
+  font-size: clamp(10px, 1.25vh, 13px);
+  font-weight: 850;
+  line-height: 1.08;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-answer-stat-value {
+  color: #bfdbfe;
+  font-size: clamp(10px, 1.25vh, 13px);
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.closed-answer-stat-meta {
+  margin-top: clamp(2px, 0.45vh, 5px);
+  color: #9ca3af;
+  font-size: clamp(8px, 0.95vh, 10px);
+  font-weight: 750;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closed-answer-stat-bar {
+  margin-top: clamp(3px, 0.55vh, 6px);
+  height: clamp(4px, 0.7vh, 7px);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+}
+
+.closed-answer-stat-bar > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60a5fa, #a855f7);
+}
+
+/* Dès qu'il y a beaucoup de réponses, on compacte automatiquement. */
+.closed-question-stats-card--dense {
+  border-radius: 20px;
+  padding: clamp(8px, 1.1vh, 12px);
+  gap: clamp(4px, 0.7vh, 8px);
+}
+
+.closed-question-stats-card--dense .closed-question-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.closed-question-stats-card--dense .closed-question-summary-tile {
+  padding: clamp(5px, 0.7vh, 8px) 5px;
+  border-radius: 12px;
+}
+
+.closed-question-stats-card--dense .closed-answer-stat-row {
+  padding: clamp(5px, 0.65vh, 7px) 8px;
+}
+
+.closed-question-stats-card--dense .closed-question-stats-subtitle {
+  display: none;
+}
+
+/* Cas extrême : beaucoup de réponses, on garde seulement l'essentiel. */
+.closed-question-stats-card--ultra {
+  border-radius: 18px;
+  padding: clamp(7px, 0.9vh, 10px);
+  gap: clamp(3px, 0.55vh, 6px);
+}
+
+.closed-question-stats-card--ultra .closed-answer-stat-meta {
+  display: none;
+}
+
+.closed-question-stats-card--ultra .closed-answer-stat-bar {
+  height: 4px;
+  margin-top: 3px;
+}
+
+.closed-question-stats-card--ultra .closed-answer-stat-row {
+  border-radius: 11px;
+  padding: 4px 7px;
+}
+
+.closed-question-stats-card--ultra .closed-question-summary-label {
+  display: none;
+}
+
 </style>
 </head>
 <body>
@@ -9448,6 +9724,125 @@ function updateBadge(){
 
 let playScreenTimerInterval = null;
 
+
+function choosePendingReplacementForFutureUnseenQuestion(oldCIndex, myIndices, protectedQuestionIndices, now) {
+  if (!game || !Array.isArray(game.challenges)) return null;
+
+  const oldIndex = Number(oldCIndex);
+  const protectedSet = protectedQuestionIndices || new Set();
+
+  const candidates = game.challenges
+    .map((ch, idx) => {
+      const numericIdx = Number(idx);
+      const status = ch ? getEffectiveStatus(ch) : "unknown";
+
+      return {
+        ch,
+        idx: numericIdx,
+        status,
+        startTime: Number(ch && ch.startTime ? ch.startTime : 0),
+        alreadyInHand: Array.isArray(myIndices) && myIndices.map(Number).includes(numericIdx)
+      };
+    })
+    .filter(item => {
+      if (!item.ch || !Number.isInteger(item.idx)) return false;
+      if (item.idx === oldIndex) return false;
+
+      // Une question déjà vue / pariée ne doit jamais être injectée comme remplacement.
+      if (protectedSet.has(item.idx)) return false;
+
+      // Pour les cartes futures qui expirent avant visite,
+      // on veut explicitement la prochaine question qui démarre.
+      return item.status === "pending" && item.startTime > now;
+    })
+    .sort((a, b) => {
+      const startDiff = a.startTime - b.startTime;
+      if (startDiff !== 0) return startDiff;
+
+      // À horaire égal, on préfère une question déjà dans la main,
+      // car elle était déjà prévue dans le parcours du joueur.
+      if (a.alreadyInHand !== b.alreadyInHand) return a.alreadyInHand ? -1 : 1;
+
+      return a.idx - b.idx;
+    });
+
+  return candidates.length ? candidates[0].idx : null;
+}
+
+function replaceFutureUnseenQuestionsBeforeExpiry(player, myIndices, protectedQuestionIndices, now) {
+  if (!player || !Array.isArray(myIndices)) return false;
+  if (!game || !Array.isArray(game.challenges)) return false;
+
+  const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
+    ? Number(window.getActiveCardChallengeIndex())
+    : Number(myIndices[window.currentCardIndex]);
+
+  let changed = false;
+
+  for (let i = 0; i < myIndices.length; i++) {
+    const cIndex = Number(myIndices[i]);
+    if (!Number.isInteger(cIndex)) continue;
+
+    // La carte active est gérée par replaceClosedActiveQuestionIfNeeded().
+    // Ici, on ne touche qu'aux cartes pas encore visitées.
+    if (Number.isInteger(activeCIndex) && cIndex === activeCIndex) continue;
+
+    // Une carte déjà vue / pariée reste figée, même si elle ferme.
+    if (protectedQuestionIndices && protectedQuestionIndices.has(cIndex)) continue;
+
+    const ch = game.challenges[cIndex];
+    if (!ch) continue;
+
+    const effStatus = getEffectiveStatus(ch);
+    const timeToEnd = Number(ch.endTime || 0) - now;
+
+    const mustReplace =
+      effStatus !== "pending" &&
+      (
+        effStatus !== "open" ||
+        timeToEnd < 60000
+      );
+
+    if (!mustReplace) continue;
+
+    const replacementIndex = choosePendingReplacementForFutureUnseenQuestion(
+      cIndex,
+      myIndices,
+      protectedQuestionIndices,
+      now
+    );
+
+    // Fin de jeu : aucune question ne s'ouvre après.
+    // On ne remplace pas : la carte restera "Mises closes" quand le joueur y arrivera.
+    if (!Number.isInteger(replacementIndex)) continue;
+
+    if (typeof clearUnopenedQuestionDraft === "function") {
+      clearUnopenedQuestionDraft(cIndex);
+    }
+
+    myIndices[i] = replacementIndex;
+    changed = true;
+  }
+
+  if (!changed) return false;
+
+  // Déduplication après remplacement, surtout si la question remplaçante était déjà plus loin.
+  const cleanAssigned = [...new Set(
+    myIndices
+      .map(Number)
+      .filter(i => Number.isInteger(i) && game.challenges[i])
+  )];
+
+  myIndices.splice(0, myIndices.length, ...cleanAssigned);
+
+  // Si la fonction du changement précédent existe, on complète pour revenir à N questions.
+  if (typeof fillAssignedIndicesToQuestionLimit === "function") {
+    fillAssignedIndicesToQuestionLimit(myIndices, protectedQuestionIndices, now);
+  }
+
+  return true;
+}
+
 function startPlayScreenTimers() {
   if (playScreenTimerInterval) clearInterval(playScreenTimerInterval);
 
@@ -9472,13 +9867,11 @@ function startPlayScreenTimers() {
       ...portfolioIndices.map(Number)
     ]);
 
-// --- NOUVEAU : REMPLACEMENT DYNAMIQUE ET INTELLIGENT DES CARTES FUTURES ---
+// --- REMPLACEMENT DYNAMIQUE DES CARTES FUTURES NON VISITÉES ---
     let indicesModified = false;
-    const maxSeen = window.maxCardIndexSeen || 0;
 
-    // NOUVEAU :
-    // si la carte active vient d'être clôturée par l'admin,
-    // on la remplace immédiatement selon la règle demandée.
+    // 1. Carte active : si elle a été clôturée pendant que le joueur est dessus,
+    // on applique la règle spéciale déjà ajoutée précédemment.
     if (
       !window.isRebetting &&
       replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestionIndices, now)
@@ -9486,65 +9879,17 @@ function startPlayScreenTimers() {
       indicesModified = true;
       needsRefresh = true;
     }
-    
-    for (let i = maxSeen + 1; i < myIndices.length; i++) {
-        const cIndex = myIndices[i];
-        const ch = game.challenges[cIndex];
-        
-        const effStatus = ch ? getEffectiveStatus(ch) : "closed";
-        const timeToEnd = ch ? (ch.endTime - now) : 0;
-        
-        let needsReplacement = false;
 
-        // Si la question a déjà été vue ou pariée, elle reste figée.
-        // Même close, elle doit rester dans le récap.
-        if (protectedQuestionIndices.has(Number(cIndex))) {
-            needsReplacement = false;
-        }
-        // Sinon, on conserve le remplacement dynamique des cartes futures.
-        else if (effStatus !== "open" && effStatus !== "pending") {
-            needsReplacement = true;
-        } else if (effStatus === "open" && timeToEnd < 60000) {
-            needsReplacement = true;
-        }
-
-        if (needsReplacement) {
-            const notInHand = game.challenges
-              .map((c, idx) => ({ c, idx }))
-              .filter(item =>
-                !myIndices.map(Number).includes(Number(item.idx)) &&
-                !protectedQuestionIndices.has(Number(item.idx))
-              );
-            
-            // Priorité 1 : Ouverte et se termine dans + d'1 minute (Sûre)
-            let p1 = notInHand.filter(item => getEffectiveStatus(item.c) === "open" && (item.c.endTime - now) >= 60000);
-            // Priorité 2 : En attente, mais commence dans - d'1 minute (Suspense)
-            let p2 = notInHand.filter(item => getEffectiveStatus(item.c) === "pending" && (item.c.startTime - now) < 60000);
-            // Priorité 3 : Ouverte et se termine dans - d'1 minute (Le dernier recours)
-            let p3 = notInHand.filter(item => getEffectiveStatus(item.c) === "open" && (item.c.endTime - now) < 60000);
-            
-            let bestOption = null;
-            if (p1.length > 0) {
-                p1.sort(() => 0.5 - Math.random());
-                bestOption = p1[0].idx;
-            } else if (p2.length > 0) {
-                p2.sort((a,b) => a.c.startTime - b.c.startTime);
-                bestOption = p2[0].idx;
-            } else if (p3.length > 0) {
-                p3.sort(() => 0.5 - Math.random());
-                bestOption = p3[0].idx;
-            }
-            
-            if (bestOption !== null) {
-                // Si on a le choix entre notre propre carte (urgence) ou une autre (urgence), on garde la nôtre
-                if (effStatus === "open" && timeToEnd < 60000 && bestOption === p3[0]?.idx) {
-                    // Ne rien faire
-                } else {
-                    myIndices[i] = bestOption;
-                    indicesModified = true;
-                }
-            }
-        }
+    // 2. Cartes futures non visitées :
+    // si une carte expire dans moins d'une minute avant d'être visitée,
+    // elle est remplacée par la question pending qui démarre le plus vite.
+    // S'il n'y en a aucune, on est en fin de jeu : elle restera "Mises closes".
+    if (
+      !window.isRebetting &&
+      replaceFutureUnseenQuestionsBeforeExpiry(player, myIndices, protectedQuestionIndices, now)
+    ) {
+      indicesModified = true;
+      needsRefresh = true;
     }
     if (indicesModified) {
         player.assignedIndices = myIndices;
@@ -9756,16 +10101,22 @@ function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protecte
   if (!game || !Array.isArray(game.challenges)) return null;
 
   const oldIndex = Number(activeCIndex);
-  const myIndices = (player && Array.isArray(player.assignedIndices)) ? player.assignedIndices.map(Number) : []; // NOUVEAU
+  const myIndices = (player && Array.isArray(player.assignedIndices))
+    ? player.assignedIndices.map(Number).filter(i => Number.isInteger(i))
+    : [];
+
+  const protectedSet = protectedQuestionIndices || new Set();
 
   const candidates = game.challenges
     .map((ch, idx) => {
       const status = ch ? getEffectiveStatus(ch) : "unknown";
+      const numericIdx = Number(idx);
 
       return {
         ch,
-        idx: Number(idx),
+        idx: numericIdx,
         status,
+        alreadyInHand: myIndices.includes(numericIdx),
         startTime: Number(ch && ch.startTime ? ch.startTime : 0),
         endTime: Number(ch && ch.endTime ? ch.endTime : 0)
       };
@@ -9774,58 +10125,125 @@ function chooseReplacementForClosedActiveQuestion(activeCIndex, player, protecte
       if (!item.ch || !Number.isInteger(item.idx)) return false;
       if (item.idx === oldIndex) return false;
 
-      // CORRECTION : On exclut les questions déjà prévues dans la main du joueur
-      if (myIndices.includes(item.idx)) return false;
-
-      // On évite de reproposer une question déjà vue / protégée.
-      if (protectedQuestionIndices && protectedQuestionIndices.has(item.idx)) return false;
+      // On évite uniquement les questions déjà vues / déjà protégées.
+      // Une question déjà dans la main mais pas encore vue reste éligible :
+      // cela permet de prendre celle qui s'ouvre au moment où l'ancienne se ferme.
+      if (protectedSet.has(item.idx)) return false;
 
       return item.status === "open" || item.status === "pending";
     });
 
-  // Priorité 1 :
-  // une question déjà ouverte, mais qui reste jouable plus d'une minute.
+  const sortByHandThenTime = (timeKey) => (a, b) => {
+    if (a.alreadyInHand !== b.alreadyInHand) return a.alreadyInHand ? -1 : 1;
+
+    const timeDiff = Number(a[timeKey] || 0) - Number(b[timeKey] || 0);
+    if (timeDiff !== 0) return timeDiff;
+
+    return a.idx - b.idx;
+  };
+
+  // Priorité 1 : question déjà ouverte avec au moins 1 minute restante.
   const safeOpenQuestions = candidates
     .filter(item => item.status === "open" && (item.endTime - now) > 60000)
-    .sort((a, b) => {
-      const endDiff = a.endTime - b.endTime;
-      if (endDiff !== 0) return endDiff;
-      return a.idx - b.idx;
-    });
+    .sort(sortByHandThenTime("endTime"));
 
-  if (safeOpenQuestions.length) {
-    return safeOpenQuestions[0].idx;
-  }
+  if (safeOpenQuestions.length) return safeOpenQuestions[0].idx;
 
-  // Priorité 2 :
-  // sinon, la question qui va s'ouvrir le plus rapidement.
+  // Priorité 2 : question en attente qui s'ouvre très bientôt.
   const soonestPendingQuestions = candidates
-    .filter(item => item.status === "pending")
-    .sort((a, b) => {
-      const startDiff = a.startTime - b.startTime;
-      if (startDiff !== 0) return startDiff;
-      return a.idx - b.idx;
-    });
+    .filter(item => item.status === "pending" && (item.startTime - now) <= 60000)
+    .sort(sortByHandThenTime("startTime"));
 
-  if (soonestPendingQuestions.length) {
-    return soonestPendingQuestions[0].idx;
-  }
+  if (soonestPendingQuestions.length) return soonestPendingQuestions[0].idx;
 
-  // CORRECTION : Priorité 3 :
-  // le dernier recours, une question ouverte qui ferme dans moins d'une minute
+  // Priorité 3 : question déjà ouverte, même urgente.
   const urgentOpenQuestions = candidates
-    .filter(item => item.status === "open" && (item.endTime - now) <= 60000)
-    .sort((a, b) => {
-        const endDiff = a.endTime - b.endTime;
-        if (endDiff !== 0) return endDiff;
-        return a.idx - b.idx;
-    });
+    .filter(item => item.status === "open")
+    .sort(sortByHandThenTime("endTime"));
 
-  if (urgentOpenQuestions.length) {
-      return urgentOpenQuestions[0].idx;
-  }
+  if (urgentOpenQuestions.length) return urgentOpenQuestions[0].idx;
+
+  // Priorité 4 : dernier recours, une question qui s'ouvrira plus tard.
+  const laterPendingQuestions = candidates
+    .filter(item => item.status === "pending")
+    .sort(sortByHandThenTime("startTime"));
+
+  if (laterPendingQuestions.length) return laterPendingQuestions[0].idx;
 
   return null;
+}
+
+function fillAssignedIndicesToQuestionLimit(myIndices, protectedQuestionIndices, now) {
+  if (!Array.isArray(myIndices)) return false;
+  if (!game || !Array.isArray(game.challenges)) return false;
+
+  const limit = getQuestionsPerPlayerLimit();
+  if (!Number.isFinite(limit)) return false;
+
+  const maxCards = Math.max(1, Math.floor(limit));
+  const protectedSet = protectedQuestionIndices || new Set();
+  let changed = false;
+
+  const normalize = () => {
+    const clean = [...new Set(
+      myIndices
+        .map(Number)
+        .filter(i => Number.isInteger(i) && game.challenges[i])
+    )].slice(0, maxCards);
+
+    if (clean.join("|") !== myIndices.map(Number).join("|")) changed = true;
+    myIndices.splice(0, myIndices.length, ...clean);
+  };
+
+  normalize();
+
+  while (myIndices.length < maxCards) {
+    const used = new Set(myIndices.map(Number));
+
+    const candidates = game.challenges
+      .map((ch, idx) => {
+        const status = ch ? getEffectiveStatus(ch) : "unknown";
+
+        return {
+          ch,
+          idx: Number(idx),
+          status,
+          startTime: Number(ch && ch.startTime ? ch.startTime : 0),
+          endTime: Number(ch && ch.endTime ? ch.endTime : 0)
+        };
+      })
+      .filter(item => {
+        if (!item.ch || !Number.isInteger(item.idx)) return false;
+        if (used.has(item.idx)) return false;
+        if (protectedSet.has(item.idx)) return false;
+        return item.status === "open" || item.status === "pending";
+      });
+
+    const safeOpen = candidates
+      .filter(item => item.status === "open" && (item.endTime - now) > 60000)
+      .sort((a, b) => (a.endTime - b.endTime) || (a.idx - b.idx));
+
+    const pendingSoon = candidates
+      .filter(item => item.status === "pending" && (item.startTime - now) <= 60000)
+      .sort((a, b) => (a.startTime - b.startTime) || (a.idx - b.idx));
+
+    const urgentOpen = candidates
+      .filter(item => item.status === "open")
+      .sort((a, b) => (a.endTime - b.endTime) || (a.idx - b.idx));
+
+    const pendingLater = candidates
+      .filter(item => item.status === "pending")
+      .sort((a, b) => (a.startTime - b.startTime) || (a.idx - b.idx));
+
+    const best = safeOpen[0] || pendingSoon[0] || urgentOpen[0] || pendingLater[0];
+    if (!best) break;
+
+    myIndices.push(best.idx);
+    changed = true;
+    normalize();
+  }
+
+  return changed;
 }
 
 function replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestionIndices, now) {
@@ -9879,7 +10297,7 @@ function replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestio
     myIndices.splice(insertAt, 0, replacementIndex);
   }
 
-  // Déduplication en conservant l'ordre.
+  // Déduplication en conservant l'ordre, puis remplissage pour revenir à N questions si possible.
   const cleanAssigned = [...new Set(
     myIndices
       .map(Number)
@@ -9887,6 +10305,10 @@ function replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestio
   )];
 
   myIndices.splice(0, myIndices.length, ...cleanAssigned);
+
+  if (typeof fillAssignedIndicesToQuestionLimit === "function") {
+    fillAssignedIndicesToQuestionLimit(myIndices, protectedQuestionIndices, now);
+  }
 
   // Remplacement aussi dans le récap interne,
   // sinon l'ancienne carte clôturée peut rester rendue à l'écran.
@@ -9899,12 +10321,24 @@ function replaceClosedActiveQuestionIfNeeded(player, myIndices, protectedQuestio
   if (recapPosition >= 0) {
     recap[recapPosition] = replacementIndex;
   } else {
-    recap.push(replacementIndex);
+    const insertAt = Math.min(
+      recap.length,
+      Math.max(0, Number(window.currentCardIndex || 0))
+    );
+
+    recap.splice(insertAt, 0, replacementIndex);
   }
 
-  player.recapAssignedIndices = [...new Set(
+  let cleanRecap = [...new Set(
     recap.filter(i => Number.isInteger(i) && game.challenges[i])
   )];
+
+  const recapLimit = getQuestionsPerPlayerLimit();
+  if (Number.isFinite(recapLimit)) {
+    cleanRecap = cleanRecap.slice(0, Math.max(1, Math.floor(recapLimit)));
+  }
+
+  player.recapAssignedIndices = cleanRecap;
 
   if (protectedQuestionIndices) {
     protectedQuestionIndices.delete(oldIndex);
@@ -10033,6 +10467,230 @@ return uniqueIndices.sort((a, b) => {
 });
 };
 
+function stopPlayNavEvent(event) {
+  if (event && typeof event.stopPropagation === "function") {
+    event.stopPropagation();
+  }
+
+  return true;
+}
+
+function buildPlayCardNavHtml(options = {}) {
+  const isAdvancedMode = currentPlayerMode === "advanced";
+
+  // En mode facile, sur une carte non ouverte / close :
+  // aucun bouton Suivant / Valider ne doit apparaître.
+  if (currentPlayerMode === "easy" && options.hideWhenEasyLocked === true) {
+    return "";
+  }
+
+  const showPrev =
+    isAdvancedMode &&
+    options.hasPrev === true &&
+    !window.isRebetting;
+
+  const nextLabel = options.nextLabel || "Suivant";
+  const nextOnclick = options.nextOnclick || "goNextCardFromButton()";
+  const nextAttrs = options.nextAttrs || "";
+
+  const navGuardAttrs = `
+    onpointerdown="stopPlayNavEvent(event)"
+    ontouchstart="stopPlayNavEvent(event)"
+    ontouchend="stopPlayNavEvent(event)"
+    onmousedown="stopPlayNavEvent(event)"
+  `;
+
+  const prevHtml = showPrev
+    ? `
+      <button
+        type="button"
+        class="play-card-nav-btn play-card-nav-btn--prev"
+        data-play-nav-button="1"
+        ${navGuardAttrs}
+        onclick="stopPlayNavEvent(event); goPrevCardFromButton(event)"
+      >
+        Précédent
+      </button>
+    `
+    : "";
+
+  return `
+    <div class="play-card-nav-row ${showPrev ? "" : "play-card-nav-row--single"}">
+      ${prevHtml}
+
+      <button
+        type="button"
+        class="play-card-nav-btn play-card-nav-btn--next"
+        data-play-nav-button="1"
+        ${navGuardAttrs}
+        ${nextAttrs}
+        onclick="stopPlayNavEvent(event); ${nextOnclick}"
+      >
+        ${nextLabel}
+      </button>
+    </div>
+  `;
+}
+
+function buildClosedQuestionStatsHtml(cIndex, ch, snap, effStatus) {
+  const answers = Array.isArray(ch.answers) ? ch.answers : [];
+    const answerCount = Math.max(1, answers.length);
+  const densityClass =
+    answerCount >= 7
+      ? "closed-question-stats-card--ultra"
+      : (
+          answerCount >= 5
+            ? "closed-question-stats-card--dense"
+            : ""
+        );
+  const votes = Array.isArray(ch.votes)
+    ? ch.votes.map(v => Number(v || 0))
+    : answers.map(() => 0);
+
+  const totalVolume = votes.reduce((sum, v) => sum + Number(v || 0), 0);
+
+  const players = Array.isArray(game.players) ? game.players : [];
+
+  const activeSnaps = [];
+
+  players.forEach(player => {
+    const portfolio = Array.isArray(player.portfolio) ? player.portfolio : [];
+
+    portfolio.forEach(position => {
+      if (Number(position.cIndex) !== Number(cIndex)) return;
+      if (position.cashedOut || position.paidOut) return;
+
+      activeSnaps.push({
+        playerName: player.name || "",
+        ansIndex: Number(position.ansIndex),
+        bet: Number(position.bet || 0),
+        eventsCount: Array.isArray(position.events) && position.events.length
+          ? position.events.length
+          : 1
+      });
+    });
+  });
+
+  const totalPlayers = new Set(
+    activeSnaps
+      .map(s => s.playerName)
+      .filter(Boolean)
+  ).size;
+
+  const totalBetActions = activeSnaps.reduce((sum, s) => sum + Number(s.eventsCount || 0), 0);
+
+  let probs = [];
+
+  if (typeof getChallengeDisplayProbs === "function") {
+    probs = getChallengeDisplayProbs(ch);
+  } else if (typeof getLMSRProbs === "function") {
+    probs = getLMSRProbs(votes);
+  } else {
+    const safeTotal = totalVolume || 1;
+    probs = votes.map(v => v / safeTotal);
+  }
+
+  const myBetHtml = snap
+    ? `
+      <div class="closed-question-summary-tile">
+        <div class="closed-question-summary-value">${Number(snap.bet || 0).toFixed(0)} 💰</div>
+        <div class="closed-question-summary-label">Ma mise</div>
+      </div>
+    `
+    : `
+      <div class="closed-question-summary-tile">
+        <div class="closed-question-summary-value">—</div>
+        <div class="closed-question-summary-label">Ma mise</div>
+      </div>
+    `;
+
+  const rowsHtml = answers.map((answer, idx) => {
+    const voteAmount = Number(votes[idx] || 0);
+    const probability = Number(probs[idx] || 0);
+    const percent = Math.max(0, Math.min(100, probability * 100));
+
+    const answerPlayers = new Set(
+      activeSnaps
+        .filter(s => Number(s.ansIndex) === Number(idx))
+        .map(s => s.playerName)
+        .filter(Boolean)
+    ).size;
+
+    const answerActions = activeSnaps
+      .filter(s => Number(s.ansIndex) === Number(idx))
+      .reduce((sum, s) => sum + Number(s.eventsCount || 0), 0);
+
+    const safeAnswerLabel = String(answer || "").trim();
+
+    return `
+      <div class="closed-answer-stat-row" title="${safeAnswerLabel}">
+        <div class="closed-answer-stat-main">
+          <div class="closed-answer-stat-name">${safeAnswerLabel}</div>
+          <div class="closed-answer-stat-value">${percent.toFixed(1)}%</div>
+        </div>
+
+        <div class="closed-answer-stat-meta">
+          ${voteAmount.toFixed(0)} 💰 · ${answerPlayers} joueur${answerPlayers > 1 ? "s" : ""} · ${answerActions} vote${answerActions > 1 ? "s" : ""}
+        </div>
+
+        <div class="closed-answer-stat-bar">
+          <span style="width:${percent}%;"></span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const resultHtml =
+    effStatus === "resolved" && ch.correct !== null && ch.correct !== undefined
+      ? `
+        <div class="closed-question-summary-tile">
+          <div class="closed-question-summary-value">✅</div>
+          <div class="closed-question-summary-label">${answers[Number(ch.correct)] || "Résultat"}</div>
+        </div>
+      `
+      : `
+        <div class="closed-question-summary-tile">
+          <div class="closed-question-summary-value">⏳</div>
+          <div class="closed-question-summary-label">Résultat à venir</div>
+        </div>
+      `;
+
+  return `
+    <div class="closed-question-stats-card ${densityClass}" style="--closed-answer-count:${answerCount};">
+      <div class="closed-question-stats-title">
+        ${effStatus === "closed" ? "Mises closes" : "Question terminée"}
+      </div>
+
+      <div class="closed-question-stats-subtitle">
+        Récapitulatif des votes et des mises
+      </div>
+
+      <div class="closed-question-summary-grid">
+        <div class="closed-question-summary-tile">
+          <div class="closed-question-summary-value">${totalPlayers}</div>
+          <div class="closed-question-summary-label">Joueurs</div>
+        </div>
+
+        <div class="closed-question-summary-tile">
+          <div class="closed-question-summary-value">${totalBetActions}</div>
+          <div class="closed-question-summary-label">Votes</div>
+        </div>
+
+        <div class="closed-question-summary-tile">
+          <div class="closed-question-summary-value">${totalVolume.toFixed(0)} 💰</div>
+          <div class="closed-question-summary-label">Volume total</div>
+        </div>
+
+        ${snap ? myBetHtml : resultHtml}
+      </div>
+
+      <div class="closed-answer-stats-list">
+        ${rowsHtml}
+      </div>
+    </div>
+  `;
+}
+
 function renderPlayChallenges(){
   const container = document.getElementById("challengesPlay");
   if (!container) return;
@@ -10124,13 +10782,57 @@ if (effStatus !== "open") {
           ${isWin ? `Gain encaissé : +${snap.pts} 💰` : 'Perdu'}</div>` : "";
       }
 
+      const isClosedLastCard = renderIndices.indexOf(cIndex) === renderIndices.length - 1;
+
+      const closedNextLabel = "Passer";
+
+      const closedNextOnclick = window.isRebetting
+        ? "finishRebetAndReturnToRecap()"
+        : (
+            isClosedLastCard
+              ? "finishPlayFromButton(event)"
+              : "goNextCardFromButton({ allowLocked: true })"
+          );
+
+      const closedNextAttrs = !window.isRebetting
+        ? `data-skip-locked-card="1" data-play-nav-button="1"`
+        : `data-play-nav-button="1"`;
+
+      const closedNextButtonHtml =
+        currentPlayerMode === "easy" && !window.isRebetting
+          ? ""
+          : buildPlayCardNavHtml({
+              hasPrev: renderIndices.indexOf(cIndex) > 0,
+              nextLabel: closedNextLabel,
+              nextOnclick: closedNextOnclick,
+              nextAttrs: closedNextAttrs,
+              hideWhenEasyLocked: true
+            });
+      const closedStatsHtml = buildClosedQuestionStatsHtml(cIndex, ch, snap, effStatus);
+
       block.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="chip">${ch.category}</div>
-          <div style="font-size:10px; font-weight:bold; color:#f87171;">${label}</div>
-        </div>
-<div class="challenge-title" style="opacity:0.5; font-size:13px; margin-top:5px;">${ch.question}</div>
-        ${detail}`;
+        <div class="closed-question-card-layout">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="chip">${ch.category}</div>
+              <div style="font-size:10px; font-weight:bold; color:#f87171;">${label}</div>
+            </div>
+
+            <div class="challenge-title" style="opacity:0.72; font-size:13px; margin-top:7px; line-height:1.25;">
+              ${ch.question}
+            </div>
+
+            ${detail}
+          </div>
+
+          <div class="closed-question-main">
+            ${closedStatsHtml}
+          </div>
+
+          <div>
+            ${closedNextButtonHtml}
+          </div>
+        </div>`;
         
       container.appendChild(block);
       return;
@@ -10227,13 +10929,37 @@ const hintText = currentPlayerMode === 'easy'
     // CORRECTION : Si le joueur vient re-miser, le bouton se transforme en "Valider mes paris" même si ce n'est pas la dernière carte !
 const cardIsActionable = effStatus === "open";
 
+const hasPrevCard = renderIndices.indexOf(cIndex) > 0;
+
 const btnHtml = !cardIsActionable
-   ? `<button type="button" data-skip-locked-card="1" onclick="skipLockedCardForLater()" style="background: rgba(255,255,255,0.92); color: #000000; border-radius: 999px; font-weight: 900; letter-spacing: 0.04em; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 24px rgba(255,255,255,0.22); font-size:clamp(12px, 1.7vh, 14px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px);">Revenir sur cette carte plus tard</button>${hintText}`
+   ? `${
+        currentPlayerMode === "easy"
+          ? ""
+          : buildPlayCardNavHtml({
+              hasPrev: hasPrevCard,
+              nextLabel: isLastCard ? "Valider mes paris" : "Suivant",
+              nextOnclick: isLastCard ? "finishPlayFromButton(event)" : "goNextCardFromButton({ allowLocked: true })",
+              nextAttrs: isLastCard ? "" : `data-skip-locked-card="1"`,
+              hideWhenEasyLocked: true
+            })
+      }${hintText}`
    : window.isRebetting
-      ? `<button onclick="finishRebetAndReturnToRecap()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
+      ? `${buildPlayCardNavHtml({
+           hasPrev: false,
+           nextLabel: "Valider mes paris",
+           nextOnclick: "finishRebetAndReturnToRecap()"
+         })}${hintText}`
       : isLastCard
-         ? `<button onclick="playNext()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Valider mes paris</button>${hintText}`
-         : `<button onclick="swipeNextCard()" style="background: #ffffff; color: #000000; border-radius: 999px; font-weight: 800; letter-spacing: 1px; padding: clamp(14px, 1.8vh, 18px); width: 100%; box-shadow: 0 0 25px rgba(255,255,255,0.25); font-size:clamp(13px, 1.8vh, 15px); text-transform:uppercase; border:none; margin-top:clamp(6px, 1vh, 12px); transition:all 0.3s;">Suivant</button>${hintText}`;
+         ? `${buildPlayCardNavHtml({
+              hasPrev: hasPrevCard,
+              nextLabel: "Valider mes paris",
+              nextOnclick: "finishPlayFromButton(event)"
+            })}${hintText}`
+         : `${buildPlayCardNavHtml({
+              hasPrev: hasPrevCard,
+              nextLabel: "Suivant",
+              nextOnclick: currentPlayerMode === "advanced" ? "goNextCardFromButton()" : "swipeNextCard()"
+            })}${hintText}`;
 
     // CORRECTION : Suppression TOTALE de la barre de score en bas pour libérer de l'espace et éviter le chevauchement !
     footer.innerHTML = `
@@ -10265,14 +10991,13 @@ if (effStatus === "pending") {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  data-skip-locked-card="1"
-                  onclick="skipLockedCardForLater()"
-                  style="pointer-events:auto; background:#ffffff; color:#000000; border-radius:999px; font-weight:900; letter-spacing:0.04em; padding:clamp(14px, 1.8vh, 18px); width:100%; box-shadow:0 0 28px rgba(255,255,255,0.28); font-size:clamp(12px, 1.7vh, 14px); text-transform:uppercase; border:none; margin:0;"
-                >
-                  Revenir sur cette carte plus tard
-                </button>
+                ${buildPlayCardNavHtml({
+                  hasPrev: hasPrevCard,
+                  nextLabel: isLastCard ? "Valider mes paris" : "Suivant",
+                  nextOnclick: isLastCard ? "finishPlayFromButton(event)" : "goNextCardFromButton({ allowLocked: true })",
+                  nextAttrs: isLastCard ? "" : `data-skip-locked-card="1"`,
+                  hideWhenEasyLocked: true
+                })}
 
                 <div style="text-align:center; color:#ffffff; font-size:16px; margin-top:clamp(6px, 1vh, 10px); opacity:0.55;">
                   ↑
@@ -10370,9 +11095,9 @@ if (!ch || effStatus !== "open") {
     // Une question non ouverte ne doit jamais conserver une sélection ou une mise brouillon.
     clearUnopenedQuestionDraft(cIndex);
 
-    // Mode facile ET mode avancé :
-    // le joueur peut passer une carte pas encore ouverte pour y revenir plus tard.
-    if (allowLockedSwipe) {
+    // Seul le mode avancé peut passer une carte non ouverte.
+    // En mode facile, aucune navigation bouton / swipe ne doit permettre de contourner l'ouverture.
+    if (allowLockedSwipe && currentPlayerMode === "advanced") {
         if (Number.isInteger(Number(cIndex)) && typeof rememberQuestionInPlayerRecap === "function") {
             rememberQuestionInPlayerRecap(Number(cIndex));
         }
@@ -10404,12 +11129,42 @@ if (currentPlayerMode === 'easy') {
       return true;
   };
 
-  window.skipLockedCardForLater = function() {
-  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card');
+window.skipLockedCardForLater = function() {
+  // En mode facile, ce bouton ne doit plus être affiché sur une carte non ouverte.
+  // Sécurité si l'appel arrive quand même.
+  if (currentPlayerMode === "easy") {
+    const cIndex = typeof window.getActiveCardChallengeIndex === "function"
+      ? Number(window.getActiveCardChallengeIndex())
+      : null;
+
+    const ch = game && game.challenges && Number.isInteger(cIndex)
+      ? game.challenges[cIndex]
+      : null;
+
+    showQuestionNotOpenMessage(ch);
+    return false;
+  }
+
+  if (typeof window.goNextCardFromButton === "function") {
+    return window.goNextCardFromButton({ allowLocked: true });
+  }
+
+  return false;
+};
+
+window.goNextCardFromButton = function(options = {}) {
   const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cards[window.currentCardIndex];
+
+  if (!cards.length || !activeCard) return false;
+
+  const realCardIndex = cards.indexOf(activeCard);
+  if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+    window.currentCardIndex = realCardIndex;
+  }
 
   const cIndex =
-    activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined
+    activeCard.dataset && activeCard.dataset.cIndex !== undefined
       ? Number(activeCard.dataset.cIndex)
       : (
           typeof window.getActiveCardChallengeIndex === "function"
@@ -10417,23 +11172,111 @@ if (currentPlayerMode === 'easy') {
             : null
         );
 
-  if (Number.isInteger(cIndex)) {
-    clearUnopenedQuestionDraft(cIndex);
+  const ch = game && game.challenges && Number.isInteger(cIndex)
+    ? game.challenges[cIndex]
+    : null;
 
-    if (typeof rememberQuestionInPlayerRecap === "function") {
-      rememberQuestionInPlayerRecap(cIndex);
-    }
+  const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+
+  // Mode facile : si la carte n'est pas ouverte, le bouton n'est normalement pas affiché.
+  // Sécurité supplémentaire si l'appel arrive quand même.
+  if (currentPlayerMode === "easy" && effStatus !== "open") {
+    showQuestionNotOpenMessage(ch);
+    return false;
   }
 
-  if (window.currentCardIndex < cards.length - 1) {
-    if (typeof window.swipeNextCard === "function") {
-      window.swipeNextCard();
-    }
-  } else {
+  if (window.currentCardIndex >= cards.length - 1) {
     if (typeof playNext === "function") {
-      playNext();
+      return playNext();
     }
+
+    return false;
   }
+
+  // En avancé, les boutons Précédent / Suivant sont de la navigation pure.
+  // Ils doivent marcher même si la question est pending ou close.
+  if (currentPlayerMode === "advanced") {
+    if (effStatus !== "open") {
+      clearUnopenedQuestionDraft(cIndex);
+
+      if (Number.isInteger(cIndex) && typeof rememberQuestionInPlayerRecap === "function") {
+        rememberQuestionInPlayerRecap(cIndex);
+      }
+    }
+
+    activeCard.style.transform = "";
+    activeCard.classList.add("fly-away");
+
+    window.currentCardIndex++;
+    window.maxCardIndexSeen = Math.max(window.maxCardIndexSeen || 0, window.currentCardIndex);
+
+    if (typeof window.saveLocalProgress === "function") {
+      window.saveLocalProgress();
+    }
+
+    setTimeout(() => {
+      if (typeof window.updateCardStack === "function") {
+        window.updateCardStack();
+      } else if (typeof updateCardStack === "function") {
+        updateCardStack();
+      }
+    }, 100);
+
+    return true;
+  }
+
+  // Mode facile sur carte ouverte : on garde la logique normale,
+  // avec obligation d'avoir répondu.
+  if (typeof window.swipeNextCard === "function") {
+    return window.swipeNextCard();
+  }
+
+  return false;
+};
+
+window.goPrevCardFromButton = function(event) {
+  stopPlayNavEvent(event);
+
+  // En mode facile, il n'y a pas de bouton précédent.
+  // Sécurité supplémentaire si l'appel arrive quand même.
+  if (currentPlayerMode === "easy") return false;
+  if (window.isRebetting) return false;
+
+  const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cards[window.currentCardIndex];
+
+  if (!cards.length || !activeCard) return false;
+
+  const realCardIndex = cards.indexOf(activeCard);
+  if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+    window.currentCardIndex = realCardIndex;
+  }
+
+  if (window.currentCardIndex <= 0) return false;
+
+  // En avancé, le bouton Précédent est une navigation pure :
+  // il ne doit jamais vérifier si la question est ouverte.
+  if (window.currentTutoStep === 5) {
+    closeTuto();
+  }
+
+  window.currentCardIndex--;
+
+  if (typeof window.saveLocalProgress === "function") {
+    window.saveLocalProgress();
+  }
+
+  if (typeof window.updateCardStack === "function") {
+    window.updateCardStack();
+  } else if (typeof updateCardStack === "function") {
+    updateCardStack();
+  }
+
+  if (window.currentTutoStep === 6) {
+    setTimeout(() => nextTuto(7), 400);
+  }
+
+  return true;
 };
 
 window.swipeNextCard = function() {
@@ -10503,8 +11346,10 @@ if (window.currentTutoStep === 5) {
     return true;
   };
 
-window.swipePrevCard = function() {
-    // En mode Facile, aucun retour en arrière possible.
+window.swipePrevCard = function(options = {}) {
+    const fromButton = options && options.fromButton === true;
+
+    // En mode Facile : aucun retour arrière, ni par swipe, ni par bouton.
     if (currentPlayerMode === 'easy') return false;
 
     if(window.currentCardIndex <= 0) return false;
@@ -10700,6 +11545,17 @@ if (!window.hasMovedCard && Math.abs(deltaY) < 15 && Math.abs(deltaX) < 15) {
 
         const ch = game && game.challenges && cIndex !== null ? game.challenges[cIndex] : null;
 
+        // Si le tap vient d'un bouton de navigation, on laisse le bouton gérer l'action.
+        // Sinon, sur une carte pending, le touchend de la carte affiche le message d'erreur
+        // avant que le bouton ait réellement pu agir.
+        const tappedInteractiveEl = e.target && typeof e.target.closest === "function"
+          ? e.target.closest('button, .play-card-nav-row, .answer-btn, input, select, textarea, label')
+          : null;
+
+        if (tappedInteractiveEl) {
+            return;
+        }
+
         // Tap sur carte non ouverte = aucune action.
         // Le swipe reste autorisé, mais le tap ne peut rien modifier.
         if (!ch || getEffectiveStatus(ch) !== "open") {
@@ -10792,9 +11648,17 @@ if (window.currentTutoStep >= 5 && window.currentTutoStep <= 7) {
   // CORRECTION : Écouteur de clics permissif, mais il ne doit jamais intercepter
   // un vrai clic sur réponse ou bouton.
 containerEl.addEventListener('click', (e) => {
-      // Le bouton "Revenir sur cette carte plus tard" doit rester cliquable
-      // même si la question n'est pas encore ouverte.
-      if (e.target.closest('[data-skip-locked-card="1"]')) {
+      // IMPORTANT :
+      // Ce listener est en capture phase, donc il passe AVANT le onclick des boutons.
+      // On doit donc laisser sortir tous les boutons / éléments interactifs AVANT
+      // de vérifier si la question est ouverte.
+      const interactiveTarget = e.target && typeof e.target.closest === "function"
+        ? e.target.closest(
+            '[data-skip-locked-card="1"], [data-play-nav-button="1"], .play-card-nav-row, button, .answer-btn, .side-panel, input, select, textarea, label'
+          )
+        : null;
+
+      if (interactiveTarget) {
           return;
       }
 
@@ -10803,10 +11667,6 @@ containerEl.addEventListener('click', (e) => {
       if (!isChallengeOpenForPlayerAction(activeCIndex, { message: true })) {
           e.preventDefault();
           e.stopPropagation();
-          return;
-      }
-
-      if (e.target.closest('button') || e.target.closest('.answer-btn') || e.target.closest('.side-panel')) {
           return;
       }
 
@@ -10824,7 +11684,7 @@ containerEl.addEventListener('click', (e) => {
 else if (window.currentTutoStep === 7) {
     closeTuto();
 }
-  }, true); 
+  }, true);
 
   updateCardStack();
 
@@ -11924,14 +12784,78 @@ if (cardToAnimate) {
   }, cardToAnimate ? 260 : 0);
 }
 
+window.finishPlayFromButton = function(event) {
+  stopPlayNavEvent(event);
+
+  const cards = Array.from(document.querySelectorAll('#challengesPlay .challenge-block'));
+  const activeCard = document.querySelector('#challengesPlay .challenge-block.active-card') || cards[window.currentCardIndex];
+
+  if (cards.length && activeCard) {
+    const realCardIndex = cards.indexOf(activeCard);
+    if (realCardIndex >= 0 && realCardIndex !== window.currentCardIndex) {
+      window.currentCardIndex = realCardIndex;
+    }
+  }
+
+  const cIndex =
+    activeCard && activeCard.dataset && activeCard.dataset.cIndex !== undefined
+      ? Number(activeCard.dataset.cIndex)
+      : (
+          typeof window.getActiveCardChallengeIndex === "function"
+            ? Number(window.getActiveCardChallengeIndex())
+            : null
+        );
+
+  const ch = game && game.challenges && Number.isInteger(cIndex)
+    ? game.challenges[cIndex]
+    : null;
+
+  const effStatus = ch ? getEffectiveStatus(ch) : "closed";
+
+  // En facile, sécurité : une carte non ouverte ne peut pas valider.
+  if (currentPlayerMode === "easy" && effStatus !== "open") {
+    showQuestionNotOpenMessage(ch);
+    return false;
+  }
+
+  // En avancé, Valider mes paris doit fonctionner même si la dernière carte est pending/closed.
+  if (currentPlayerMode === "advanced" && !window.isRebetting) {
+    if (effStatus !== "open") {
+      clearUnopenedQuestionDraft(cIndex);
+
+      if (Number.isInteger(cIndex) && typeof rememberQuestionInPlayerRecap === "function") {
+        rememberQuestionInPlayerRecap(cIndex);
+      }
+    }
+
+    if (typeof validate === "function") {
+      validate();
+      return true;
+    }
+
+    if (typeof renderPlayerRecap === "function") {
+      renderPlayerRecap(game.currentPlayerName);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (typeof playNext === "function") {
+    return playNext();
+  }
+
+  return false;
+};
+
 function playNext() {
     const player = (game.players || []).find(p => p.name === game.currentPlayerName);
     const myIndices = (player && player.assignedIndices) ? player.assignedIndices : [];
     const totalCards = document.querySelectorAll('#challengesPlay .challenge-block').length;
 
-    // Une carte pas encore ouverte peut maintenant être passée,
-    // même en mode facile, pour permettre au joueur d'y revenir plus tard.
-    if (!window.isRebetting) {
+    // En mode avancé uniquement, une carte non ouverte peut être passée.
+    // En mode facile, elle reste bloquée jusqu'à ouverture.
+    if (!window.isRebetting && currentPlayerMode === "advanced") {
         const activeCIndex = typeof window.getActiveCardChallengeIndex === "function"
           ? window.getActiveCardChallengeIndex()
           : myIndices[window.currentCardIndex];
@@ -11949,7 +12873,7 @@ function playNext() {
 
     // 1. Navigation : si on n'est pas à la fin du paquet ET qu'on n'est pas en train de faire un Retour Rapide (re-miser)
     if (window.currentCardIndex < totalCards - 1 && !window.isRebetting) {
-        if (typeof window.canPassCurrentCard === 'function' && !window.canPassCurrentCard()) return;
+        if (typeof window.canPassCurrentCard === 'function' && !window.canPassCurrentCard({ allowLockedSwipe: currentPlayerMode === "advanced" })) return;
         if (typeof window.swipeNextCard === 'function') window.swipeNextCard();
         return;
     }
@@ -14411,6 +15335,9 @@ if (connectedPlayer && ensurePlayerHasPreStartCards(connectedPlayer)) {
   }
 }
 
+currentPlayerMode = modeToPlay;
+window.pendingJoinMode = modeToPlay;
+
 saveLastPlayerSession(inputCode, finalPseudo, emailInput, modeToPlay);
 
 if (currentPlayerMode === 'easy' && typeof window.refreshEasyConfirmPreference === 'function') {
@@ -14434,7 +15361,7 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
         if (!game.players) game.players = [];
         if (!game.messages) game.messages = []; 
         game.currentPlayerName = finalPseudo;
-
+        currentPlayerMode = modeToPlay;
         updateMessageBadges();
         const msgPanel = document.getElementById("messagePanel");
         if (msgPanel && msgPanel.classList.contains("open")) {
