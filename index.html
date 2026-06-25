@@ -6913,7 +6913,7 @@ vos positions et les opportunités encore ouvertes.
     <button type="button" data-test-mode="easy" onclick="selectFDJTestMode('easy')" style="margin:0;">Facile</button>
     <button type="button" data-test-mode="advanced" onclick="selectFDJTestMode('advanced')" style="margin:0;">Avancé</button>
     <button type="button" data-test-mode="polymarket" onclick="selectFDJTestMode('polymarket')" style="margin:0;">Polymarket</button>
-    <button type="button" data-test-mode="both" onclick="selectFDJTestMode('both')" style="margin:0;">Facile + Avancé</button>
+    <button type="button" data-test-mode="both" onclick="selectFDJTestMode('both')" style="margin:0;">Les 3 modes</button>
   </div>
 
   <label>Durée de la session</label>
@@ -6983,7 +6983,7 @@ vos positions et les opportunités encore ouvertes.
 <button onclick="startSetup('easy')">Créer un jeu Facile</button>
 <button onclick="startSetup('advanced')" class="btn-spacing">Créer un jeu Avancé</button>
 <button onclick="startSetup('polymarket')" class="btn-spacing">Créer un jeu Polymarket style</button>
-<button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les deux modes</button>
+<button onclick="startSetup('both')" class="btn-primary btn-spacing">Créer les 3 modes</button>
   <div style="display:flex; gap:10px; margin-top:15px;">
     <button onclick="goBack()" style="margin:0;">Retour</button>
     <button onclick="showScreen('home')" style="margin:0;">Accueil</button>
@@ -7865,6 +7865,7 @@ function getJoinModeFromCode(config, code) {
 
   if (config.mode === 'both') {
     if (code === config.codeAdvanced) return 'advanced';
+    if (code === config.codePolymarket) return 'polymarket';
     if (code === config.code) return 'easy';
     return null;
   }
@@ -8919,7 +8920,8 @@ function saveToCloud(targetCode) {
 
   const allowedCodes = [
     payload.sessionConfig.code,
-    payload.sessionConfig.codeAdvanced
+    payload.sessionConfig.codeAdvanced,
+    payload.sessionConfig.codePolymarket
   ].filter(Boolean);
 
   if (!allowedCodes.includes(activeCode)) {
@@ -8939,11 +8941,12 @@ function saveToCloud(targetCode) {
 
 let sessionConfig = {
   code: "",
-  codeAdvanced: "", 
-  mode: "easy", 
-  initialBalance: 100, 
+  codeAdvanced: "",
+  codePolymarket: "",
+  mode: "easy",
+  initialBalance: 100,
   expiresAt: null,
-  durationMinutes: 60 
+  durationMinutes: 60
 };
 
 let game = {
@@ -8966,7 +8969,8 @@ function stopLiveSessionContext() {
     ...(window.liveSessionCodes ? Array.from(window.liveSessionCodes) : []),
     window.currentActiveSessionCode,
     sessionConfig && sessionConfig.code,
-    sessionConfig && sessionConfig.codeAdvanced
+    sessionConfig && sessionConfig.codeAdvanced,
+    sessionConfig && sessionConfig.codePolymarket
   ].filter(Boolean));
 
   codes.forEach(code => {
@@ -9026,6 +9030,7 @@ function resetLocalSessionForSetup(mode) {
   sessionConfig = {
     code: "",
     codeAdvanced: "",
+    codePolymarket: "",
     mode: mode,
     initialBalance: 100,
     expiresAt: null,
@@ -9855,10 +9860,13 @@ const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   sessionConfig.code = "";
   for(let i=0; i<6; i++) sessionConfig.code += chars.charAt(Math.floor(Math.random() * chars.length));
 
-  // Code 2 (si nécessaire)
+  // Codes supplémentaires si on crée les 3 modes
   if (sessionConfig.mode === 'both') {
     sessionConfig.codeAdvanced = "";
     for(let i=0; i<6; i++) sessionConfig.codeAdvanced += chars.charAt(Math.floor(Math.random() * chars.length));
+
+    sessionConfig.codePolymarket = "";
+    for(let i=0; i<6; i++) sessionConfig.codePolymarket += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
 sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
@@ -9934,21 +9942,42 @@ saveToCloud(sessionConfig.code);
   if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
      const bEasy = (sessionConfig.n || 1) / 2;
      const bAdv = (sessionConfig.initialBalance || 100) / 2;
-     const ratio = bAdv / bEasy; // Facteur de mise à l'échelle des parts LMSR
+     const ratio = bAdv / bEasy;
 
-     const advPayload = { 
-        sessionConfig: JSON.parse(JSON.stringify(sessionConfig)), 
-        gameData: JSON.parse(JSON.stringify(game)) 
+     const advPayload = {
+        sessionConfig: JSON.parse(JSON.stringify(sessionConfig)),
+        gameData: JSON.parse(JSON.stringify(game))
      };
 
-     // Ajustement mathématique : on multiplie les parts par le ratio des B
-     // pour garantir que les deux versions débutent exactement avec les mêmes pourcentages affichés
+     advPayload.gameData.gameMode = "advanced";
+
      advPayload.gameData.challenges.forEach(ch => {
         if(ch.votes) ch.votes = ch.votes.map(v => v * ratio);
         if(ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
      });
 
      db.ref('sessions/' + sessionConfig.codeAdvanced).set(advPayload).catch(err => console.error(err));
+  }
+
+  // NOUVEAU : Création de la copie 100% indépendante pour le mode Polymarket
+  if (sessionConfig.mode === 'both' && sessionConfig.codePolymarket) {
+     const bEasy = (sessionConfig.n || 1) / 2;
+     const bPoly = (sessionConfig.initialBalance || 100) / 2;
+     const ratio = bPoly / bEasy;
+
+     const polyPayload = {
+        sessionConfig: JSON.parse(JSON.stringify(sessionConfig)),
+        gameData: JSON.parse(JSON.stringify(game))
+     };
+
+     polyPayload.gameData.gameMode = "polymarket";
+
+     polyPayload.gameData.challenges.forEach(ch => {
+        if(ch.votes) ch.votes = ch.votes.map(v => v * ratio);
+        if(ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
+     });
+
+     db.ref('sessions/' + sessionConfig.codePolymarket).set(polyPayload).catch(err => console.error(err));
   }
 
 // On garde une trace locale juste pour que l'admin retrouve sa propre partie
@@ -10213,6 +10242,7 @@ function launchFDJTestGame() {
   sessionConfig.expiresAt = endTime + 30 * 60 * 1000;
   sessionConfig.code = makeFDJTestSessionCode();
   sessionConfig.codeAdvanced = mode === "both" ? makeFDJTestSessionCode() : "";
+  sessionConfig.codePolymarket = mode === "both" ? makeFDJTestSessionCode() : "";
 
   const bEasy = sessionConfig.n / 2;
   const bAdv = sessionConfig.initialBalance / 2;
@@ -10255,6 +10285,8 @@ function launchFDJTestGame() {
       gameData: JSON.parse(JSON.stringify(game))
     };
 
+    advPayload.gameData.gameMode = "advanced";
+
     advPayload.gameData.challenges.forEach(ch => {
       if (ch.votes) ch.votes = ch.votes.map(v => v * ratio);
       if (ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
@@ -10262,6 +10294,26 @@ function launchFDJTestGame() {
 
     db.ref("sessions/" + sessionConfig.codeAdvanced)
       .set(advPayload)
+      .catch(err => console.error(err));
+  }
+
+  if (mode === "both" && sessionConfig.codePolymarket) {
+    const ratio = bAdv / bEasy;
+
+    const polyPayload = {
+      sessionConfig: JSON.parse(JSON.stringify(sessionConfig)),
+      gameData: JSON.parse(JSON.stringify(game))
+    };
+
+    polyPayload.gameData.gameMode = "polymarket";
+
+    polyPayload.gameData.challenges.forEach(ch => {
+      if (ch.votes) ch.votes = ch.votes.map(v => v * ratio);
+      if (ch.baseVotes) ch.baseVotes = ch.baseVotes.map(v => v * ratio);
+    });
+
+    db.ref("sessions/" + sessionConfig.codePolymarket)
+      .set(polyPayload)
       .catch(err => console.error(err));
   }
 
@@ -10322,6 +10374,7 @@ function showSessionInfo() {
       </div>`;
   }
 
+
 // Bloc Mode Avancé / Polymarket
 if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both' || sessionConfig.mode === 'polymarket') {
   const codeAdv = sessionConfig.mode === 'both' ? sessionConfig.codeAdvanced : sessionConfig.code;
@@ -10351,14 +10404,41 @@ if (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'both' || sessio
       </div>`;
   }
 
-  // NOUVEAU : Le bouton Gestion Commune qui apparaît sous les deux QR Codes
-  if (sessionConfig.mode === 'both') {
+  // Bloc Mode Polymarket quand on crée les 3 modes
+  if (sessionConfig.mode === 'both' && sessionConfig.codePolymarket) {
+    const codePoly = sessionConfig.codePolymarket;
+    const urlPoly = getPlayerJoinUrl(codePoly);
+    const qrPoly = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(urlPoly)}`;
+
     html += `
-      <button onclick="directManage('${sessionConfig.code}', true)" style="background:linear-gradient(135deg,#f59e0b,#d97706); margin-bottom: 15px; width:100%; border-radius:12px; font-size:15px; padding:14px; box-shadow:0 8px 20px rgba(245,158,11,0.3); border:none; color:white; font-weight:bold;">
-        👑 GESTION COMMUNE (Synchronise les 2 modes)
-      </button>
-    `;
+      <div class="card" style="border-color:#60a5fa; margin-bottom:15px; padding-bottom:15px; text-align:center;">
+        <div style="color:#60a5fa; font-weight:bold; margin-bottom:15px; letter-spacing:1px;">POLYMARKET STYLE</div>
+          
+          <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+              <div style="display:flex; justify-content:center; align-items:center; gap:12px; background:rgba(0,0,0,0.3); padding:8px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                 <div style="font-size:26px; font-weight:900; color:white; letter-spacing:3px;">${codePoly}</div>
+                 <button onclick="window.copyCodeToClipboard('${codePoly}', this)" style="background:rgba(255,255,255,0.15) !important; border:1px solid rgba(255,255,255,0.2) !important; color:#fff !important; padding:6px 12px; font-size:11px; width:auto; border-radius:6px; margin:0; box-shadow:0 4px 10px rgba(0,0,0,0.2) !important; font-weight:bold;">Copier</button>
+              </div>
+              
+              <img src="${qrPoly}" style="width:140px; height:140px; border:4px solid white; border-radius:12px; box-shadow:0 8px 25px rgba(0,0,0,0.5);">
+          </div>
+          
+          <div style="display: flex; gap: 8px; margin-top: 20px;">
+            <button onclick="directManage('${codePoly}')" style="background:linear-gradient(135deg,#22c55e,#16a34a); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">⚙️ Gestion</button>
+            <button onclick="directBigScreen('${codePoly}')" style="background:linear-gradient(135deg,#3b82f6,#2563eb); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">📺 Écran</button>
+            <button onclick="directSimulation('${codePoly}')" style="background:linear-gradient(135deg,#a855f7,#9333ea); margin:0; padding:10px 2px; font-size:clamp(10px, 2.5vw, 12px); flex:1; border-radius:8px;">🤖 Simuler</button>
+          </div>
+        </div>`;
   }
+
+// Gestion commune : synchronise les 3 modes Facile + Avancé + Polymarket.
+if (sessionConfig.mode === 'both') {
+  html += `
+    <button onclick="directManage('${sessionConfig.code}', true)" style="background:linear-gradient(135deg,#f59e0b,#d97706); margin-bottom: 15px; width:100%; border-radius:12px; font-size:15px; padding:14px; box-shadow:0 8px 20px rgba(245,158,11,0.3); border:none; color:white; font-weight:bold;">
+      👑 GESTION COMMUNE DES 3 MODES
+    </button>
+  `;
+}
 
   html += `
     <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -14916,16 +14996,16 @@ game.isResolved = true;
 game.resolvedAt = Date.now();
 saveToCloud();
 
-  // NOUVEAU : Clôture synchronisée pour l'autre mode (Gestion Commune)
-  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-     if (otherCode) {
-         db.ref('sessions/' + otherCode + '/gameData').update({
-  isResolved: true,
-  resolvedAt: Date.now()
-});
-     }
-  }
+// Clôture synchronisée pour les autres modes en Gestion commune
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   const resolvedAt = Date.now();
+
+   updateOtherCommonSessions(otherData => {
+      if (!otherData.gameData) otherData.gameData = {};
+      otherData.gameData.isResolved = true;
+      otherData.gameData.resolvedAt = resolvedAt;
+   });
+}
 
   // --- NOUVEAU : ENVOI DE L'ALERTE RÉSULTATS FINAUX ---
   sendFinalRankingAlert();
@@ -16077,6 +16157,7 @@ if (!isValidEmailValue(emailInput)) {
     let modeToPlay = null;
     if (sessionConfig.mode === 'both') {
       if (inputCode === sessionConfig.codeAdvanced) modeToPlay = 'advanced';
+      else if (inputCode === sessionConfig.codePolymarket) modeToPlay = 'polymarket';
       else if (inputCode === sessionConfig.code) modeToPlay = 'easy';
     } else {
       if (inputCode === sessionConfig.code) modeToPlay = sessionConfig.mode;
@@ -17715,6 +17796,7 @@ function confirmExitManage() {
     // On coupe l'écoute Firebase (sur les deux codes possibles)
     if (sessionConfig.code) db.ref('sessions/' + sessionConfig.code).off();
     if (sessionConfig.codeAdvanced) db.ref('sessions/' + sessionConfig.codeAdvanced).off();
+    if (sessionConfig.codePolymarket) db.ref('sessions/' + sessionConfig.codePolymarket).off();
     
     localStorage.setItem('savedGameData', JSON.stringify(game));
     showScreen('home');
@@ -19954,6 +20036,53 @@ function directSimulation(targetCode) {
   showScreen('simulationSetup');
 }
 
+function getCommonManagedCodes() {
+  if (!sessionConfig) return [];
+
+  return [
+    sessionConfig.code,
+    sessionConfig.codeAdvanced,
+    sessionConfig.codePolymarket
+  ]
+    .filter(Boolean)
+    .filter((code, index, arr) => arr.indexOf(code) === index);
+}
+
+function getOtherCommonManagedCodes(activeCode = window.currentActiveSessionCode) {
+  return getCommonManagedCodes().filter(code => code && code !== activeCode);
+}
+
+function getModeLabelFromCode(code) {
+  if (!sessionConfig || !code) return "Mode inconnu";
+
+  if (code === sessionConfig.code) return "Facile";
+  if (code === sessionConfig.codeAdvanced) return "Avancé";
+  if (code === sessionConfig.codePolymarket) return "Polymarket";
+
+  return "Mode inconnu";
+}
+
+function updateOtherCommonSessions(mutator) {
+  if (!(sessionConfig.mode === 'both' && window.isCommonManagement)) {
+    return Promise.resolve([]);
+  }
+
+  const otherCodes = getOtherCommonManagedCodes();
+
+  return Promise.all(
+    otherCodes.map(otherCode => {
+      return db.ref('sessions/' + otherCode).once('value').then(snap => {
+        if (!snap.exists()) return null;
+
+        const otherData = snap.val();
+        mutator(otherData, otherCode);
+
+        return db.ref('sessions/' + otherCode).set(otherData);
+      });
+    })
+  );
+}
+
 function forceTime(index, type) {
   const now = Date.now();
 
@@ -19961,18 +20090,13 @@ function forceTime(index, type) {
   if (type === 'start') {
     game.challenges[index].startTime = now;
     saveToCloud();
-    if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-       const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-       if (otherCode) {
-           db.ref('sessions/' + otherCode).once('value').then(snap => {
-               if(snap.exists()) {
-                   let otherData = snap.val();
-                   otherData.gameData.challenges[index].startTime = now;
-                   db.ref('sessions/' + otherCode).set(otherData);
-               }
-           });
-       }
-    }
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   updateOtherCommonSessions(otherData => {
+      if (otherData.gameData && otherData.gameData.challenges && otherData.gameData.challenges[index]) {
+         otherData.gameData.challenges[index].startTime = now;
+      }
+   });
+}
     renderManageDashboard();
     return;
   }
@@ -20020,45 +20144,49 @@ function forceTime(index, type) {
      game.challenges[index].endTime = now;
      saveToCloud();
 
-     if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-         const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-         if (otherCode) {
-             db.ref('sessions/' + otherCode).once('value').then(snap => {
-                 if(snap.exists()) {
-                     let otherData = snap.val();
-                     otherData.gameData.challenges[index].endTime = now;
-                     db.ref('sessions/' + otherCode).set(otherData);
-                 }
-             });
-         }
-     }
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+    updateOtherCommonSessions(otherData => {
+       if (otherData.gameData && otherData.gameData.challenges && otherData.gameData.challenges[index]) {
+          otherData.gameData.challenges[index].endTime = now;
+       }
+    });
+}
      renderManageDashboard();
   };
 
   // 3. VÉRIFICATION AVANT EXÉCUTION
-  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-     
-     // On lit le planning du 2ème mode en tâche de fond
-     db.ref('sessions/' + otherCode + '/gameData/challenges').once('value').then(snap => {
-         let otherChallenges = snap.exists() ? snap.val() : game.challenges;
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   const otherCodes = getOtherCommonManagedCodes();
 
-         let defect1 = checkTimelineDrop(game.challenges);
-         let defect2 = checkTimelineDrop(otherChallenges);
-         let defect = defect1 || defect2; // S'il y a un défaut dans un des deux modes
+   Promise.all(
+      otherCodes.map(code =>
+         db.ref('sessions/' + code + '/gameData/challenges').once('value').then(snap => ({
+            code,
+            challenges: snap.exists() ? snap.val() : game.challenges
+         }))
+      )
+   ).then(results => {
+       const defects = [
+          checkTimelineDrop(game.challenges),
+          ...results.map(item => checkTimelineDrop(item.challenges))
+       ].filter(Boolean);
 
-         if (defect) {
-             let msg = "";
-             if (defect.end >= sessionEnd - 60000) {
-                 msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent après ${formatTime(defect.start)} auront moins de ${n} questions disponibles.`;
-             } else {
-                 msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent entre ${formatTime(defect.start)} et ${formatTime(defect.end)} auront moins de ${n} questions disponibles.`;
-             }
-             if (!confirm(msg + "\n\nÊtes-vous sûr de votre choix pour les deux modes ?")) return;
-         }
-         proceedWithClosure();
-     });
-  } else {
+       const defect = defects[0];
+
+       if (defect) {
+           let msg = "";
+           if (defect.end >= sessionEnd - 60000) {
+               msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent après ${formatTime(defect.start)} auront moins de ${n} questions disponibles.`;
+           } else {
+               msg = `Attention, si vous clôturez cette question, les joueurs qui se connectent entre ${formatTime(defect.start)} et ${formatTime(defect.end)} auront moins de ${n} questions disponibles.`;
+           }
+
+           if (!confirm(msg + "\n\nÊtes-vous sûr de votre choix pour les 3 modes ?")) return;
+       }
+
+       proceedWithClosure();
+   });
+} else {
      // Vérification locale (Mode simple ou Gestion Séparée)
      let defect = checkTimelineDrop(game.challenges);
      if (defect) {
@@ -20089,43 +20217,44 @@ function resolveChallenge(index) {
   const isCurrentActive = (currentStatus === 'open' || currentStatus === 'pending');
 
   // --- VÉRIFICATION INTELLIGENTE (GESTION COMMUNE) ---
-  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const isCurrentFacile = (window.currentActiveSessionCode === sessionConfig.code);
-     
-     const currentModeName = isCurrentFacile ? "Facile" : "Avancé";
-     const otherModeName = isCurrentFacile ? "Avancé" : "Facile";
-     const otherCode = isCurrentFacile ? sessionConfig.codeAdvanced : sessionConfig.code;
-     
-     // On lit discrètement l'état de la question dans le 2ème jeu sur la base de données
-     db.ref('sessions/' + otherCode + '/gameData/challenges/' + index).once('value').then(snap => {
-        if (snap.exists()) {
-           const otherCh = snap.val();
-           const otherStatus = getEffectiveStatus(otherCh);
-           const isOtherActive = (otherStatus === 'open' || otherStatus === 'pending');
-           
-           let warningMsg = "";
-           
-           if (!isCurrentActive && isOtherActive) {
-               warningMsg = `Attention, cette question n'a pas été clôturée dans le mode ${otherModeName}.`;
-           } else if (isCurrentActive && !isOtherActive) {
-               warningMsg = `Attention, cette question n'a pas été clôturée dans le mode ${currentModeName}.`;
-           } else if (isCurrentActive && isOtherActive) {
-               warningMsg = `Attention, cette question n'a été clôturée dans AUCUN des deux modes.`;
-           }
-           
-           if (warningMsg !== "") {
-               if (!confirm(`${warningMsg}\nÊtes-vous sûr de vouloir promulguer les résultats de cette question pour les deux modes ?`)) {
-                   return; // L'administrateur a annulé
-               }
-           }
-           
-           // Si tout est clôturé ou si l'admin a forcé, on publie !
-           executeResolution(index, ansIndex);
-        } else {
-           executeResolution(index, ansIndex);
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   const activeModeName = getModeLabelFromCode(window.currentActiveSessionCode);
+   const activeModes = [];
+
+   if (isCurrentActive) activeModes.push(activeModeName);
+
+   const otherCodes = getOtherCommonManagedCodes();
+
+   Promise.all(
+      otherCodes.map(code =>
+         db.ref('sessions/' + code + '/gameData/challenges/' + index).once('value').then(snap => {
+            const otherCh = snap.exists() ? snap.val() : null;
+            const otherStatus = otherCh ? getEffectiveStatus(otherCh) : "closed";
+            const isOtherActive = (otherStatus === 'open' || otherStatus === 'pending');
+
+            return {
+              code,
+              modeName: getModeLabelFromCode(code),
+              isActive: isOtherActive
+            };
+         })
+      )
+   ).then(states => {
+      states.forEach(state => {
+        if (state.isActive) activeModes.push(state.modeName);
+      });
+
+      if (activeModes.length > 0) {
+        const warningMsg = `Attention, cette question n'a pas encore été clôturée dans : ${activeModes.join(", ")}.`;
+
+        if (!confirm(`${warningMsg}\nÊtes-vous sûr de vouloir promulguer les résultats de cette question pour les 3 modes ?`)) {
+          return;
         }
-     });
-  } else {
+      }
+
+      executeResolution(index, ansIndex);
+   });
+} else {
      // --- VÉRIFICATION CLASSIQUE (GESTION UNIQUE) ---
      if (isCurrentActive) {
          if (!confirm("Attention, cette question n'est pas encore clôturée. Êtes-vous sûr de vouloir promulguer le résultat ?")) {
@@ -20226,22 +20355,18 @@ function executeResolution(index, ansIndex) {
   applyResolutionToPlayers(game.players, index, ansIndex);
   saveToCloud();
 
-  // Synchronisation avec l'autre session si on est en gestion commune
-  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-     if (otherCode) {
-        db.ref('sessions/' + otherCode).once('value').then(snap => {
-           if(snap.exists()) {
-               let otherData = snap.val();
-               otherData.gameData.challenges[index].status = "resolved";
-               otherData.gameData.challenges[index].correct = ansIndex;
-               
-               applyResolutionToPlayers(otherData.gameData.players, index, ansIndex);
-               db.ref('sessions/' + otherCode).set(otherData);
-           }
-        });
-     }
-  }
+// Synchronisation avec les autres sessions si on est en gestion commune
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   updateOtherCommonSessions(otherData => {
+      if (!otherData.gameData) return;
+      if (!otherData.gameData.challenges || !otherData.gameData.challenges[index]) return;
+
+      otherData.gameData.challenges[index].status = "resolved";
+      otherData.gameData.challenges[index].correct = ansIndex;
+
+      applyResolutionToPlayers(otherData.gameData.players, index, ansIndex);
+   });
+}
   renderManageDashboard();
 }
 
@@ -20264,24 +20389,19 @@ undoResolutionOnPlayers(game.players, index, previousCorrectIdx);
   
   saveToCloud();
 
-  // --- NOUVEAU : SYNCHRONISATION DE L'ANNULATION ---
-  if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-     if (otherCode) {
-         db.ref('sessions/' + otherCode).once('value').then(snap => {
-             if(snap.exists()) {
-                 let otherData = snap.val();
-                 let otherGame = otherData.gameData;
-                 
-                 otherGame.challenges[index].correct = null;
-                 otherGame.challenges[index].status = "closed";
-                 
-undoResolutionOnPlayers(otherGame.players, index, previousCorrectIdx);
-                 db.ref('sessions/' + otherCode).set(otherData);
-             }
-         });
-     }
-  }
+// Synchronisation de l'annulation sur les autres modes
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+   updateOtherCommonSessions(otherData => {
+      if (!otherData.gameData) return;
+      const otherGame = otherData.gameData;
+      if (!otherGame.challenges || !otherGame.challenges[index]) return;
+
+      otherGame.challenges[index].correct = null;
+      otherGame.challenges[index].status = "closed";
+
+      undoResolutionOnPlayers(otherGame.players, index, previousCorrectIdx);
+   });
+}
 
   renderManageDashboard();
 }
@@ -20555,20 +20675,14 @@ function sendBroadcastMessage() {
   game.messages.push({ text: text, timestamp: now });
   saveToCloud(); 
 
-  // NOUVEAU : Synchronisation du message à l'autre mode (Gestion Commune)
+// Synchronisation du message aux autres modes en Gestion commune
 if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-     const otherCode = (window.currentActiveSessionCode === sessionConfig.codeAdvanced) ? sessionConfig.code : sessionConfig.codeAdvanced;
-     if (otherCode) {
-         db.ref('sessions/' + otherCode).once('value').then(snap => {
-             if(snap.exists()) {
-                 let otherData = snap.val();
-                 if (!otherData.gameData.messages) otherData.gameData.messages = [];
-                 otherData.gameData.messages.push({ text: text, timestamp: now });
-                 db.ref('sessions/' + otherCode).set(otherData);
-             }
-         });
-     }
-  }
+  updateOtherCommonSessions(otherData => {
+    if (!otherData.gameData) otherData.gameData = {};
+    if (!otherData.gameData.messages) otherData.gameData.messages = [];
+    otherData.gameData.messages.push({ text: text, timestamp: now });
+  });
+}
 
   // 2. PRÉPARATION DE L'ALERTE EXTERNE (Pour Make.com / Zapier)
 const joinUrl = `${window.location.origin}/jouer?session=${sessionConfig.code}`;
@@ -23270,18 +23384,13 @@ function linkNextSessionFromFields(inputId = "nextSessionInput", msgId = "nextSe
             db.ref('sessions/' + activeCode + '/sessionConfig').update(nextSessionFields)
         ];
 
-        if (sessionConfig.mode === 'both' && window.isCommonManagement) {
-            const otherCode =
-              activeCode === sessionConfig.codeAdvanced
-                ? sessionConfig.code
-                : sessionConfig.codeAdvanced;
-
-            if (otherCode && otherCode !== activeCode) {
-                writes.push(
-                    db.ref('sessions/' + otherCode + '/sessionConfig').update(nextSessionFields)
-                );
-            }
-        }
+if (sessionConfig.mode === 'both' && window.isCommonManagement) {
+    getOtherCommonManagedCodes(activeCode).forEach(otherCode => {
+        writes.push(
+            db.ref('sessions/' + otherCode + '/sessionConfig').update(nextSessionFields)
+        );
+    });
+}
 
         return Promise.all(writes);
     }).then(result => {
