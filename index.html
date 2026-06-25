@@ -2943,22 +2943,23 @@ body.has-app-top-logo #playerAuth.join-card {
   box-shadow: none !important;
 
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) var(--answer-metric-width, clamp(72px, 22vw, 108px)) !important;
+  grid-template-columns: minmax(0, 1fr) var(--answer-metric-width, 112px) !important;
   align-items: center !important;
-  gap: clamp(5px, 1.15vw, 10px) !important;
+  gap: var(--answer-inner-gap, 9px) !important;
   overflow: hidden !important;
   contain: layout paint;
 }
 
 .answer-letter {
-  width: var(--answer-letter-size, 32px);
-  height: var(--answer-letter-size, 32px);
+  width: var(--answer-letter-size, 30px) !important;
+  height: var(--answer-letter-size, 30px) !important;
+  min-width: var(--answer-letter-size, 30px) !important;
   display: grid;
   place-items: center;
   border-radius: 9px;
   border: 1px solid currentColor;
   font-weight: 950;
-  font-size: clamp(10px, 1.35vh, 14px);
+  font-size: clamp(9px, 1.2vh, 14px);
   flex-shrink: 0;
 }
 
@@ -2966,9 +2967,9 @@ body.has-app-top-logo #playerAuth.join-card {
   min-width: 0 !important;
   width: 100% !important;
   display: grid !important;
-  grid-template-columns: var(--answer-letter-size, 32px) minmax(0, 1fr);
+  grid-template-columns: var(--answer-letter-size, 30px) minmax(0, 1fr);
   align-items: center !important;
-  gap: clamp(6px, 1.3vw, 12px);
+  gap: var(--answer-label-gap, 9px);
   overflow: hidden !important;
 }
 
@@ -2978,32 +2979,17 @@ body.has-app-top-logo #playerAuth.join-card {
   text-overflow: ellipsis !important;
   display: -webkit-box !important;
   -webkit-box-orient: vertical !important;
-  -webkit-line-clamp: var(--answer-text-lines, 2) !important;
-  line-clamp: var(--answer-text-lines, 2) !important;
+  -webkit-line-clamp: var(--answer-text-lines, 1) !important;
+  line-clamp: var(--answer-text-lines, 1) !important;
 }
 
 .answer-pts-text {
-  width: var(--answer-metric-width, clamp(72px, 22vw, 108px)) !important;
-  max-width: var(--answer-metric-width, clamp(72px, 22vw, 108px)) !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
+  width: var(--answer-metric-width, 112px) !important;
+  min-width: var(--answer-metric-width, 112px) !important;
+  max-width: var(--answer-metric-width, 112px) !important;
+  overflow: visible !important;
   justify-self: end !important;
   text-align: right !important;
-}
-
-.answer-pts-text strong {
-  display: block !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}
-
-.answer-pts-text span {
-  display: block !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
@@ -3011,54 +2997,158 @@ body.has-app-top-logo #playerAuth.join-card {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
   line-height: 1;
   text-align: right;
+  white-space: nowrap;
 }
 
-.answer-pts-text strong {
-  display: block;
-  font-size: 17px;
-  color: #fff;
+.answer-pts-text strong,
+.answer-pts-inner strong {
+  display: block !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  color: #ffffff;
+  font-weight: 950;
+  letter-spacing: -0.035em;
 }
 
-.answer-pts-text span {
-  display: block;
+.answer-pts-text span,
+.answer-pts-inner span {
+  display: block !important;
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
   margin-top: 3px;
-  font-size: 10px;
-  color: #a7adc8;
-  text-align: right;
+  color: #cbd5e1;
+  font-weight: 850;
 }
 
-.answer-label-text {
-  min-width: 0 !important;
-  overflow: hidden !important;
+.play-question-text {
+  flex: 0 0 auto;
+  min-height: fit-content;
+  overflow: visible;
+  display: block;
+  -webkit-line-clamp: unset !important;
+  line-clamp: unset !important;
 }
 
-.answer-label-text span:last-child {
-  min-width: 0 !important;
-  display: -webkit-box !important;
-  line-clamp: var(--answer-text-lines, 2) !important;
-  -webkit-line-clamp: var(--answer-text-lines, 2) !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+.play-bet-info-strip {
+  flex: 0 0 auto;
+  min-height: 0;
+  margin: 0 0 clamp(4px, 0.8vh, 8px);
+  overflow: hidden;
 }
 
-.answer-pts-text {
+.play-bet-info-list {
+  display: grid;
+  gap: 4px;
+  max-height: var(--play-bet-info-max-height, 62px);
+  overflow: hidden;
+}
+
+.play-bet-line {
+  min-height: 26px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  color: #fde047;
+  font-size: 11px;
+  font-weight: 900;
+  background: rgba(255,255,255,0.055);
+  padding: 5px 7px;
+  border-radius: 8px;
+  border: 1px solid rgba(253,224,71,0.22);
+}
+
+.play-bet-line-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.play-cashout-btn {
+  width: auto !important;
+  min-width: 60px !important;
+  height: 23px !important;
+  margin: 0 !important;
+  padding: 0 8px !important;
+  border-radius: 7px !important;
+  background: rgba(249,115,22,0.12) !important;
+  border: 1px solid rgba(249,115,22,0.75) !important;
+  color: #fdba74 !important;
+  font-size: 9px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
   flex-shrink: 0 !important;
-  max-width: 42% !important;
-  overflow: hidden !important;
 }
 
-.answer-letter {
-  width: var(--answer-letter-size, 32px) !important;
-  height: var(--answer-letter-size, 32px) !important;
-  min-width: var(--answer-letter-size, 32px) !important;
+.play-bet-info-list.is-dense {
+  gap: 3px;
+  max-height: 30px;
+}
+
+.play-bet-info-list.is-dense .play-bet-line {
+  min-height: 24px;
+  padding: 4px 6px;
+  font-size: 10px;
+}
+
+.challenge-block.has-bet-layout .play-card-media {
+  margin-bottom: clamp(2px, 0.45vh, 5px) !important;
+}
+
+.challenge-block.has-bet-layout .play-card-media-body {
+  height: clamp(48px, 7vh, 78px) !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-card-media-body {
+  height: clamp(38px, 5.6vh, 58px) !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-card-media-tabs {
+  margin-bottom: 3px !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-card-media-tab {
+  width: 24px !important;
+  height: 20px !important;
+  min-width: 24px !important;
+  font-size: 11px !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-question-text {
+  font-size: clamp(11px, 1.55vh, 14px) !important;
+  line-height: 1.14 !important;
+  margin-bottom: clamp(3px, 0.6vh, 6px) !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-bet-info-strip {
+  margin-bottom: clamp(3px, 0.55vh, 5px) !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-bet-line {
+  min-height: 22px !important;
+  padding: 3px 6px !important;
+  font-size: 9.5px !important;
+}
+
+.challenge-block.has-dense-answer-layout .play-cashout-btn {
+  min-width: 54px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+  font-size: 8px !important;
 }
 
 .bs-stage {
@@ -10849,35 +10939,49 @@ function isActivePortfolioBetForChallenge(b, cIndex, ch, options = {}) {
 
 // NOUVEAU: Fonction dédiée pour générer la liste des mises sur la carte
 window.generateBetInfoHtml = function(cIndex, ch, effStatus) {
-    if (!ch || effStatus !== "open") return "";
+  if (!ch || effStatus !== "open") return "";
 
-    const player = (game.players || []).find(p => p.name === game.currentPlayerName);
-    const snaps = player
-      ? (player.portfolio || []).filter(b => isActivePortfolioBetForChallenge(b, cIndex, ch))
-      : [];
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+  const snaps = player
+    ? (player.portfolio || []).filter(b => isActivePortfolioBetForChallenge(b, cIndex, ch))
+    : [];
 
-    let betInfoHtml = "";
-    
-    // Si la carte comporte beaucoup de réponses, on passe en mode ultra-compact
-    const isCompact = ch.answers && ch.answers.length > 4;
-    
-    if (snaps.length > 0) {
-       snaps.forEach(snap => {
-           // CORRECTION : Le bouton Cash Out est maintenant aligné sur la même ligne (flexbox) pour économiser la moitié de la hauteur !
-          const cashOutBtn = (isAdvancedLikeMode() && effStatus === "open" && !isSessionTradingClosed())
-            ? `<button onclick="event.preventDefault(); event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}'); return false;" style="background:rgba(249,115,22,0.1) !important; color:#f97316 !important; border:1px solid #f97316 !important; padding:4px 8px; font-size:10px; border-radius:6px; width:auto; font-weight:bold; box-shadow:none !important; margin:0; flex-shrink:0;">Cash out</button>` 
-            : "";
-           
-           let ansText = ch.answers[snap.ansIndex] || "Réponse";
-           if (isCompact && ansText.length > 18) ansText = ansText.substring(0, 15) + "..."; 
+  if (snaps.length <= 0) return "";
 
-           betInfoHtml += `<div style="color:#fde047; font-size:${isCompact ? '11px' : '12px'}; margin-top:${isCompact ? '4px' : '6px'}; font-weight:bold; background:rgba(255,255,255,0.05); padding:${isCompact ? '6px 8px' : '8px'}; border-radius:8px; border:1px solid rgba(253,224,71,0.2); display:flex; justify-content:space-between; align-items:center; gap:8px;">
-             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">✅ ${snap.bet} sur "${ansText}"</div>
-             ${cashOutBtn}
-           </div>`;
-       });
-    }
-    return betInfoHtml;
+  const isDense = Array.isArray(ch.answers) && ch.answers.length >= 5;
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+
+  const rowsHtml = snaps.map(snap => {
+    const cashOutBtn = (isAdvancedLikeMode() && effStatus === "open" && !isSessionTradingClosed())
+      ? `
+        <button
+          class="play-cashout-btn"
+          onclick="event.preventDefault(); event.stopPropagation(); openSellPanel(${cIndex}, ${snap.ansIndex}, '${snap.type || 'YES'}'); return false;"
+          type="button"
+        >
+          Cash out
+        </button>
+      `
+      : "";
+
+    const answerText = safe(ch.answers[snap.ansIndex] || "Réponse");
+    const betAmount = Number(snap.bet || 0);
+
+    return `
+      <div class="play-bet-line">
+        <div class="play-bet-line-text">
+          ✅ ${betAmount.toFixed(0)} sur “${answerText}”
+        </div>
+        ${cashOutBtn}
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="play-bet-info-list ${isDense ? "is-dense" : ""}">
+      ${rowsHtml}
+    </div>
+  `;
 };
 
 function getQuestionsPerPlayerLimit() {
@@ -12011,19 +12115,22 @@ header.innerHTML = `
     qnaZone.className = "challenge-qna-zone";
     /* CORRECTION : On retire le "margin: auto 0" qui poussait la zone à chevaucher l'en-tête s'il y a 4 réponses. 
        On le remplace par un padding dynamique pour encrer la zone vers le haut de manière aérée. */
-    qnaZone.style.cssText = "display:flex; flex-direction:column; flex:1 1 auto; min-height:0; max-height:100%; overflow:hidden; padding-top:clamp(6px, 1.4vh, 16px); padding-bottom:4px;";
+    qnaZone.style.cssText = "display:grid; grid-template-rows:auto auto minmax(0, 1fr); flex:1 1 auto; min-height:0; max-height:100%; overflow:hidden; padding-top:clamp(4px, 0.9vh, 10px); padding-bottom:3px;";
 
-    qnaZone.innerHTML = `
-      <div class="play-question-text" style="flex:0 1 auto; min-height:0; overflow:hidden; font-size:clamp(13px, 2vh, 18px); font-weight:600; line-height:1.22; margin-bottom:clamp(7px, 1.25vh, 14px); color:#f9fafb;">
-         ${ch.question}
-         <div id="bet-info-${cIndex}">${betInfoHtml}</div>
-      </div>
-    `;
+qnaZone.innerHTML = `
+  <div class="play-question-text" style="font-size:clamp(13px, 2vh, 18px); font-weight:600; line-height:1.22; margin-bottom:clamp(5px, 1vh, 10px); color:#f9fafb;">
+     ${ch.question}
+  </div>
+
+  <div id="bet-info-${cIndex}" class="play-bet-info-strip">
+    ${betInfoHtml}
+  </div>
+`;
 
     const answersBox = document.createElement("div");
     answersBox.id = "answers-ch" + cIndex;
     /* CORRECTION : "overflow: hidden" interdit formellement le défilement et force l'élasticité absolue ! */
-    answersBox.style.cssText = "flex:1 1 auto; height:100%; min-height:0; max-height:100%; display:grid; grid-template-rows:repeat(var(--answer-count, 1), minmax(0, 1fr)); align-items:stretch; gap:var(--answer-gap, clamp(4px, 0.9vh, 8px)); overflow:hidden; padding-bottom:0;";
+    answersBox.style.cssText = "height:100%; min-height:0; max-height:100%; display:grid; grid-template-rows:repeat(var(--answer-count, 1), minmax(0, 1fr)); align-items:stretch; gap:var(--answer-gap, clamp(4px, 0.9vh, 8px)); overflow:hidden; padding-bottom:0;";
     answersBox.classList.add("hide-scrollbar");
     
     // On insère la boîte de réponses à l'intérieur de la zone globale
@@ -12895,67 +13002,86 @@ box.style.alignItems = "stretch";
 box.style.setProperty("--answer-count", String(safeAnsCount));
 
 let answerGap = "clamp(5px, 1vh, 9px)";
-let btnPadding = "clamp(5px, 1.25vh, 10px) 12px";
-let labelFontSize = "clamp(13px, 1.65vh, 16px)";
-let ptsFontSize = "clamp(13px, 1.7vh, 17px)";
+let btnPadding = "clamp(5px, 1.15vh, 9px) 10px";
+let labelFontSize = "clamp(13px, 1.55vh, 16px)";
+let ptsFontSize = "clamp(13px, 1.6vh, 16px)";
 let answerLetterSize = "30px";
-let answerTextLines = "2";
-let answerMetricWidth = "clamp(76px, 22vw, 112px)";
-let playQuestionLines = "3";
+let answerTextLines = "1";
+let answerMetricWidth = "112px";
+let answerInnerGap = "9px";
+let answerLabelGap = "9px";
+let playQuestionLines = "999";
+let playBetInfoMaxHeight = hasBets ? "58px" : "0px";
 
 if (ansCount <= 2) {
-  answerGap = "clamp(9px, 1.6vh, 14px)";
-  btnPadding = "clamp(9px, 1.8vh, 14px) 14px";
-  labelFontSize = "clamp(15px, 2vh, 19px)";
-  ptsFontSize = "clamp(15px, 2.05vh, 20px)";
+  answerGap = "clamp(8px, 1.5vh, 13px)";
+  btnPadding = "clamp(8px, 1.6vh, 13px) 13px";
+  labelFontSize = "clamp(15px, 1.9vh, 19px)";
+  ptsFontSize = "clamp(15px, 1.95vh, 19px)";
   answerLetterSize = "34px";
   answerTextLines = "2";
-  answerMetricWidth = "clamp(86px, 24vw, 124px)";
+  answerMetricWidth = "124px";
+  answerInnerGap = "11px";
+  answerLabelGap = "11px";
   playQuestionLines = "4";
 } else if (ansCount === 3) {
-  answerGap = "clamp(7px, 1.35vh, 11px)";
-  btnPadding = "clamp(7px, 1.55vh, 12px) 13px";
-  labelFontSize = "clamp(14px, 1.85vh, 17px)";
-  ptsFontSize = "clamp(14px, 1.9vh, 18px)";
+  answerGap = "clamp(6px, 1.2vh, 10px)";
+  btnPadding = "clamp(6px, 1.35vh, 11px) 12px";
+  labelFontSize = "clamp(14px, 1.75vh, 17px)";
+  ptsFontSize = "clamp(14px, 1.8vh, 18px)";
   answerLetterSize = "32px";
   answerTextLines = "2";
-  answerMetricWidth = "clamp(82px, 23vw, 116px)";
+  answerMetricWidth = "120px";
+  answerInnerGap = "10px";
+  answerLabelGap = "10px";
   playQuestionLines = "3";
 } else if (ansCount === 4) {
-  answerGap = "clamp(5px, 1vh, 8px)";
-  btnPadding = "clamp(5px, 1.25vh, 9px) 12px";
-  labelFontSize = "clamp(13px, 1.65vh, 16px)";
-  ptsFontSize = "clamp(13px, 1.75vh, 17px)";
-  answerLetterSize = "30px";
-  answerTextLines = "2";
-  answerMetricWidth = "clamp(76px, 22vw, 106px)";
-  playQuestionLines = "3";
+  answerGap = "clamp(4px, 0.9vh, 7px)";
+  btnPadding = "clamp(4px, 1vh, 8px) 10px";
+  labelFontSize = "clamp(12px, 1.5vh, 15px)";
+  ptsFontSize = "clamp(12px, 1.55vh, 15px)";
+  answerLetterSize = "28px";
+  answerTextLines = "1";
+  answerMetricWidth = "112px";
+  answerInnerGap = "8px";
+  answerLabelGap = "8px";
+  playQuestionLines = hasBets ? "2" : "3";
 } else if (ansCount === 5) {
-  answerGap = "clamp(3px, 0.7vh, 6px)";
-  btnPadding = "clamp(3px, 0.85vh, 6px) 10px";
-  labelFontSize = "clamp(11px, 1.38vh, 14px)";
-  ptsFontSize = "clamp(11px, 1.42vh, 14px)";
-  answerLetterSize = "25px";
+  answerGap = "clamp(2px, 0.55vh, 5px)";
+  btnPadding = "clamp(2px, 0.65vh, 5px) 8px";
+  labelFontSize = "clamp(10px, 1.22vh, 12px)";
+  ptsFontSize = "clamp(10px, 1.25vh, 12px)";
+  answerLetterSize = "23px";
   answerTextLines = "1";
-  answerMetricWidth = "clamp(64px, 19vw, 88px)";
-  playQuestionLines = "2";
+  answerMetricWidth = "104px";
+  answerInnerGap = "6px";
+  answerLabelGap = "6px";
+playQuestionLines = "999";
+  playBetInfoMaxHeight = "26px";
 } else {
-  answerGap = "clamp(2px, 0.45vh, 4px)";
-  btnPadding = "clamp(2px, 0.65vh, 4px) 8px";
-  labelFontSize = "clamp(9px, 1.12vh, 12px)";
-  ptsFontSize = "clamp(9px, 1.15vh, 12px)";
-  answerLetterSize = "22px";
+  answerGap = "clamp(1px, 0.35vh, 3px)";
+  btnPadding = "clamp(1px, 0.45vh, 3px) 6px";
+  labelFontSize = "clamp(8.5px, 1.02vh, 10.5px)";
+  ptsFontSize = "clamp(8.8px, 1.05vh, 10.8px)";
+  answerLetterSize = "19px";
   answerTextLines = "1";
-  answerMetricWidth = "clamp(58px, 17vw, 76px)";
-  playQuestionLines = "1";
+  answerMetricWidth = "98px";
+  answerInnerGap = "5px";
+  answerLabelGap = "5px";
+  playQuestionLines = "999";
+  playBetInfoMaxHeight = "24px";
 }
 
-if (hasBets && ansCount >= 5) {
-  answerGap = "clamp(1px, 0.35vh, 3px)";
-  btnPadding = "clamp(1px, 0.5vh, 3px) 8px";
-  answerMetricWidth = ansCount >= 6
-    ? "clamp(56px, 16vw, 72px)"
-    : "clamp(60px, 18vw, 82px)";
+if (hasBets && ansCount >= 4) {
+  answerGap = ansCount >= 6
+    ? "clamp(1px, 0.3vh, 2px)"
+    : "clamp(2px, 0.45vh, 4px)";
+
+  btnPadding = ansCount >= 6
+    ? "clamp(1px, 0.35vh, 3px) 6px"
+    : "clamp(2px, 0.5vh, 4px) 7px";
+
+  playQuestionLines = "999";
 }
 
 box.style.gap = answerGap;
@@ -12965,15 +13091,27 @@ box.style.setProperty("--answer-text-lines", answerTextLines);
 
 box.style.setProperty("--answer-btn-padding", btnPadding);
 box.style.setProperty("--answer-metric-width", answerMetricWidth);
+box.style.setProperty("--answer-inner-gap", answerInnerGap);
+box.style.setProperty("--answer-label-gap", answerLabelGap);
 box.style.setProperty("--play-question-lines", playQuestionLines);
 
 const qnaZoneEl = box.closest(".challenge-qna-zone");
 if (qnaZoneEl) {
+
+  const cardEl = box.closest(".challenge-block");
+  if (cardEl) {
+    cardEl.classList.toggle("has-bet-layout", hasBets);
+    cardEl.classList.toggle("has-dense-answer-layout", hasBets && ansCount >= 4);
+  }
+
   qnaZoneEl.style.setProperty("--answer-count", String(safeAnsCount));
   qnaZoneEl.style.setProperty("--answer-text-lines", answerTextLines);
   qnaZoneEl.style.setProperty("--answer-letter-size", answerLetterSize);
   qnaZoneEl.style.setProperty("--answer-metric-width", answerMetricWidth);
   qnaZoneEl.style.setProperty("--play-question-lines", playQuestionLines);
+  qnaZoneEl.style.setProperty("--answer-inner-gap", answerInnerGap);
+  qnaZoneEl.style.setProperty("--answer-label-gap", answerLabelGap);
+  qnaZoneEl.style.setProperty("--play-bet-info-max-height", playBetInfoMaxHeight);
 }
 
 const probs = getLMSRProbs(ch.votes);
@@ -13042,7 +13180,7 @@ const c = colors[i % colors.length];
         // La cote / probabilité : jamais coupée, même avec beaucoup de réponses.
         ptsSpan = document.createElement("div");
         ptsSpan.className = "answer-pts-text";
-        ptsSpan.style.cssText = `position:relative; z-index:1; font-family:'Plus Jakarta Sans', system-ui, sans-serif; font-weight:900; color:#ffffff; white-space:nowrap; width:var(--answer-metric-width, 92px); min-width:0; max-width:var(--answer-metric-width, 92px); overflow:hidden; text-align:right; text-shadow:0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
+        ptsSpan.style.cssText = `position:relative; z-index:1; font-family:'Plus Jakarta Sans', system-ui, sans-serif; font-weight:900; color:#ffffff; white-space:nowrap; width:var(--answer-metric-width, 112px); min-width:var(--answer-metric-width, 112px); max-width:var(--answer-metric-width, 112px); overflow:visible; text-align:right; text-shadow:0 2px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.5);`;
 
         div.appendChild(gauge);
         div.appendChild(label);
@@ -13061,6 +13199,8 @@ div.style.padding = btnPadding;
 div.style.setProperty("--answer-letter-size", answerLetterSize);
 div.style.setProperty("--answer-text-lines", answerTextLines);
 div.style.setProperty("--answer-metric-width", answerMetricWidth);
+div.style.setProperty("--answer-inner-gap", answerInnerGap);
+div.style.setProperty("--answer-label-gap", answerLabelGap);
 
 label.style.fontSize = labelFontSize;
 ptsSpan.style.fontSize = ptsFontSize;
@@ -13215,19 +13355,7 @@ if (window.currentTutoStep === 3 && Number(activeTutoCIndex) === Number(cIndex))
 
     if (currentPlayerMode === 'easy') {
       ptsSpan.innerHTML = `
-        <div style="
-          display:flex;
-          flex-direction:column;
-          align-items:flex-end;
-          justify-content:center;
-width:100%;
-min-width:0;
-max-width:100%;
-overflow:hidden;
-white-space:nowrap;
-line-height:1;
-text-align:right;
-        ">
+<div class="answer-pts-inner">
           <strong style="
             display:block;
             color:#ffffff;
@@ -13256,19 +13384,7 @@ text-align:right;
       const oddsText = formatOddsMultiplier(oddsMultiplier);
 
       ptsSpan.innerHTML = `
-        <div style="
-          display:flex;
-          flex-direction:column;
-          align-items:flex-end;
-          justify-content:center;
-width:100%;
-min-width:0;
-max-width:100%;
-overflow:hidden;
-white-space:nowrap;
-line-height:1;
-text-align:right;
-        ">
+<div class="answer-pts-inner">
           <strong style="
             display:block;
             color:#ffffff;
@@ -18617,53 +18733,51 @@ function buildPolymarketRecapMarketInlineHtml(cIndex, ch, probs, snaps = []) {
         ? "rgba(249,115,22,0.08)"
         : "rgba(255,255,255,0.045)";
 
-    return `
-      <div style="background:${rowBg}; border:1px solid ${rowBorder}; border-radius:11px; padding:9px 10px; margin-top:7px;">
-        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-          <div style="min-width:0;">
-            <div style="font-size:12px; color:#ffffff; font-weight:850; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${safe(answer)}
-            </div>
-            ${badge ? `<div style="margin-top:2px;">${badge}</div>` : ""}
-          </div>
-
-<div style="text-align:right; flex-shrink:0;">
+return `
   <button
     type="button"
     onclick="openPolymarketRecapBetPanel(event, ${cIndex}, ${aIdx}, 'YES')"
     style="
-      width:auto !important;
-      margin:0 !important;
-      padding:5px 9px !important;
-      border-radius:999px !important;
-      background:rgba(253,224,71,0.13) !important;
-      border:1px solid rgba(253,224,71,0.38) !important;
-      color:#fde047 !important;
-      font-size:16px !important;
-      font-weight:950 !important;
-      line-height:1 !important;
+      width:100% !important;
+      margin:7px 0 0 !important;
+      padding:9px 10px !important;
+      display:block !important;
+      text-align:left !important;
+      background:${rowBg} !important;
+      border:1px solid ${rowBorder} !important;
+      border-radius:11px !important;
       box-shadow:none !important;
       cursor:pointer;
     "
   >
-    ${pct.toFixed(1)}%
-  </button>
+    <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+      <div style="min-width:0;">
+        <div style="font-size:12px; color:#ffffff; font-weight:850; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          ${safe(answer)}
+        </div>
+        ${badge ? `<div style="margin-top:2px;">${badge}</div>` : ""}
+      </div>
 
-  <div style="font-size:9px; color:#93c5fd; font-weight:900; margin-top:3px;">
-    Toucher pour miser
-  </div>
-
-  <div style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
-    👥 ${count} · 💰 ${betTotal.toFixed(0)}
-  </div>
-</div>
+      <div style="text-align:right; flex-shrink:0;">
+        <div style="display:inline-flex; align-items:center; justify-content:center; padding:5px 9px; border-radius:999px; background:rgba(253,224,71,0.13); border:1px solid rgba(253,224,71,0.38); color:#fde047; font-size:16px; font-weight:950; line-height:1;">
+          ${pct.toFixed(1)}%
         </div>
 
-        <div style="height:6px; border-radius:999px; background:rgba(15,23,42,0.88); overflow:hidden; margin-top:7px;">
-          <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#60a5fa,#a855f7); border-radius:999px;"></div>
+        <div style="font-size:9px; color:#93c5fd; font-weight:900; margin-top:3px;">
+          Toucher pour miser
+        </div>
+
+        <div style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
+          👥 ${count} · 💰 ${betTotal.toFixed(0)}
         </div>
       </div>
-    `;
+    </div>
+
+    <div style="height:6px; border-radius:999px; background:rgba(15,23,42,0.88); overflow:hidden; margin-top:7px;">
+      <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#60a5fa,#a855f7); border-radius:999px;"></div>
+    </div>
+  </button>
+`;
   }).join("");
 
   return `
