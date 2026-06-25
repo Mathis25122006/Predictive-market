@@ -14253,11 +14253,14 @@ function closeBetPanel(options = {}) {
 
 document.body.classList.remove("bet-panel-open");
 
+const betConfirmed = options && options.betConfirmed === true;
+
 if (
-  (!options || options.betConfirmed !== true) &&
+  !betConfirmed &&
   (!options || options.skipUnconfirmedClear !== true)
 ) {
   clearUnconfirmedAdvancedSelection();
+  window.betOpenedFromRecap = false;
 }
 
 if (overlay) overlay.classList.remove("open");
@@ -14722,6 +14725,23 @@ closeBetPanel({ suppressTuto: true, betConfirmed: true });
 
 // Rafraîchissement plus doux : feedback immédiat, puis mise à jour après la descente du panel.
 refreshCardAfterBetSmoothly(confirmedBetCIndex, confirmedBetAnsIndex);
+
+if (window.betOpenedFromRecap === true) {
+  const recapPseudo = game.currentPlayerName;
+  const previousScrollY = Number(window.recapBetScrollY || 0);
+
+  window.betOpenedFromRecap = false;
+
+  setTimeout(() => {
+    if (recapPseudo && typeof renderPlayerRecap === "function") {
+      renderPlayerRecap(recapPseudo);
+
+      setTimeout(() => {
+        window.scrollTo(0, previousScrollY);
+      }, 40);
+    }
+  }, 240);
+}
 
 // Après validation d'une mise pendant le tuto,
 // on passe directement à l'étape suivante au lieu de revenir au début.
@@ -17352,8 +17372,11 @@ function renderAdminPlayersPanel() {
           </div>
 
           <div style="text-align:right; flex-shrink:0;">
-<div style="font-size:10px; color:#94a3b8;">Valeur actuelle</div>
-<div style="font-size:14px; color:#38bdf8; font-weight:950;">${partsValue.toFixed(2)} 💰</div>
+<div style="font-size:10px; color:#94a3b8;">Valeur actuelle totale</div>
+<div style="font-size:14px; color:#38bdf8; font-weight:950;">${totalValue.toFixed(2)} 💰</div>
+<div style="font-size:9px; color:#94a3b8; margin-top:2px;">
+  dont ${balance.toFixed(2)} 💰 non pariés
+</div>
           </div>
         </div>
 
@@ -18410,6 +18433,156 @@ const myPositionsHtml = activeSnaps.length > 0
   `;
 }
 
+function openPolymarketRecapBetPanel(event, cIndex, ansIndex, betType = "YES") {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (!isPolymarketStyleMode()) return;
+
+  const ch = game && Array.isArray(game.challenges)
+    ? game.challenges[cIndex]
+    : null;
+
+  if (!ch || getEffectiveStatus(ch) !== "open") {
+    openBetPanel(cIndex, ansIndex, betType);
+    return;
+  }
+
+  const player = (game.players || []).find(p => p.name === game.currentPlayerName);
+
+  if (player && player.balance !== undefined) {
+    currentPlayerBalance = Number(player.balance || 0);
+  } else if (!Number.isFinite(Number(currentPlayerBalance))) {
+    currentPlayerBalance = Number(sessionConfig.initialBalance || 100);
+  }
+
+  if (typeof updateGlobalBalance === "function") {
+    updateGlobalBalance();
+  }
+
+  window.betOpenedFromRecap = true;
+  window.recapBetScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+  openBetPanel(cIndex, ansIndex, betType);
+}
+function buildPolymarketRecapMarketInlineHtml(cIndex, ch, probs, snaps = []) {
+  if (!isPolymarketStyleMode() || !ch || !Array.isArray(ch.answers)) return "";
+
+  const safe = window.escapeHtml || ((v) => String(v ?? ""));
+
+  const stats = typeof getQuestionBettorStats === "function"
+    ? getQuestionBettorStats(cIndex)
+    : {
+        totalBettors: 0,
+        answerCounts: new Array(ch.answers.length).fill(0),
+        answerBetTotals: new Array(ch.answers.length).fill(0),
+        questionBetTotal: 0
+      };
+
+  const activeSnaps = Array.isArray(snaps)
+    ? snaps.filter(s => Number(s.bet || 0) > 0 && !s.cashedOut)
+    : [];
+
+  const answersHtml = ch.answers.map((answer, aIdx) => {
+    const pct = Math.max(0, Math.min(100, Number(((probs[aIdx] || 0) * 100).toFixed(1))));
+    const count = Number((stats.answerCounts && stats.answerCounts[aIdx]) || 0);
+    const betTotal = Number((stats.answerBetTotals && stats.answerBetTotals[aIdx]) || 0);
+
+    const isMyYes = activeSnaps.some(snap =>
+      Number(snap.ansIndex) === Number(aIdx) &&
+      (snap.type === "YES" || !snap.type)
+    );
+
+    const isMyNo = activeSnaps.some(snap =>
+      Number(snap.ansIndex) === Number(aIdx) &&
+      snap.type === "NO"
+    );
+
+    const badge = isMyYes
+      ? `<span style="font-size:9px; color:#22c55e; font-weight:950;">Votre OUI</span>`
+      : isMyNo
+        ? `<span style="font-size:9px; color:#f97316; font-weight:950;">Votre NON</span>`
+        : "";
+
+    const rowBorder = isMyYes
+      ? "rgba(34,197,94,0.35)"
+      : isMyNo
+        ? "rgba(249,115,22,0.35)"
+        : "rgba(255,255,255,0.09)";
+
+    const rowBg = isMyYes
+      ? "rgba(34,197,94,0.08)"
+      : isMyNo
+        ? "rgba(249,115,22,0.08)"
+        : "rgba(255,255,255,0.045)";
+
+    return `
+      <div style="background:${rowBg}; border:1px solid ${rowBorder}; border-radius:11px; padding:9px 10px; margin-top:7px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+          <div style="min-width:0;">
+            <div style="font-size:12px; color:#ffffff; font-weight:850; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${safe(answer)}
+            </div>
+            ${badge ? `<div style="margin-top:2px;">${badge}</div>` : ""}
+          </div>
+
+<div style="text-align:right; flex-shrink:0;">
+  <button
+    type="button"
+    onclick="openPolymarketRecapBetPanel(event, ${cIndex}, ${aIdx}, 'YES')"
+    style="
+      width:auto !important;
+      margin:0 !important;
+      padding:5px 9px !important;
+      border-radius:999px !important;
+      background:rgba(253,224,71,0.13) !important;
+      border:1px solid rgba(253,224,71,0.38) !important;
+      color:#fde047 !important;
+      font-size:16px !important;
+      font-weight:950 !important;
+      line-height:1 !important;
+      box-shadow:none !important;
+      cursor:pointer;
+    "
+  >
+    ${pct.toFixed(1)}%
+  </button>
+
+  <div style="font-size:9px; color:#93c5fd; font-weight:900; margin-top:3px;">
+    Toucher pour miser
+  </div>
+
+  <div style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
+    👥 ${count} · 💰 ${betTotal.toFixed(0)}
+  </div>
+</div>
+        </div>
+
+        <div style="height:6px; border-radius:999px; background:rgba(15,23,42,0.88); overflow:hidden; margin-top:7px;">
+          <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#60a5fa,#a855f7); border-radius:999px;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div style="margin-top:10px; background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.10)); border:1px solid rgba(96,165,250,0.25); border-radius:14px; padding:11px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
+        <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:950; letter-spacing:0.08em;">
+          Marché actuel
+        </div>
+        <div style="font-size:10px; color:#94a3b8; font-weight:800;">
+          ${Number(stats.totalBettors || 0)} joueur(s)
+        </div>
+      </div>
+
+      ${answersHtml}
+    </div>
+  `;
+}
+
 function formatRecapCountdown(diff) {
   const safeDiff = Math.max(0, Number(diff || 0));
   const h = Math.floor(safeDiff / 3600000);
@@ -18484,6 +18657,10 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
   const isPending = effStatus === "pending";
   const pendingDiff = Number(ch.startTime || 0) - Date.now();
 
+  const polymarketInlineMarketHtml = isPolymarketStyleMode()
+    ? buildPolymarketRecapMarketInlineHtml(cIndex, ch, getChallengeDisplayProbs(ch), [])
+    : "";
+
   const cardAttrs = canTradeQuestion
     ? `data-recap-jump-cindex="${cIndex}" style="border-left:3px solid #3b82f6; cursor:pointer;"`
     : `style="border-left:3px solid ${isPending ? "#fbbf24" : "#64748b"}; opacity:${isPending ? "1" : "0.72"}; cursor:default;"`;
@@ -18507,7 +18684,7 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
   ? `
     <div style="margin-top:10px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.38); padding:10px 12px; border-radius:12px;">
       <div style="font-size:11px; color:#93c5fd; font-weight:950; text-transform:uppercase;">
-        👆 Touchez cette carte pour miser maintenant
+        ${isPolymarketStyleMode() ? "👆 Touchez un pourcentage pour miser maintenant" : "👆 Touchez cette carte pour miser maintenant"}
       </div>
       ${buildRecapCloseCountdownHtml(cIndex, ch, effStatus)}
     </div>
@@ -18542,6 +18719,8 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
       <div style="margin-top:8px; font-size:12px; color:#9ca3af;">
         Pas encore de mise sur cette question.
       </div>
+
+      ${polymarketInlineMarketHtml}
 
       ${statusHtml}
     </div>
@@ -18976,6 +19155,10 @@ const advancedDetailsHtml =
     ? buildAdvancedQuestionDetailsHtml(cIndex, ch, probs, snaps)
     : "";
 
+const polymarketInlineMarketHtml = isPolymarketStyleMode()
+  ? buildPolymarketRecapMarketInlineHtml(cIndex, ch, probs, snaps)
+  : "";
+
         const lockTitle =
           effStatus === "pending"
             ? "Question pas encore ouverte"
@@ -19109,6 +19292,8 @@ const originalStake = getPortfolioDisplayedStake(snap);
                 <div class="challenge-title" style="margin-top:6px;">${ch.question}</div>
 
                 ${buildRecapCloseCountdownHtml(cIndex, ch, effStatus)}
+
+                ${polymarketInlineMarketHtml}
 
                 <div id="summary-ch-${cIndex}" class="${advancedSummaryClass}">
                 <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
