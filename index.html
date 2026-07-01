@@ -3042,9 +3042,12 @@ body.has-app-top-logo #playerAuth.join-card {
 
 .play-bet-info-strip {
   flex: 0 0 auto;
-  min-height: 0;
-  margin: 0 0 clamp(4px, 0.8vh, 8px);
-  overflow: hidden;
+  height: var(--play-bet-info-row-height, auto);
+  min-height: var(--play-bet-info-row-height, 0px);
+  margin: 0 0 clamp(5px, 0.85vh, 8px);
+  overflow: visible;
+  position: relative;
+  z-index: 3;
 }
 
 .play-bet-info-list {
@@ -3095,26 +3098,23 @@ body.has-app-top-logo #playerAuth.join-card {
 }
 
 .play-bet-info-list.is-dense {
-  gap: 3px;
-  max-height: 30px;
+  gap: 2px;
+  max-height: var(--play-bet-info-max-height, 34px);
 }
 
 .play-bet-info-list.is-dense .play-bet-line {
-  min-height: 24px;
-  padding: 4px 6px;
-  font-size: 10px;
+  min-height: var(--play-bet-line-height, 30px);
+  padding: 3px 6px;
+  font-size: 9.5px;
 }
 
 .challenge-block.has-bet-layout .play-card-media {
-  margin-bottom: clamp(2px, 0.45vh, 5px) !important;
+  margin-bottom: clamp(4px, 1vh, 10px) !important;
 }
 
-.challenge-block.has-bet-layout .play-card-media-body {
-  height: clamp(48px, 7vh, 78px) !important;
-}
-
+.challenge-block.has-bet-layout .play-card-media-body,
 .challenge-block.has-dense-answer-layout .play-card-media-body {
-  height: clamp(38px, 5.6vh, 58px) !important;
+  height: clamp(72px, 13vh, 138px) !important;
 }
 
 .challenge-block.has-dense-answer-layout .play-card-media-tabs {
@@ -3135,20 +3135,39 @@ body.has-app-top-logo #playerAuth.join-card {
 }
 
 .challenge-block.has-dense-answer-layout .play-bet-info-strip {
-  margin-bottom: clamp(3px, 0.55vh, 5px) !important;
+  margin-bottom: clamp(4px, 0.7vh, 7px) !important;
 }
 
 .challenge-block.has-dense-answer-layout .play-bet-line {
-  min-height: 22px !important;
+  min-height: var(--play-bet-line-height, 30px) !important;
   padding: 3px 6px !important;
   font-size: 9.5px !important;
 }
 
 .challenge-block.has-dense-answer-layout .play-cashout-btn {
-  min-width: 54px !important;
-  height: 20px !important;
-  padding: 0 6px !important;
-  font-size: 8px !important;
+  min-width: 60px !important;
+  height: 23px !important;
+  padding: 0 8px !important;
+  font-size: 9px !important;
+}
+
+.challenge-block.has-cashout-answer-layout .answer-btn {
+  padding-top: clamp(1px, 0.35vh, 4px) !important;
+  padding-bottom: clamp(1px, 0.35vh, 4px) !important;
+}
+
+.challenge-block.has-cashout-answer-layout .answer-label-text {
+  line-height: 1.02 !important;
+}
+
+.challenge-block.has-cashout-answer-layout .answer-pts-inner,
+.challenge-block.has-cashout-answer-layout .answer-pts-text {
+  line-height: 0.95 !important;
+}
+
+.challenge-block.has-cashout-answer-layout .answer-pts-text span,
+.challenge-block.has-cashout-answer-layout .answer-pts-inner span {
+  margin-top: 1px !important;
 }
 
 .bs-stage {
@@ -12992,6 +13011,12 @@ const snaps = player
   : [];
   
 const hasBets = snaps.length > 0;
+const hasCashoutButton =
+  hasBets &&
+  isAdvancedLikeMode() &&
+  answersAreTradeable &&
+  !isSessionTradingClosed();
+
 const ansCount = ch.answers.length;
 const safeAnsCount = Math.max(1, ansCount);
 
@@ -13012,6 +13037,8 @@ let answerInnerGap = "9px";
 let answerLabelGap = "9px";
 let playQuestionLines = "999";
 let playBetInfoMaxHeight = hasBets ? "58px" : "0px";
+let playBetInfoRowHeight = hasBets ? "34px" : "0px";
+let playBetLineHeight = hasBets ? "30px" : "0px";
 
 if (ansCount <= 2) {
   answerGap = "clamp(8px, 1.5vh, 13px)";
@@ -13072,14 +13099,49 @@ playQuestionLines = "999";
   playBetInfoMaxHeight = "24px";
 }
 
-if (hasBets && ansCount >= 4) {
+if (hasCashoutButton) {
+  playBetInfoRowHeight = ansCount >= 6 ? "32px" : "35px";
+  playBetInfoMaxHeight = playBetInfoRowHeight;
+  playBetLineHeight = ansCount >= 6 ? "28px" : "31px";
+
   answerGap = ansCount >= 6
-    ? "clamp(1px, 0.3vh, 2px)"
-    : "clamp(2px, 0.45vh, 4px)";
+    ? "0px"
+    : ansCount >= 4
+      ? "clamp(0px, 0.25vh, 2px)"
+      : "clamp(2px, 0.45vh, 4px)";
 
   btnPadding = ansCount >= 6
-    ? "clamp(1px, 0.35vh, 3px) 6px"
-    : "clamp(2px, 0.5vh, 4px) 7px";
+    ? "0px 5px"
+    : ansCount >= 4
+      ? "clamp(0px, 0.25vh, 2px) 6px"
+      : "clamp(2px, 0.55vh, 5px) 8px";
+
+  labelFontSize = ansCount >= 6
+    ? "clamp(7.6px, 0.86vh, 9.4px)"
+    : ansCount >= 4
+      ? "clamp(8.8px, 1vh, 11px)"
+      : labelFontSize;
+
+  ptsFontSize = ansCount >= 6
+    ? "clamp(7.8px, 0.88vh, 9.6px)"
+    : ansCount >= 4
+      ? "clamp(8.8px, 1vh, 11px)"
+      : ptsFontSize;
+
+  answerLetterSize = ansCount >= 6
+    ? "16px"
+    : ansCount >= 4
+      ? "19px"
+      : answerLetterSize;
+
+  answerMetricWidth = ansCount >= 6
+    ? "88px"
+    : ansCount >= 4
+      ? "94px"
+      : answerMetricWidth;
+
+  answerInnerGap = ansCount >= 6 ? "4px" : "5px";
+  answerLabelGap = ansCount >= 6 ? "4px" : "5px";
 
   playQuestionLines = "999";
 }
@@ -13101,7 +13163,8 @@ if (qnaZoneEl) {
   const cardEl = box.closest(".challenge-block");
   if (cardEl) {
     cardEl.classList.toggle("has-bet-layout", hasBets);
-    cardEl.classList.toggle("has-dense-answer-layout", hasBets && ansCount >= 4);
+    cardEl.classList.toggle("has-dense-answer-layout", hasCashoutButton && ansCount >= 4);
+    cardEl.classList.toggle("has-cashout-answer-layout", hasCashoutButton);
   }
 
   qnaZoneEl.style.setProperty("--answer-count", String(safeAnsCount));
@@ -13112,6 +13175,8 @@ if (qnaZoneEl) {
   qnaZoneEl.style.setProperty("--answer-inner-gap", answerInnerGap);
   qnaZoneEl.style.setProperty("--answer-label-gap", answerLabelGap);
   qnaZoneEl.style.setProperty("--play-bet-info-max-height", playBetInfoMaxHeight);
+  qnaZoneEl.style.setProperty("--play-bet-info-row-height", playBetInfoRowHeight);
+  qnaZoneEl.style.setProperty("--play-bet-line-height", playBetLineHeight);
 }
 
 const probs = getLMSRProbs(ch.votes);
