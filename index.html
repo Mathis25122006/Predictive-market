@@ -7093,9 +7093,17 @@ vos positions et les opportunités encore ouvertes.
     <button type="button" data-test-duration="15" onclick="setFDJTestDuration(15)" style="margin:0;">15 min</button>
   </div>
 
-  <div id="testAdvancedBalanceBlock" style="margin-bottom:15px;">
+<div id="testAdvancedBalanceBlock" style="margin-bottom:15px;">
     <label>Crédits de départ par joueur</label>
     <input type="number" id="testInitialBalance" value="100" min="10">
+  </div>
+
+  <div style="margin-bottom:15px;">
+    <label>Résistance des probabilités</label>
+    <p class="subtitle" style="font-size:11px; margin-bottom:8px;">
+      Facile : nombre de joueurs déjà simulés. Avancé / Polymarket : ce nombre × capital de départ ÷ nombre de questions.
+    </p>
+    <input type="number" id="testProbabilityResistance" value="5" min="1" step="1">
   </div>
 
   <div style="margin-bottom:15px;">
@@ -7239,6 +7247,14 @@ vos positions et les opportunités encore ouvertes.
       <label style="color:#3b82f6; font-weight:bold;">Nombre de questions par joueur</label>
       <p class="subtitle" style="font-size:11px; margin-bottom:8px;">Chaque joueur devra parier sur exactement ce nombre de défis.</p>
       <input type="number" id="questionsPerPlayer" value="3" min="1" style="width:100%; border-color:#3b82f6;">
+    </div>
+
+    <div style="margin-bottom:15px; background:rgba(168,85,247,0.10); padding:15px; border-radius:12px; border:1px solid rgba(168,85,247,0.45);">
+      <label style="color:#c4b5fd; font-weight:bold;">Résistance des probabilités</label>
+      <p class="subtitle" style="font-size:11px; margin-bottom:8px;">
+        Nombre de joueurs qui auraient déjà voté. 
+      </p>
+      <input type="number" id="probabilityResistance" value="3" min="1" step="1" style="width:100%; border-color:#a855f7;">
     </div>
 
     <div style="margin-bottom:15px;">
@@ -9203,6 +9219,7 @@ function resetLocalSessionForSetup(mode) {
     codePolymarket: "",
     mode: mode,
     initialBalance: 100,
+    probabilityResistance: 3,
     expiresAt: null,
     durationMinutes: 60,
     gameStartTime: null,
@@ -9227,7 +9244,19 @@ function resetLocalSessionForSetup(mode) {
 // Ce modèle garantit que les probabilités correspondent EXACTEMENT à la proportion d'argent misé.
 // Plus il y a d'argent (liquidité) dans la question, plus les pourcentages deviennent stables.
 // Plus cette valeur est basse, plus les probabilités se rapprochent vite de la vraie répartition des mises.
-const PROBABILITY_RESISTANCE = 2;
+function getInitialLiquidityForMode(mode, questionsPerPlayer, initialBalance, probabilityResistance) {
+  const safeMode = String(mode || "easy");
+  const safeN = Math.max(1, parseInt(questionsPerPlayer, 10) || 1);
+  const safeBalance = Math.max(1, parseFloat(initialBalance) || 100);
+  const safeResistance = Math.max(1, parseFloat(probabilityResistance) || safeN);
+
+  if (safeMode === "advanced" || safeMode === "polymarket") {
+    return safeResistance * (safeBalance / safeN);
+  }
+
+  return safeResistance;
+}
+
 window.PredictiveMath = {
     getProbs: function(q) {
         const total = q.reduce((a, b) => a + b, 0);
@@ -9995,11 +10024,21 @@ if (!isValid) {
   sessionConfig.n = n;
   sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
 
-  const bEasy = n / 2;
-  const bAdv = sessionConfig.initialBalance / 2;
-  
-  // CORRECTION : On utilise le paramètre de liquidité (B) correspondant au VRAI mode choisi
-const initialB = (sessionConfig.mode === 'advanced' || sessionConfig.mode === 'polymarket') ? bAdv : bEasy;
+  const probabilityResistanceInput = document.getElementById("probabilityResistance");
+  const probabilityResistance = Math.max(
+    1,
+    parseFloat(probabilityResistanceInput && probabilityResistanceInput.value) || n
+  );
+
+  sessionConfig.probabilityResistance = probabilityResistance;
+
+  const bEasy = getInitialLiquidityForMode("easy", n, sessionConfig.initialBalance, probabilityResistance);
+  const bAdv = getInitialLiquidityForMode("advanced", n, sessionConfig.initialBalance, probabilityResistance);
+
+  // En mode "both", la session principale reste la base facile ; les copies avancée / polymarket sont recalculées par ratio.
+  const initialB = sessionConfig.mode === "both"
+    ? bEasy
+    : getInitialLiquidityForMode(sessionConfig.mode, n, sessionConfig.initialBalance, probabilityResistance);
 
   // 2. Initialisation des votes (parts) pour chaque challenge
   game.challenges.forEach(ch => initBaseVotes(ch, initialB));
@@ -10040,6 +10079,7 @@ const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   }
 
 sessionConfig.initialBalance = parseInt(document.getElementById("initialBalance").value) || 100;
+sessionConfig.probabilityResistance = probabilityResistance;
   console.log("Session créée avec le code : " + sessionConfig.code); // Pour debug
   
 // NOUVEAU : La fin globale est définie par l'heure saisie par l'admin (ou par la question la plus tardive)
@@ -10110,8 +10150,8 @@ saveToCloud(sessionConfig.code);
 
   // NOUVEAU : Création de la copie 100% indépendante pour le mode Avancé
   if (sessionConfig.mode === 'both' && sessionConfig.codeAdvanced) {
-     const bEasy = (sessionConfig.n || 1) / 2;
-     const bAdv = (sessionConfig.initialBalance || 100) / 2;
+     const bEasy = getInitialLiquidityForMode("easy", sessionConfig.n || 1, sessionConfig.initialBalance || 100, sessionConfig.probabilityResistance || sessionConfig.n || 1);
+     const bAdv = getInitialLiquidityForMode("advanced", sessionConfig.n || 1, sessionConfig.initialBalance || 100, sessionConfig.probabilityResistance || sessionConfig.n || 1);
      const ratio = bAdv / bEasy;
 
      const advPayload = {
@@ -10321,8 +10361,17 @@ function renderFDJTestGameSetup() {
 
   container.innerHTML = FDJ_TEST_GAME_QUESTIONS.map((q, qIndex) => `
     <div style="margin-bottom:12px; padding:12px; border-radius:14px; background:rgba(15,23,42,0.78); border:1px solid rgba(255,255,255,0.10);">
-      <div style="font-size:12px; font-weight:900; color:#ffffff; line-height:1.3; margin-bottom:8px;">
-        ${qIndex + 1}. ${window.escapeHtml(q.question)}
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+        <div style="font-size:12px; font-weight:900; color:#ffffff; line-height:1.3;">
+          ${qIndex + 1}. ${window.escapeHtml(q.question)}
+        </div>
+        <button
+          type="button"
+          onclick="setRandom('fdj-test-${qIndex}')"
+          style="width:auto; margin:0; padding:7px 9px; font-size:10px; border-radius:999px; background:#8b5cf6;"
+        >
+          Aléatoire
+        </button>
       </div>
 
       ${q.answers.map((answer, aIndex) => `
@@ -10397,6 +10446,12 @@ function launchFDJTestGame() {
     parseInt(initialBalanceInput && initialBalanceInput.value, 10) || 100
   );
 
+  const probabilityResistanceInput = document.getElementById("testProbabilityResistance");
+  const probabilityResistance = Math.max(
+    1,
+    parseFloat(probabilityResistanceInput && probabilityResistanceInput.value) || 5
+  );
+
   resetLocalSessionForSetup(mode);
 
   const now = Date.now();
@@ -10406,6 +10461,7 @@ function launchFDJTestGame() {
   sessionConfig.mode = mode;
   sessionConfig.n = 5;
   sessionConfig.initialBalance = initialBalance;
+  sessionConfig.probabilityResistance = probabilityResistance;
   sessionConfig.durationMinutes = durationMinutes;
   sessionConfig.gameStartTime = startTime;
   sessionConfig.gameEndTime = endTime;
@@ -10414,9 +10470,12 @@ function launchFDJTestGame() {
   sessionConfig.codeAdvanced = mode === "both" ? makeFDJTestSessionCode() : "";
   sessionConfig.codePolymarket = mode === "both" ? makeFDJTestSessionCode() : "";
 
-  const bEasy = sessionConfig.n / 2;
-  const bAdv = sessionConfig.initialBalance / 2;
-  const initialB = (mode === "advanced" || mode === "polymarket") ? bAdv : bEasy;
+  const bEasy = getInitialLiquidityForMode("easy", sessionConfig.n, sessionConfig.initialBalance, probabilityResistance);
+  const bAdv = getInitialLiquidityForMode("advanced", sessionConfig.n, sessionConfig.initialBalance, probabilityResistance);
+
+  const initialB = mode === "both"
+    ? bEasy
+    : getInitialLiquidityForMode(mode, sessionConfig.n, sessionConfig.initialBalance, probabilityResistance);
 
   game.challenges = buildFDJTestChallenges(startTime, endTime, initialB);
   game.players = [];
@@ -10503,7 +10562,7 @@ function initBaseVotes(ch, customB) {
   
   // Le volume de liquidité initial définit la "résistance" du marché.
   // Plus customB est grand, plus il faudra d'argent pour faire bouger les cotes initiales.
-const baseVolume = Math.max(1, (customB || 50) * PROBABILITY_RESISTANCE); 
+const baseVolume = Math.max(1, Number(customB) || 1);
 
   // Dans le modèle proportionnel, les votes de base représentent l'argent virtuel initial
   let initialMoney = normPcts.map(p => p * baseVolume);
