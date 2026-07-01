@@ -7101,7 +7101,7 @@ vos positions et les opportunités encore ouvertes.
   <div style="margin-bottom:15px;">
     <label>Résistance des probabilités</label>
     <p class="subtitle" style="font-size:11px; margin-bottom:8px;">
-      Facile : nombre de joueurs déjà simulés. Avancé / Polymarket : ce nombre × capital de départ ÷ nombre de questions.
+      Nombre de joueurs déjà simulés
     </p>
     <input type="number" id="testProbabilityResistance" value="5" min="1" step="1">
   </div>
@@ -7189,6 +7189,10 @@ vos positions et les opportunités encore ouvertes.
     <button onclick="goBack()" style="margin:0; font-size:12px;">Retour</button>
     <button onclick="confirmExitManage()" style="margin:0; font-size:12px;">Accueil</button>
   </div>
+  <div
+  id="commonManageModeSelector"
+  style="display:none; margin:0 0 15px 0; padding:12px; border-radius:14px; background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.10);"
+></div>
       
       <div style="background:rgba(168,85,247,0.1); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(168,85,247,0.5);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -7622,7 +7626,9 @@ vos positions et les opportunités encore ouvertes.
     <div id="adminFinalNextSessionMsg" class="msg" style="margin-top:6px;"></div>
   </div>
 
-  <div id="leaderboard"></div>
+<div id="adminFinalLeaderboardModeSelector" style="display:none; margin-bottom:12px;"></div>
+
+<div id="leaderboard"></div>
 
   <div class="final-dropdown-note">
     Score calculé sur la valeur finale de vos prédictions.
@@ -7704,10 +7710,31 @@ vos positions et les opportunités encore ouvertes.
         </div>
       </div>
 
-      <div class="bs-header-slot right">
-        <div id="bsStats" class="bs-stats-card"></div>
-        <div id="bsNextSessionHeaderContainer"></div>
-      </div>
+<div class="bs-header-slot right">
+  <button
+    id="bsRevealToggleBtn"
+    onclick="toggleBigScreenFinalReveal()"
+    style="
+      display:none;
+      width:auto;
+      margin:0 14px 0 0;
+      padding:10px 16px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:950;
+      background:rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.22);
+      color:#ffffff;
+      box-shadow:0 10px 24px rgba(0,0,0,0.24);
+      white-space:nowrap;
+    "
+  >
+    Passer
+  </button>
+
+  <div id="bsStats" class="bs-stats-card"></div>
+  <div id="bsNextSessionHeaderContainer"></div>
+</div>
     </div>
 
 <div class="bs-grid bs-grid-photo-layout">
@@ -9151,9 +9178,13 @@ function rememberLiveSessionCode(code) {
 }
 
 function stopLiveSessionContext() {
+  // Invalide immédiatement tous les anciens timers / callbacks du grand écran.
+  window.bigScreenActiveLoadToken = (Number(window.bigScreenActiveLoadToken) || 0) + 1;
+
   const codes = new Set([
     ...(window.liveSessionCodes ? Array.from(window.liveSessionCodes) : []),
     window.currentActiveSessionCode,
+    window.bigScreenActiveSessionCode,
     sessionConfig && sessionConfig.code,
     sessionConfig && sessionConfig.codeAdvanced,
     sessionConfig && sessionConfig.codePolymarket
@@ -9189,6 +9220,25 @@ function stopLiveSessionContext() {
     bsTimerInterval = null;
   }
 
+  if (typeof bsRefreshRaf !== "undefined" && bsRefreshRaf) {
+    cancelAnimationFrame(bsRefreshRaf);
+    bsRefreshRaf = null;
+  }
+
+  if (typeof bsChartRefreshTimer !== "undefined" && bsChartRefreshTimer) {
+    clearTimeout(bsChartRefreshTimer);
+    bsChartRefreshTimer = null;
+  }
+
+  if (typeof bsTrendFadeTimer !== "undefined" && bsTrendFadeTimer) {
+    clearTimeout(bsTrendFadeTimer);
+    bsTrendFadeTimer = null;
+  }
+
+  if (typeof clearBsFinalRevealTimers === "function") {
+    clearBsFinalRevealTimers();
+  }
+
   if (typeof playerTimerInterval !== "undefined" && playerTimerInterval) {
     clearInterval(playerTimerInterval);
     playerTimerInterval = null;
@@ -9197,6 +9247,17 @@ function stopLiveSessionContext() {
   if (typeof recapTimerInterval !== "undefined" && recapTimerInterval) {
     clearInterval(recapTimerInterval);
     recapTimerInterval = null;
+  }
+
+  const oldConfettiLayer = document.getElementById("bsFinalConfettiLayer");
+  if (oldConfettiLayer) oldConfettiLayer.remove();
+
+  window.bsFinalRevealDone = false;
+  window.bsFinalRevealRunning = false;
+  window.bsFinalRevealSessionCode = "";
+
+  if (typeof bsLastLayoutKey !== "undefined") {
+    bsLastLayoutKey = "";
   }
 
   if (typeof isBigScreenActive !== "undefined") {
@@ -15173,10 +15234,14 @@ if (typeof selectedBetTypes !== 'undefined') {
   }
 }
 
-function computeHistories(){
-  const histories = game.challenges.map(() => []);
+function computeHistories(sourceGame = game){
+  const safeGame = sourceGame || game;
+  const challenges = Array.isArray(safeGame.challenges) ? safeGame.challenges : [];
+  const players = Array.isArray(safeGame.players) ? safeGame.players : [];
 
-  game.challenges.forEach((ch, cIndex)=>{
+  const histories = challenges.map(() => []);
+
+  challenges.forEach((ch, cIndex)=>{
     // Initialisation de la courbe avec les votes de base
     const votes = ch.baseVotes ? ch.baseVotes.slice() : new Array(ch.answers.length).fill(0);
     
@@ -15185,7 +15250,7 @@ function computeHistories(){
     histories[cIndex].push(initialProbs);
 
     // On parcourt tous les joueurs pour construire l'évolution
-    game.players.forEach(p => {
+    players.forEach(p => {
       if (p.portfolio) {
         const investments = p.portfolio.filter(snap => snap.cIndex === cIndex);
         
@@ -15378,8 +15443,10 @@ if (sessionConfig.mode === 'both' && window.isCommonManagement) {
   showAdminFinalResults();
 }
 
-function displayLeaderboard(highlightPseudo = null, playerView = false) {
-  const playersList = game.players || [];
+function displayLeaderboard(highlightPseudo = null, playerView = false, sourceGame = game) {
+  const safeGame = sourceGame || game;
+  const playersList = safeGame.players || [];
+
   const normalizedHighlight = playerView && highlightPseudo
     ? String(highlightPseudo).trim().toLowerCase()
     : null;
@@ -15387,7 +15454,7 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
   const leaderboard = playersList.map(p => {
     return {
       name: p.name,
-      pts: window.calculatePlayerScore(p, game)
+      pts: window.calculatePlayerScore(p, safeGame)
     };
   }).sort((a, b) => b.pts - a.pts);
 
@@ -15400,12 +15467,10 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
     const isMe = playerView && normalizedHighlight && p.name && p.name.trim().toLowerCase() === normalizedHighlight;
     const safeName = window.escapeHtml ? window.escapeHtml(p.name) : p.name;
 
-    // IMPORTANT :
-    // Le pseudo est en gras uniquement dans la page récapitulative du joueur.
-    // Côté admin, playerView vaut false, donc aucun pseudo n'est mis en gras.
     const displayName = isMe
       ? `<strong style="font-weight:900; color:#ffffff;">${safeName}</strong>`
       : safeName;
+
     const row = document.createElement("div");
     row.className = `leader-entry final-leader-entry ${isMe ? "highlight" : ""}`;
     row.style.cssText = extraStyle || "";
@@ -15431,7 +15496,6 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
     leaderContainer.appendChild(renderRow(p, idx));
   });
 
-  // On ajoute la ligne du joueur hors Top 10 uniquement dans la vue joueur.
   const myRankIndex = normalizedHighlight
     ? leaderboard.findIndex(p => p.name && p.name.trim().toLowerCase() === normalizedHighlight)
     : -1;
@@ -15447,6 +15511,159 @@ function displayLeaderboard(highlightPseudo = null, playerView = false) {
     );
   }
 }
+
+function getAdminFinalLeaderboardEntries() {
+  const isCommon =
+    sessionConfig &&
+    sessionConfig.mode === "both" &&
+    window.isCommonManagement &&
+    typeof getCommonSessionEntriesForAdmin === "function";
+
+  if (!isCommon) {
+    return [{
+      code: window.currentActiveSessionCode || sessionConfig.code,
+      modeId: typeof getModeIdFromCode === "function"
+        ? getModeIdFromCode(window.currentActiveSessionCode || sessionConfig.code)
+        : "unknown",
+      label: typeof getModeLabelFromCode === "function"
+        ? getModeLabelFromCode(window.currentActiveSessionCode || sessionConfig.code)
+        : "Session",
+      data: {
+        sessionConfig,
+        gameData: game
+      }
+    }];
+  }
+
+  return getCommonSessionEntriesForAdmin();
+}
+
+function getAdminFinalLeaderboardEntry() {
+  const entries = getAdminFinalLeaderboardEntries();
+
+  if (!entries.length) {
+    return {
+      code: window.currentActiveSessionCode || sessionConfig.code,
+      modeId: "unknown",
+      label: "Session",
+      data: {
+        sessionConfig,
+        gameData: game
+      }
+    };
+  }
+
+  const wantedCode =
+    window.adminFinalLeaderboardSelectedCode ||
+    window.commonManageSelectedCode ||
+    window.currentActiveSessionCode ||
+    sessionConfig.code;
+
+  let entry = entries.find(e => e.code === wantedCode);
+
+  if (!entry) {
+    entry =
+      entries.find(e => e.code === window.currentActiveSessionCode) ||
+      entries[0];
+
+    window.adminFinalLeaderboardSelectedCode = entry.code;
+  }
+
+  return entry;
+}
+
+function renderAdminFinalLeaderboardModeSelector() {
+  const box = document.getElementById("adminFinalLeaderboardModeSelector");
+  if (!box) return;
+
+  const isCommon =
+    sessionConfig &&
+    sessionConfig.mode === "both" &&
+    window.isCommonManagement;
+
+  if (!isCommon) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const entries = getAdminFinalLeaderboardEntries();
+
+  if (entries.length < 2) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const selectedEntry = getAdminFinalLeaderboardEntry();
+
+  box.style.display = "block";
+  box.innerHTML = `
+    <div style="
+      background:rgba(255,255,255,0.045);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:16px;
+      padding:12px;
+      margin-bottom:10px;
+    ">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:10px;">
+        <div>
+          <div style="font-size:12px; color:#ffffff; font-weight:950;">
+            Classement affiché
+          </div>
+          <div style="font-size:10px; color:#94a3b8; line-height:1.35;">
+            Choisissez le mode dont vous voulez voir le classement final.
+          </div>
+        </div>
+
+        <div style="font-size:10px; color:#c4b5fd; font-weight:900; text-align:right;">
+          Vue : ${selectedEntry.label}
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;">
+        ${entries.map(entry => {
+          const selected = entry.code === selectedEntry.code;
+          const color = typeof getModeColorFromModeId === "function"
+            ? getModeColorFromModeId(entry.modeId)
+            : "#60a5fa";
+
+          return `
+            <button
+              type="button"
+              onclick="selectAdminFinalLeaderboardMode('${entry.code}')"
+              style="
+                margin:0;
+                padding:10px 8px;
+                border-radius:999px;
+                font-size:11px;
+                font-weight:950;
+                color:${selected ? '#020617' : color};
+                background:${selected ? color : 'rgba(15,23,42,0.78)'};
+                border:1px solid ${color};
+                box-shadow:${selected ? `0 0 18px ${color}55` : 'none'};
+              "
+            >
+              ${entry.label}
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+window.selectAdminFinalLeaderboardMode = function(code) {
+  window.adminFinalLeaderboardSelectedCode = code;
+
+  const entry = getAdminFinalLeaderboardEntry();
+  const selectedGame = entry && entry.data && entry.data.gameData
+    ? entry.data.gameData
+    : game;
+
+  renderAdminFinalLeaderboardModeSelector();
+  displayLeaderboard(null, false, selectedGame);
+};
 
 
 function getPlayerVoteStatsForChallenge(cIndex) {
@@ -16002,7 +16219,21 @@ function showAdminFinalResults() {
     finalNextMsg.className = sessionConfig.nextSessionCode ? "msg ok" : "msg";
   }
 
-  displayLeaderboard(null, false);
+window.adminFinalLeaderboardSelectedCode =
+  window.adminFinalLeaderboardSelectedCode ||
+  window.commonManageSelectedCode ||
+  window.currentActiveSessionCode ||
+  sessionConfig.code;
+
+renderAdminFinalLeaderboardModeSelector();
+
+const finalLeaderboardEntry = getAdminFinalLeaderboardEntry();
+const finalLeaderboardGame =
+  finalLeaderboardEntry && finalLeaderboardEntry.data && finalLeaderboardEntry.data.gameData
+    ? finalLeaderboardEntry.data.gameData
+    : game;
+
+displayLeaderboard(null, false, finalLeaderboardGame);
 
   const leaderboardDropdown = document.getElementById("finalLeaderboardDropdown");
   const resultsDropdown = document.getElementById("finalResultsDropdown");
@@ -16898,17 +17129,33 @@ if (initialLocalPlayer) window.localPlayerSnapshot = JSON.parse(JSON.stringify(i
                   showPlayerResult(finalPseudo);
                }
             } else {
-               const recapEl = document.getElementById("playerRecap");
-               if (recapEl && recapEl.style.display === "block") {
-                  updateRecapUI(finalPseudo);
-               } else {
-                   const container = document.getElementById("challengesPlay");
-                   if (container && container.children.length > 0) {
-                       if (typeof updatePlayChallengesLive === 'function') {
-                           updatePlayChallengesLive();
-                       }
-                   }
-               }
+const recapEl = document.getElementById("playerRecap");
+if (recapEl && recapEl.style.display === "block") {
+   const isPolyRecap =
+     typeof isPolymarketStyleMode === "function" &&
+     (
+       isPolymarketStyleMode(typeof currentPlayerMode !== "undefined" ? currentPlayerMode : null) ||
+       isPolymarketStyleMode(typeof modeToPlay !== "undefined" ? modeToPlay : null) ||
+       isPolymarketStyleMode()
+     );
+
+   if (
+     isPolyRecap &&
+     typeof updatePolymarketRecapNoJump === "function" &&
+     updatePolymarketRecapNoJump(finalPseudo)
+   ) {
+     // Mise à jour légère : on ne reconstruit pas le récap, donc pas de saut de page.
+   } else {
+     updateRecapUI(finalPseudo);
+   }
+} else {
+    const container = document.getElementById("challengesPlay");
+    if (container && container.children.length > 0) {
+        if (typeof updatePlayChallengesLive === 'function') {
+            updatePlayChallengesLive();
+        }
+    }
+}
             }
         }
       }
@@ -17194,6 +17441,10 @@ const sessionRef = db.ref("sessions").child(input);
 
     window.currentActiveSessionCode = input;
 
+    window.commonManageSelectedCode = input;
+
+    
+
     // Réparation Firebase si la liste des joueurs est vide
     if (!game.players) game.players = [];
 
@@ -17225,21 +17476,26 @@ const sessionRef = db.ref("sessions").child(input);
     startManageTimer();
     renderManageDashboard();
 
-    // ON ACTIVE LE TEMPS RÉEL : On écoute les futures mises
-sessionRef.off('value');
+// ON ACTIVE LE TEMPS RÉEL : en gestion commune, on écoute les 3 sessions.
+// Ainsi le panneau joueurs peut afficher les mises Facile / Avancé / Polymarket séparément.
+if (typeof startCommonManageLiveListeners === "function") {
+  startCommonManageLiveListeners(input);
+} else {
+  sessionRef.off("value");
 
-sessionRef.on('value', (liveSnap) => {
-  if (window.currentActiveSessionCode !== input) return;
+  sessionRef.on("value", liveSnap => {
+    if (window.currentActiveSessionCode !== input) return;
 
-  if (liveSnap.exists()) {
-    const liveData = liveSnap.val() || {};
-    sessionConfig = liveData.sessionConfig || sessionConfig;
-    game = liveData.gameData || game;
+    if (liveSnap.exists()) {
+      const liveData = liveSnap.val() || {};
+      sessionConfig = liveData.sessionConfig || sessionConfig;
+      game = liveData.gameData || game;
 
-    if (!game.players) game.players = [];
-    renderManageDashboard();
-  }
-});
+      if (!game.players) game.players = [];
+      renderManageDashboard();
+    }
+  });
+}
 
   }).catch(err => {
     msg.textContent = "Erreur : " + err.message;
@@ -17542,30 +17798,32 @@ function getAdminPositionCurrentValue(ch, snap) {
   return Number(snap.bet || 0);
 }
 
-function getAdminPlayerPartsValue(player) {
+function getAdminPlayerPartsValue(player, sourceGame = game) {
   if (!player || !Array.isArray(player.portfolio)) return 0;
 
-  return player.portfolio.reduce((sum, snap) => {
-    const ch = game.challenges && game.challenges[snap.cIndex]
-      ? game.challenges[snap.cIndex]
-      : null;
+  const challenges = sourceGame && Array.isArray(sourceGame.challenges)
+    ? sourceGame.challenges
+    : [];
 
+  return player.portfolio.reduce((sum, snap) => {
+    const ch = challenges[snap.cIndex] || null;
     return sum + getAdminPositionCurrentValue(ch, snap);
   }, 0);
 }
 
-function buildAdminPlayerPortfolioHtml(player) {
+function buildAdminPlayerPortfolioHtml(player, sourceGame = game, modeLabel = "") {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
 
   if (!player || !Array.isArray(player.portfolio) || player.portfolio.length === 0) {
-    return `<div style="font-size:12px; color:#94a3b8; margin-top:10px;">Aucune mise enregistrée.</div>`;
+    return `<div style="font-size:12px; color:#94a3b8; margin-top:10px;">Aucune mise enregistrée dans ce mode.</div>`;
   }
 
-  return player.portfolio.map(snap => {
-    const ch = game.challenges && game.challenges[snap.cIndex]
-      ? game.challenges[snap.cIndex]
-      : null;
+  const challenges = sourceGame && Array.isArray(sourceGame.challenges)
+    ? sourceGame.challenges
+    : [];
 
+  return player.portfolio.map(snap => {
+    const ch = challenges[snap.cIndex] || null;
     if (!ch) return "";
 
     const ansLabel = ch.answers && ch.answers[snap.ansIndex]
@@ -17578,6 +17836,10 @@ function buildAdminPlayerPortfolioHtml(player) {
 
     const currentValue = getAdminPositionCurrentValue(ch, snap);
 
+    const typeLabel = snap.type && snap.type !== "YES"
+      ? ` · ${safe(snap.type)}`
+      : "";
+
     return `
       <div style="
         background:rgba(15,23,42,0.72);
@@ -17586,8 +17848,26 @@ function buildAdminPlayerPortfolioHtml(player) {
         padding:10px;
         margin-top:8px;
       ">
-        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
-          ${safe(ch.category || "Question")}
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
+            ${safe(ch.category || "Question")}
+          </div>
+
+          ${modeLabel ? `
+            <div style="
+              flex-shrink:0;
+              font-size:9px;
+              color:#ffffff;
+              background:rgba(96,165,250,0.16);
+              border:1px solid rgba(96,165,250,0.30);
+              border-radius:999px;
+              padding:3px 7px;
+              font-weight:950;
+              text-transform:uppercase;
+            ">
+              ${safe(modeLabel)}
+            </div>
+          ` : ""}
         </div>
 
         <div style="font-size:12px; color:#fff; font-weight:850; margin-top:3px; line-height:1.25;">
@@ -17607,7 +17887,7 @@ function buildAdminPlayerPortfolioHtml(player) {
             padding:8px;
           ">
             <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
-              A misé sur
+              A misé sur${typeLabel}
             </div>
             <div style="font-size:13px; color:#ffffff; font-weight:950; margin-top:2px;">
               ${safe(ansLabel)}
@@ -17621,7 +17901,7 @@ function buildAdminPlayerPortfolioHtml(player) {
             padding:8px;
           ">
             <div style="font-size:9px; color:#94a3b8; text-transform:uppercase; font-weight:900;">
-              Mise
+              Mise initiale
             </div>
             <div style="font-size:13px; color:#fde047; font-weight:950; margin-top:2px;">
               ${Number(stakeValue || 0).toFixed(2)} 💰
@@ -17648,9 +17928,9 @@ function buildAdminPlayerPortfolioHtml(player) {
   }).join("");
 }
 
-window.toggleAdminPlayerDetails = function(playerIndex) {
+window.toggleAdminPlayerDetails = function(playerKey) {
   window.adminOpenedPlayerIndex =
-    window.adminOpenedPlayerIndex === playerIndex ? null : playerIndex;
+    window.adminOpenedPlayerIndex === playerKey ? null : playerKey;
 
   renderAdminPlayersPanel();
 };
@@ -17665,27 +17945,65 @@ function renderAdminPlayersPanel() {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
   const query = search ? search.value.trim().toLowerCase() : "";
 
-  const allPlayers = game.players || [];
+const isCommon =
+    sessionConfig &&
+    sessionConfig.mode === "both" &&
+    window.isCommonManagement;
+
+  const displayEntry =
+    isCommon && typeof getCommonManageDisplayEntry === "function"
+      ? getCommonManageDisplayEntry()
+      : null;
+
+  const entries = displayEntry
+    ? [displayEntry]
+    : (
+        typeof getCommonSessionEntriesForAdmin === "function"
+          ? getCommonSessionEntriesForAdmin()
+          : [{
+              code: window.currentActiveSessionCode || sessionConfig.code,
+              modeId: getModeIdFromCode(window.currentActiveSessionCode || sessionConfig.code),
+              label: getModeLabelFromCode(window.currentActiveSessionCode || sessionConfig.code),
+              data: { sessionConfig, gameData: game }
+            }]
+      );
+
+  const allRows = entries.flatMap(entry => {
+    const sourceGame = entry.data && entry.data.gameData ? entry.data.gameData : { players: [], challenges: [] };
+    const players = Array.isArray(sourceGame.players) ? sourceGame.players : [];
+
+    return players.map((p, index) => ({
+      p,
+      index,
+      entry,
+      sourceGame
+    }));
+  });
 
   if (!query) {
     if (count) {
-      count.textContent = `${allPlayers.length} joueur${allPlayers.length > 1 ? "s" : ""} dans la partie`;
+      if (sessionConfig.mode === "both" && window.isCommonManagement) {
+        count.textContent = `${allRows.length} joueur${allRows.length > 1 ? "s" : ""} en ${displayEntry ? displayEntry.label : "ce mode"}`;
+      } else {
+        count.textContent = `${allRows.length} joueur${allRows.length > 1 ? "s" : ""} dans la partie`;
+      }
     }
 
     list.innerHTML = `
       <div style="font-size:12px; color:#94a3b8; line-height:1.45; padding:10px 2px;">
-        Tapez un pseudo ou une adresse e-mail pour afficher un joueur.
+        Tapez un pseudo ou une adresse e-mail pour afficher les mises.
+        ${sessionConfig.mode === "both" && window.isCommonManagement
+          ? `<br>Vous consultez actuellement les données du mode <strong>${displayEntry ? displayEntry.label : "sélectionné"}</strong>.`
+          : ""}
       </div>
     `;
     return;
   }
 
-  const players = allPlayers
-    .map((p, index) => ({ p, index }))
-    .filter(({ p }) => {
-      return String(p.name || "").toLowerCase().includes(query) ||
-        String(p.email || "").toLowerCase().includes(query);
-    });
+  const players = allRows.filter(({ p }) => {
+    return String(p.name || "").toLowerCase().includes(query) ||
+      String(p.email || "").toLowerCase().includes(query);
+  });
 
   if (count) {
     count.textContent = `${players.length} résultat${players.length > 1 ? "s" : ""}`;
@@ -17696,33 +18014,56 @@ function renderAdminPlayersPanel() {
     return;
   }
 
-  list.innerHTML = players.map(({ p, index }) => {
-    const partsValue = getAdminPlayerPartsValue(p);
+  list.innerHTML = players.map(({ p, index, entry, sourceGame }) => {
+    const partsValue = getAdminPlayerPartsValue(p, sourceGame);
     const balance = Number(p.balance || 0);
     const totalValue = balance + partsValue;
-    const isOpen = window.adminOpenedPlayerIndex === index;
+    const rowKey = `${entry.code}-${index}`;
+    const isOpen = window.adminOpenedPlayerIndex === rowKey;
+    const modeColor = getModeColorFromModeId(entry.modeId);
 
     return `
       <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(147,197,253,0.22); border-radius:14px; padding:10px; margin-top:8px;">
-        <div onclick="toggleAdminPlayerDetails(${index})" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div onclick="toggleAdminPlayerDetails('${rowKey}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px;">
           <div style="min-width:0;">
-            <div style="font-size:13px; color:#fff; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safe(p.name || "Joueur")}</div>
-            <div style="font-size:10px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${safe(p.email || "")}</div>
+            <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+              <div style="font-size:13px; color:#fff; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${safe(p.name || "Joueur")}
+              </div>
+
+              <div style="
+                flex-shrink:0;
+                color:${modeColor};
+                border:1px solid ${modeColor}66;
+                background:${modeColor}1A;
+                border-radius:999px;
+                padding:2px 6px;
+                font-size:8px;
+                font-weight:950;
+                text-transform:uppercase;
+              ">
+                ${safe(entry.label)}
+              </div>
+            </div>
+
+            <div style="font-size:10px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${safe(p.email || "")}
+            </div>
           </div>
 
           <div style="text-align:right; flex-shrink:0;">
-<div style="font-size:10px; color:#94a3b8;">Valeur actuelle totale</div>
-<div style="font-size:14px; color:#38bdf8; font-weight:950;">${totalValue.toFixed(2)} 💰</div>
-<div style="font-size:9px; color:#94a3b8; margin-top:2px;">
-  dont ${balance.toFixed(2)} 💰 non pariés
-</div>
+            <div style="font-size:10px; color:#94a3b8;">Valeur actuelle totale</div>
+            <div style="font-size:14px; color:#38bdf8; font-weight:950;">${totalValue.toFixed(2)} 💰</div>
+            <div style="font-size:9px; color:#94a3b8; margin-top:2px;">
+              dont ${balance.toFixed(2)} 💰 non pariés
+            </div>
           </div>
         </div>
 
         ${isOpen ? `
-<div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-  ${buildAdminPlayerPortfolioHtml(p)}
-</div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+            ${buildAdminPlayerPortfolioHtml(p, sourceGame, entry.label)}
+          </div>
         ` : ""}
       </div>
     `;
@@ -17838,7 +18179,7 @@ function repairAdminChallengeShape(ch, index) {
   return safeCh;
 }
 
-function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
+function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false, sourceGame = game) {
   const safe = window.escapeHtml || ((v) => String(v ?? ""));
   const events = [];
   const activePlayers = new Set();
@@ -17875,7 +18216,7 @@ function buildAdminChallengeTimelineHtml(cIndex, ch, isOpen = false) {
     });
   };
 
-  (game.players || []).forEach(player => {
+  ((sourceGame && sourceGame.players) || []).forEach(player => {
     (player.portfolio || [])
       .filter(snap => Number(snap.cIndex) === Number(cIndex))
       .forEach(snap => {
@@ -17983,19 +18324,38 @@ function renderManageDashboard() {
   const container = document.getElementById("manageChallengesContainer");
   if (!container) return;
 
-  if (!game || typeof game !== "object") {
-    game = { players: [], challenges: [] };
+    if (typeof renderCommonManageModeSelector === "function") {
+    renderCommonManageModeSelector();
   }
 
-  if (!Array.isArray(game.players)) {
-    game.players = [];
+  const displayEntry =
+    typeof getCommonManageDisplayEntry === "function"
+      ? getCommonManageDisplayEntry()
+      : null;
+
+  const sourceGame =
+    displayEntry && displayEntry.data && displayEntry.data.gameData
+      ? displayEntry.data.gameData
+      : game;
+
+  const sourceSessionConfig =
+    displayEntry && displayEntry.data && displayEntry.data.sessionConfig
+      ? displayEntry.data.sessionConfig
+      : sessionConfig;
+
+if (!sourceGame || typeof sourceGame !== "object") {
+    return;
   }
 
-  if (!Array.isArray(game.challenges)) {
-    game.challenges = [];
+  if (!Array.isArray(sourceGame.players)) {
+    sourceGame.players = [];
   }
 
-  game.challenges = game.challenges
+  if (!Array.isArray(sourceGame.challenges)) {
+    sourceGame.challenges = [];
+  }
+
+  sourceGame.challenges = sourceGame.challenges
     .filter(ch => ch && typeof ch === "object")
     .map((ch, idx) => repairAdminChallengeShape(ch, idx));
 
@@ -18005,13 +18365,13 @@ function renderManageDashboard() {
   
   // CORRECTION : On ne nettoie tout l'écran que si le nombre de questions change (Ex: changement de session).
   // Cela empêche le rechargement complet du DOM toutes les 3 secondes !
-  if (container.children.length !== game.challenges.length) {
+if (container.children.length !== sourceGame.challenges.length) {
       container.innerHTML = "";
   }
 
-game.challenges.forEach((ch, i) => {
+sourceGame.challenges.forEach((ch, i) => {
   ch = repairAdminChallengeShape(ch, i);
-  game.challenges[i] = ch;
+  sourceGame.challenges[i] = ch;
 
   const answers = getSafeAdminChallengeAnswers(ch);
   const votes = getSafeAdminChallengeVotes(ch, answers);
@@ -18107,15 +18467,15 @@ let answersHtml = answers.map((ans, idx) => {
     }).join('');
 
     const timelineOpen = document.getElementById(`admin-timeline-${i}`)?.open || false;
-    const playersHtml = buildAdminChallengeTimelineHtml(i, ch, timelineOpen);
+    const playersHtml = buildAdminChallengeTimelineHtml(i, ch, timelineOpen, sourceGame);
 
     document.getElementById(`manage-stats-data-${i}`).innerHTML = answersHtml + playersHtml;
   });
 
   // 5. On dessine les graphiques en temps réel (Plus de setTimeout nécessaire car les canvas ne sont plus détruits)
-  const histories = computeHistories();
+const histories = computeHistories(sourceGame);
   histories.forEach((hist, i) => {
-    drawSingleChart(hist, "manage-chart-" + i, i);
+    drawSingleChart(hist, "manage-chart-" + i, i, sourceGame);
   });
 
   // 6. Relance intelligente du chrono global Admin
@@ -18784,10 +19144,9 @@ function openPolymarketRecapBetPanel(event, cIndex, ansIndex, betType = "YES") {
     ? game.challenges[cIndex]
     : null;
 
-  if (!ch || getEffectiveStatus(ch) !== "open") {
-    openBetPanel(cIndex, ansIndex, betType);
-    return;
-  }
+if (!ch || getEffectiveStatus(ch) !== "open") {
+  return;
+}
 
   const player = (game.players || []).find(p => p.name === game.currentPlayerName);
 
@@ -18883,34 +19242,34 @@ return `
       </div>
 
       <div style="text-align:right; flex-shrink:0;">
-        <div style="display:inline-flex; align-items:center; justify-content:center; padding:5px 9px; border-radius:999px; background:rgba(253,224,71,0.13); border:1px solid rgba(253,224,71,0.38); color:#fde047; font-size:16px; font-weight:950; line-height:1;">
-          ${pct.toFixed(1)}%
-        </div>
+<div data-poly-pct="${cIndex}-${aIdx}" style="display:inline-flex; align-items:center; justify-content:center; padding:5px 9px; border-radius:999px; background:rgba(253,224,71,0.13); border:1px solid rgba(253,224,71,0.38); color:#fde047; font-size:16px; font-weight:950; line-height:1;">
+  ${pct.toFixed(1)}%
+</div>
 
         <div style="font-size:9px; color:#93c5fd; font-weight:900; margin-top:3px;">
           Toucher pour miser
         </div>
 
-        <div style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
-          👥 ${count} · 💰 ${betTotal.toFixed(0)}
-        </div>
+<div data-poly-meta="${cIndex}-${aIdx}" style="font-size:10px; color:#94a3b8; font-weight:800; margin-top:2px;">
+  👥 ${count} · 💰 ${betTotal.toFixed(0)}
+</div>
       </div>
     </div>
 
     <div style="height:6px; border-radius:999px; background:rgba(15,23,42,0.88); overflow:hidden; margin-top:7px;">
-      <div style="height:100%; width:${pct}%; background:linear-gradient(90deg,#60a5fa,#a855f7); border-radius:999px;"></div>
+      <div data-poly-bar="${cIndex}-${aIdx}" style="height:100%; width:${pct}%; background:linear-gradient(90deg,#60a5fa,#a855f7); border-radius:999px; transition:width 0.25s ease;"></div>
     </div>
   </button>
 `;
   }).join("");
 
-  return `
-    <div style="margin-top:10px; background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.10)); border:1px solid rgba(96,165,250,0.25); border-radius:14px; padding:11px;">
+return `
+    <div data-polymarket-recap-market="${cIndex}" style="margin-top:10px; background:linear-gradient(135deg, rgba(59,130,246,0.12), rgba(168,85,247,0.10)); border:1px solid rgba(96,165,250,0.25); border-radius:14px; padding:11px;">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
         <div style="font-size:10px; color:#93c5fd; text-transform:uppercase; font-weight:950; letter-spacing:0.08em;">
           Marché actuel
         </div>
-        <div style="font-size:10px; color:#94a3b8; font-weight:800;">
+        <div data-poly-total-bettors="${cIndex}" style="font-size:10px; color:#94a3b8; font-weight:800;">
           ${Number(stats.totalBettors || 0)} joueur(s)
         </div>
       </div>
@@ -18918,6 +19277,201 @@ return `
       ${answersHtml}
     </div>
   `;
+}
+
+function updatePolymarketRecapNoJump(pseudo) {
+  const recapEl = document.getElementById("playerRecap");
+  const summaryContainer = document.getElementById("recapSummary");
+
+  if (!recapEl || recapEl.style.display !== "block" || !summaryContainer || !game || !Array.isArray(game.challenges)) {
+    return false;
+  }
+
+  const player =
+    (game.players || []).find(p => p.name === pseudo) ||
+    (
+      window.localPlayerSnapshot &&
+      window.localPlayerSnapshot.name === pseudo
+        ? window.localPlayerSnapshot
+        : null
+    );
+
+  if (!player) return false;
+
+  const setText = (el, text) => {
+    if (el && el.textContent.trim() !== String(text)) {
+      el.textContent = String(text);
+    }
+  };
+
+  const setHtml = (el, html) => {
+    if (el && el.innerHTML !== html) {
+      el.innerHTML = html;
+    }
+  };
+
+  const remainingBalanceToBet = Number(
+    player && player.balance !== undefined
+      ? player.balance
+      : currentPlayerBalance
+  );
+
+  const balanceEl = document.getElementById("live-score-recap-balance");
+  if (balanceEl) {
+    setText(
+      balanceEl,
+      Number(remainingBalanceToBet || 0)
+        .toFixed(1)
+        .replace(".", ",")
+    );
+  }
+
+  if (typeof window.calculatePlayerScore === "function") {
+    const maxScorePossible = window.calculatePlayerScore(player, game).toFixed(2);
+    const maxScoreEl = document.getElementById("recap-max-score");
+
+    setHtml(
+      maxScoreEl,
+      `${maxScorePossible} <span style="font-size:18px;">💰</span>`
+    );
+
+    const provLeaderboard = (game.players || [])
+      .map(p => ({ name: p.name, score: window.calculatePlayerScore(p, game) }))
+      .sort((a, b) => b.score - a.score);
+
+    const myScore = provLeaderboard.find(p => p.name === pseudo)?.score || 0;
+    const myRankIndex = provLeaderboard.findIndex(p => p.score === myScore);
+    const myRank = myRankIndex + 1;
+    const isTied = provLeaderboard.filter(p => p.score === myScore).length > 1;
+    const rankDisplay = isTied ? myRank + "t*" : myRank;
+
+    const rankEl = document.getElementById("recap-rank");
+    setText(rankEl, `#${rankDisplay}`);
+
+    const distEl = document.getElementById("recap-podium-dist");
+    if (distEl) {
+      if (myRank > 3) {
+        distEl.textContent = `Vous êtes à ${myRank - 3} place(s) du podium !`;
+        distEl.style.display = "block";
+      } else {
+        distEl.style.display = "none";
+      }
+    }
+
+    let top3Html = "";
+    let hasTiesInDisplay = false;
+    const top3 = provLeaderboard.slice(0, 3);
+
+    top3.forEach((p) => {
+      const pScore = p.score;
+      const pRankIndex = provLeaderboard.findIndex(x => x.score === pScore);
+      const pRank = pRankIndex + 1;
+      const pIsTied = provLeaderboard.filter(x => x.score === pScore).length > 1;
+      const pRankDisplay = pIsTied ? pRank + "t*" : pRank;
+
+      if (pIsTied) hasTiesInDisplay = true;
+
+      top3Html += `
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:${p.name === pseudo ? '1' : '0.6'}">
+          <span>${pRankDisplay}. ${p.name === pseudo ? '<strong>VOUS</strong>' : p.name}</span>
+          <span>${Number(p.score || 0).toFixed(2)} 💰</span>
+        </div>
+      `;
+    });
+
+    if (myRankIndex >= 3) {
+      if (isTied) hasTiesInDisplay = true;
+
+      top3Html += `
+        <div style="text-align:center; color:#9ca3af; font-size:10px; margin:4px 0;">...</div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; opacity:1">
+          <span>${rankDisplay}. <strong>VOUS</strong></span>
+          <span>${Number(myScore || 0).toFixed(2)} 💰</span>
+        </div>
+      `;
+    }
+
+    if (hasTiesInDisplay) {
+      top3Html += `<div style="font-size:10px; color:#9ca3af; margin-top:6px; font-style:italic;">* T : égalité avec d'autres joueurs</div>`;
+    }
+
+    setHtml(document.getElementById("recap-top3"), top3Html);
+  }
+
+  if (Array.isArray(player.portfolio)) {
+    player.portfolio.forEach(snap => {
+      if (!snap || snap.cashedOut === true) return;
+
+      const valEl = document.getElementById(`cashout-val-${snap.cIndex}-${snap.ansIndex}`);
+      const ch = game.challenges[snap.cIndex];
+
+      if (valEl && ch && getEffectiveStatus(ch) === "open" && typeof window.getAMMValue === "function") {
+        const currentCashoutValue = Number(window.getAMMValue(ch, snap) || 0).toFixed(2);
+        setText(valEl, `${currentCashoutValue} 💰`);
+      }
+    });
+  }
+
+  let touchedAtLeastOneMarket = false;
+
+  game.challenges.forEach((ch, cIndex) => {
+    const marketEl = document.querySelector(`[data-polymarket-recap-market="${cIndex}"]`);
+    if (!marketEl || !ch || !Array.isArray(ch.answers)) return;
+
+    touchedAtLeastOneMarket = true;
+
+    const probs = typeof getChallengeDisplayProbs === "function"
+      ? getChallengeDisplayProbs(ch)
+      : getLMSRProbs(ch.votes);
+
+    const stats = typeof getQuestionBettorStats === "function"
+      ? getQuestionBettorStats(cIndex)
+      : {
+          totalBettors: 0,
+          answerCounts: new Array(ch.answers.length).fill(0),
+          answerBetTotals: new Array(ch.answers.length).fill(0)
+        };
+
+    setText(
+      marketEl.querySelector(`[data-poly-total-bettors="${cIndex}"]`),
+      `${Number(stats.totalBettors || 0)} joueur(s)`
+    );
+
+    ch.answers.forEach((answer, aIdx) => {
+      const pct = Math.max(
+        0,
+        Math.min(100, Number(((probs[aIdx] || 0) * 100).toFixed(1)))
+      );
+
+      const count = Number((stats.answerCounts && stats.answerCounts[aIdx]) || 0);
+      const betTotal = Number((stats.answerBetTotals && stats.answerBetTotals[aIdx]) || 0);
+
+      setText(
+        marketEl.querySelector(`[data-poly-pct="${cIndex}-${aIdx}"]`),
+        `${pct.toFixed(1)}%`
+      );
+
+      setText(
+        marketEl.querySelector(`[data-poly-meta="${cIndex}-${aIdx}"]`),
+        `👥 ${count} · 💰 ${betTotal.toFixed(0)}`
+      );
+
+      const barEl = marketEl.querySelector(`[data-poly-bar="${cIndex}-${aIdx}"]`);
+      if (barEl && barEl.style.width !== `${pct}%`) {
+        barEl.style.width = `${pct}%`;
+      }
+    });
+  });
+
+  if (
+    document.getElementById("sellPanel") &&
+    document.getElementById("sellPanel").classList.contains("open") &&
+    typeof refreshOpenSellPanelValue === "function"
+  ) {
+    refreshOpenSellPanelValue();
+  }
+
+  return touchedAtLeastOneMarket || !!document.getElementById("recap-max-score");
 }
 
 function formatRecapCountdown(diff) {
@@ -18994,9 +19548,13 @@ function buildRecapUnplayedQuestionCardHtml(cIndex, ch, effStatus) {
   const isPending = effStatus === "pending";
   const pendingDiff = Number(ch.startTime || 0) - Date.now();
 
-  const polymarketInlineMarketHtml = isPolymarketStyleMode()
-    ? buildPolymarketRecapMarketInlineHtml(cIndex, ch, getChallengeDisplayProbs(ch), [])
-    : "";
+const shouldShowPolymarketAnswers =
+  isPolymarketStyleMode() &&
+  effStatus !== "pending";
+
+const polymarketInlineMarketHtml = shouldShowPolymarketAnswers
+  ? buildPolymarketRecapMarketInlineHtml(cIndex, ch, getChallengeDisplayProbs(ch), [])
+  : "";
 
   const cardAttrs = canTradeQuestion
     ? `data-recap-jump-cindex="${cIndex}" style="border-left:3px solid #3b82f6; cursor:pointer;"`
@@ -19501,7 +20059,11 @@ const advancedDetailsHtml =
     ? buildAdvancedQuestionDetailsHtml(cIndex, ch, probs, snaps)
     : "";
 
-const polymarketInlineMarketHtml = isPolymarketStyleMode()
+const shouldShowPolymarketAnswers =
+  isPolymarketStyleMode() &&
+  effStatus !== "pending";
+
+const polymarketInlineMarketHtml = shouldShowPolymarketAnswers
   ? buildPolymarketRecapMarketInlineHtml(cIndex, ch, probs, snaps)
   : "";
 
@@ -19702,7 +20264,7 @@ window.copyRecapSessionCode = function(btn) {
 };
 
 // Fonction utilitaire complétée pour dessiner sur n'importe quel canvas par son ID
-function drawSingleChart(hist, canvasId, cIndex) {
+function drawSingleChart(hist, canvasId, cIndex, sourceGame = game) {
   const canvas = document.getElementById(canvasId);
   if(!canvas) return;
   const ctx = canvas.getContext("2d");
@@ -19740,8 +20302,21 @@ function drawSingleChart(hist, canvasId, cIndex) {
 
 const letters = ['A','B','C','D','E','F','G','H'];
 const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#facc15"];
-  const answersCount = game.challenges[cIndex].answers.length;
-  const steps = hist.length;
+
+const sourceChallenges =
+  sourceGame && Array.isArray(sourceGame.challenges)
+    ? sourceGame.challenges
+    : game.challenges;
+
+const answers =
+  sourceChallenges[cIndex] && Array.isArray(sourceChallenges[cIndex].answers)
+    ? sourceChallenges[cIndex].answers
+    : [];
+
+const answersCount = answers.length;
+if (!answersCount) return;
+
+const steps = hist.length;
 
   function xPos(stepIndex){
     if(steps === 1) return paddingLeft + chartW;
@@ -19789,7 +20364,7 @@ const colors = ["#22c55e","#3b82f6","#f97316","#ec4899","#a855f7","#06b6d4","#fa
           x: lastX,
           y: lastY,
           color: colors[ans % colors.length],
-          label: game.challenges[cIndex].answers[ans],
+          label: answers[ans],
           pct: finalPct
       });
     }
@@ -20592,36 +21167,115 @@ function directManage(targetCode, isCommon = false) {
 }
 
 function directBigScreen(targetCode) {
-  const code = targetCode || sessionConfig.code;
+  const code = String(targetCode || sessionConfig.code || "").trim().toUpperCase();
   if (!code) return;
+
+  // On coupe tout l'ancien grand écran avant de charger le nouveau mode.
+  stopLiveSessionContext();
+
+  // Token unique : tout callback ancien sera ignoré.
+  window.bigScreenActiveLoadToken = (Number(window.bigScreenActiveLoadToken) || 0) + 1;
+  const loadToken = window.bigScreenActiveLoadToken;
+
+  rememberLiveSessionCode(code);
 
   const input = document.getElementById("bsCodeInput");
   if (input) input.value = code;
 
   isBigScreenActive = true;
   window.currentActiveSessionCode = code;
-  
-  showScreen('bigScreen');
-  
-  db.ref('sessions/' + code).once('value').then((snapshot) => {
-      if (snapshot.exists()) {
-          const data = snapshot.val();
-          game = data.gameData;
-          sessionConfig = data.sessionConfig;
-          if (!game.players) game.players = [];
-          
-          startBigScreenEngine();
-          
-          db.ref('sessions/' + code).on('value', (liveSnap) => {
-              if (liveSnap.exists()) {
-                  game = liveSnap.val().gameData;
-                  if (!game.players) game.players = [];
-                  if (isBigScreenActive) requestBigScreenDataRefresh();
-              }
-          });
+  window.bigScreenActiveSessionCode = code;
+
+  resetBigScreenRevealStateForSession(code);
+
+  showScreen("bigScreen");
+
+  const sessionRef = db.ref("sessions").child(code);
+
+  sessionRef.off("value");
+
+  sessionRef.once("value").then(snapshot => {
+    if (
+      window.bigScreenActiveLoadToken !== loadToken ||
+      window.bigScreenActiveSessionCode !== code ||
+      !isBigScreenActive
+    ) {
+      return;
+    }
+
+    if (!snapshot.exists()) return;
+
+    const data = snapshot.val() || {};
+
+game = data.gameData || { players: [], challenges: [] };
+sessionConfig = data.sessionConfig || sessionConfig;
+
+if (!game.players) game.players = [];
+if (!game.challenges) game.challenges = [];
+
+window.currentActiveSessionCode = code;
+window.bigScreenActiveSessionCode = code;
+window.bsFinalRevealSessionCode = code;
+
+resetBigScreenRevealStateForSession(code);
+
+if (typeof bsLastLayoutKey !== "undefined") {
+  bsLastLayoutKey = "";
+}
+
+startBigScreenEngine();
+
+    const liveRef = db.ref("sessions").child(code);
+    liveRef.off("value");
+
+    liveRef.on("value", liveSnap => {
+      if (
+        window.bigScreenActiveLoadToken !== loadToken ||
+        window.bigScreenActiveSessionCode !== code ||
+        !isBigScreenActive
+      ) {
+        return;
       }
+
+      if (!liveSnap.exists()) return;
+
+      const liveData = liveSnap.val() || {};
+
+const wasResolved = !!(game && game.isResolved);
+
+game = liveData.gameData || { players: [], challenges: [] };
+sessionConfig = liveData.sessionConfig || sessionConfig;
+
+if (!game.players) game.players = [];
+if (!game.challenges) game.challenges = [];
+
+window.currentActiveSessionCode = code;
+window.bigScreenActiveSessionCode = code;
+window.bsFinalRevealSessionCode = code;
+
+const isNowResolved = !!(game && game.isResolved);
+
+if (!wasResolved && isNowResolved) {
+  resetBigScreenRevealStateForSession(code);
+
+  if (typeof bsLastLayoutKey !== "undefined") {
+    bsLastLayoutKey = "";
+  }
+
+  renderBigScreen();
+  bsLastLayoutKey = getBigScreenLayoutKey();
+
+  if (typeof updateBsTimers === "function") {
+    updateBsTimers();
+  }
+
+  return;
+}
+
+requestBigScreenDataRefresh();
+    });
   }).catch(err => {
-      console.error("Erreur Firebase:", err);
+    console.error("Erreur Firebase:", err);
   });
 }
 
@@ -20660,6 +21314,230 @@ function getModeLabelFromCode(code) {
 
   return "Mode inconnu";
 }
+
+function getModeIdFromCode(code) {
+  if (!sessionConfig || !code) return "unknown";
+
+  if (code === sessionConfig.code) return "easy";
+  if (code === sessionConfig.codeAdvanced) return "advanced";
+  if (code === sessionConfig.codePolymarket) return "polymarket";
+
+  return "unknown";
+}
+
+function getModeColorFromModeId(modeId) {
+  if (modeId === "easy") return "#22c55e";
+  if (modeId === "advanced") return "#f97316";
+  if (modeId === "polymarket") return "#60a5fa";
+  return "#94a3b8";
+}
+
+function getCommonSessionEntriesForAdmin() {
+  const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+
+  if (!(sessionConfig.mode === "both" && window.isCommonManagement)) {
+    return [{
+      code: activeCode,
+      modeId: getModeIdFromCode(activeCode),
+      label: getModeLabelFromCode(activeCode),
+      data: {
+        sessionConfig,
+        gameData: game
+      }
+    }];
+  }
+
+  return getCommonManagedCodes()
+    .map(code => {
+      const storedData =
+        window.commonManagedSessionData &&
+        window.commonManagedSessionData[code]
+          ? window.commonManagedSessionData[code]
+          : null;
+
+      const data = storedData || (
+        code === activeCode
+          ? { sessionConfig, gameData: game }
+          : null
+      );
+
+      return {
+        code,
+        modeId: getModeIdFromCode(code),
+        label: getModeLabelFromCode(code),
+        data
+      };
+    })
+    .filter(entry => entry.data && entry.data.gameData);
+}
+
+function startCommonManageLiveListeners(activeCode) {
+  const codes =
+    sessionConfig.mode === "both" && window.isCommonManagement
+      ? getCommonManagedCodes()
+      : [activeCode];
+
+  window.commonManagedSessionData = {};
+
+  if (!window.commonManageSelectedCode || !codes.includes(window.commonManageSelectedCode)) {
+  window.commonManageSelectedCode = activeCode;
+}
+
+  codes.forEach(code => {
+    if (!code) return;
+
+    rememberLiveSessionCode(code);
+
+    const ref = db.ref("sessions").child(code);
+    ref.off("value");
+
+    ref.on("value", liveSnap => {
+      if (!liveSnap.exists()) return;
+
+      const liveData = liveSnap.val() || {};
+      window.commonManagedSessionData[code] = liveData;
+
+      if (code === activeCode) {
+        sessionConfig = liveData.sessionConfig || sessionConfig;
+        game = liveData.gameData || game;
+
+        if (!game.players) game.players = [];
+        if (!game.challenges) game.challenges = [];
+      }
+
+      if (window.currentActiveSessionCode === activeCode) {
+        renderManageDashboard();
+      }
+    });
+  });
+}
+
+function getCommonManageDisplayEntry() {
+  const entries =
+    typeof getCommonSessionEntriesForAdmin === "function"
+      ? getCommonSessionEntriesForAdmin()
+      : [{
+          code: window.currentActiveSessionCode || sessionConfig.code,
+          modeId: getModeIdFromCode(window.currentActiveSessionCode || sessionConfig.code),
+          label: getModeLabelFromCode(window.currentActiveSessionCode || sessionConfig.code),
+          data: { sessionConfig, gameData: game }
+        }];
+
+  if (!entries.length) {
+    return {
+      code: window.currentActiveSessionCode || sessionConfig.code,
+      modeId: getModeIdFromCode(window.currentActiveSessionCode || sessionConfig.code),
+      label: getModeLabelFromCode(window.currentActiveSessionCode || sessionConfig.code),
+      data: { sessionConfig, gameData: game }
+    };
+  }
+
+  const selectedCode = window.commonManageSelectedCode;
+  let entry = entries.find(e => e.code === selectedCode);
+
+  if (!entry) {
+    entry =
+      entries.find(e => e.code === window.currentActiveSessionCode) ||
+      entries[0];
+
+    window.commonManageSelectedCode = entry.code;
+  }
+
+  return entry;
+}
+
+function getCommonManageDisplayedGame() {
+  const entry =
+    typeof getCommonManageDisplayEntry === "function"
+      ? getCommonManageDisplayEntry()
+      : null;
+
+  return entry && entry.data && entry.data.gameData
+    ? entry.data.gameData
+    : game;
+}
+
+function renderCommonManageModeSelector() {
+  const box = document.getElementById("commonManageModeSelector");
+  if (!box) return;
+
+  const isCommon =
+    sessionConfig &&
+    sessionConfig.mode === "both" &&
+    window.isCommonManagement;
+
+  if (!isCommon) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const entries = getCommonSessionEntriesForAdmin();
+
+  if (!entries.length) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const selectedEntry = getCommonManageDisplayEntry();
+  box.style.display = "block";
+
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+      <div>
+        <div style="font-size:12px; color:#ffffff; font-weight:950;">
+          Données affichées
+        </div>
+        <div style="font-size:10px; color:#94a3b8; line-height:1.35;">
+          Les statistiques changent selon le mode choisi. Les actions de publication restent communes aux 3 modes.
+        </div>
+      </div>
+      <div style="font-size:10px; color:#c4b5fd; font-weight:900; text-align:right;">
+        Vue : ${selectedEntry.label}
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;">
+      ${entries.map(entry => {
+        const selected = entry.code === selectedEntry.code;
+        const color = getModeColorFromModeId(entry.modeId);
+
+        return `
+          <button
+            type="button"
+            onclick="selectCommonManageMode('${entry.code}')"
+            style="
+              margin:0;
+              padding:10px 8px;
+              border-radius:999px;
+              font-size:11px;
+              font-weight:950;
+              color:${selected ? '#020617' : color};
+              background:${selected ? color : 'rgba(15,23,42,0.78)'};
+              border:1px solid ${color};
+              box-shadow:${selected ? `0 0 18px ${color}55` : 'none'};
+            "
+          >
+            ${entry.label}
+          </button>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+window.selectCommonManageMode = function(code) {
+  window.commonManageSelectedCode = code;
+  window.adminOpenedPlayerIndex = null;
+
+  const container = document.getElementById("manageChallengesContainer");
+  if (container) {
+    container.innerHTML = "";
+  }
+
+  renderManageDashboard();
+};
 
 function updateOtherCommonSessions(mutator) {
   if (!(sessionConfig.mode === 'both' && window.isCommonManagement)) {
@@ -21221,11 +22099,21 @@ function startAdminDashboardTimers() {
     const now = Date.now();
     let needsRefresh = false;
 
-game.challenges.forEach((ch, i) => {
+const displayedGame =
+      typeof getCommonManageDisplayedGame === "function"
+        ? getCommonManageDisplayedGame()
+        : game;
+
+    const displayedChallenges =
+      displayedGame && Array.isArray(displayedGame.challenges)
+        ? displayedGame.challenges
+        : [];
+
+    displayedChallenges.forEach((ch, i) => {
       const effStatus = getEffectiveStatus(ch);
       
       // NOUVEAU : Détection automatique de l'ouverture pour envoyer l'email
-      if (effStatus === "open" && !ch.alertSent) {
+if (displayedGame === game && effStatus === "open" && !ch.alertSent) {
          ch.alertSent = true; // On verrouille immédiatement pour éviter le spam
          sendNewQuestionAlert(ch);
          saveToCloud(); // On sauvegarde sur Firebase que l'alerte a été envoyée
@@ -21602,11 +22490,12 @@ function renderBigScreenPreStartPanel(title, subtitle) {
 function getBigScreenLayoutKey() {
   if (!game || !game.challenges || !sessionConfig) return "";
 
-  const now = Date.now();
-  const sessionStart = getBsSessionStartMs();
-  const limit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
-  const isBeforeStart = sessionStart > now && !game.isResolved;
-  const isWaitingForResults = now >= limit && !game.isResolved && !isBeforeStart;
+const now = Date.now();
+const sessionStart = getBsSessionStartMs();
+const limit = Number(sessionConfig.gameEndTime) || Number(sessionConfig.expiresAt);
+const isBeforeStart = sessionStart > now && !game.isResolved;
+const isWaitingForResults = now >= limit && !game.isResolved;
+const projectedCode = window.bigScreenActiveSessionCode || window.currentActiveSessionCode || sessionConfig.code || "";
 
   const challengeStateKey = (game.challenges || []).map((ch, i) => {
     return [
@@ -21617,7 +22506,10 @@ function getBigScreenLayoutKey() {
     ].join(":");
   }).join("|");
 
-  return [
+return [
+    projectedCode,
+    game.gameMode || "",
+    sessionConfig.mode || "",
     game.isResolved ? "resolved" : isBeforeStart ? "prestart" : isWaitingForResults ? "waiting" : "live",
     sessionConfig.gameStartTime || "",
     sessionConfig.gameEndTime || sessionConfig.expiresAt || "",
@@ -21636,8 +22528,19 @@ function requestBigScreenDataRefresh() {
 
   if (bsRefreshRaf) return;
 
+  const refreshToken = window.bigScreenActiveLoadToken;
+  const refreshCode = window.bigScreenActiveSessionCode;
+
   bsRefreshRaf = requestAnimationFrame(() => {
     bsRefreshRaf = null;
+
+    if (
+      window.bigScreenActiveLoadToken !== refreshToken ||
+      window.bigScreenActiveSessionCode !== refreshCode ||
+      !isBigScreenActive
+    ) {
+      return;
+    }
 
     const nextLayoutKey = getBigScreenLayoutKey();
 
@@ -21804,9 +22707,17 @@ function checkBigScreenAccess() {
     msg.className = "msg err";
     return;
   }
+stopLiveSessionContext();
 
-  stopLiveSessionContext();
+window.bigScreenActiveLoadToken = (Number(window.bigScreenActiveLoadToken) || 0) + 1;
+const loadToken = window.bigScreenActiveLoadToken;
+
 rememberLiveSessionCode(input);
+
+window.currentActiveSessionCode = input;
+window.bigScreenActiveSessionCode = input;
+
+resetBigScreenRevealStateForSession(input);
 
 const sessionRef = db.ref("sessions").child(input);
 
@@ -21820,18 +22731,38 @@ const sessionRef = db.ref("sessions").child(input);
       msg.className = "msg err";
       return;
     }
+if (
+  window.bigScreenActiveLoadToken !== loadToken ||
+  window.bigScreenActiveSessionCode !== input
+) {
+  return;
+}
     
-    const data = snapshot.val();
-    game = data.gameData;
-    sessionConfig = data.sessionConfig;
-    window.currentActiveSessionCode = input;
+    
+const data = snapshot.val() || {};
+game = data.gameData || { players: [], challenges: [] };
+sessionConfig = data.sessionConfig || sessionConfig;
 
-    if (!game.players) game.players = [];
+if (!game.players) game.players = [];
+if (!game.challenges) game.challenges = [];
 
-    isBigScreenActive = true;
-    msg.textContent = "";
-    showScreen('bigScreen'); // Affichage uniquement quand tout est prêt !
-    startBigScreenEngine();
+window.currentActiveSessionCode = input;
+window.bigScreenActiveSessionCode = input;
+window.bsFinalRevealSessionCode = input;
+
+rememberLiveSessionCode(input);
+
+isBigScreenActive = true;
+msg.textContent = "";
+
+resetBigScreenRevealStateForSession(input);
+
+if (typeof bsLastLayoutKey !== "undefined") {
+  bsLastLayoutKey = "";
+}
+
+showScreen('bigScreen');
+startBigScreenEngine();
 
     // On relance l'écoute continue pour la mise à jour fluide des jauges
     // et pour récupérer aussi les changements de configuration,
@@ -21839,7 +22770,11 @@ const sessionRef = db.ref("sessions").child(input);
 sessionRef.off('value');
 
 sessionRef.on('value', (liveSnap) => {
-  if (window.currentActiveSessionCode !== input || !isBigScreenActive) return;
+  if (
+  window.bigScreenActiveLoadToken !== loadToken ||
+  window.bigScreenActiveSessionCode !== input ||
+  !isBigScreenActive
+) return;
 
   if (liveSnap.exists()) {
       const liveData = liveSnap.val() || {};
@@ -21854,6 +22789,8 @@ sessionRef.on('value', (liveSnap) => {
 
       sessionConfig = liveData.sessionConfig || sessionConfig;
       game = liveData.gameData || game;
+      window.currentActiveSessionCode = input;
+      window.bigScreenActiveSessionCode = input;
 
       const isNowResolved = !!(game && game.isResolved);
 
@@ -21911,22 +22848,33 @@ if (isBigScreenActive) {
 function startBigScreenEngine() {
   if (bsInterval) clearInterval(bsInterval);
   if (bsTimerInterval) clearInterval(bsTimerInterval);
+
+  const engineToken = window.bigScreenActiveLoadToken;
+  const engineCode = window.bigScreenActiveSessionCode;
+
+  const isCurrentEngine = () => {
+    return (
+      isBigScreenActive &&
+      window.bigScreenActiveLoadToken === engineToken &&
+      window.bigScreenActiveSessionCode === engineCode
+    );
+  };
   
   updateBsIndices(true);
-  window.bsFinalRecapIndex = 0; // Initialisation du pointeur de fin
-  window.bsScreenSwitchedToWaiting = false; // NOUVEAU : Réinitialisation du drapeau de basculement d'écran
+  window.bsFinalRecapIndex = 0;
+  window.bsScreenSwitchedToWaiting = false;
+
   renderBigScreen();
   bsLastLayoutKey = getBigScreenLayoutKey();
 
-let elapsedSeconds = 0;
-let trendElapsedSeconds = 0;
+  let elapsedSeconds = 0;
+  let trendElapsedSeconds = 0;
 
-  // CORRECTION : Horloge universelle de 5 secondes qui s'adapte instantanément à l'état du jeu
   bsInterval = setInterval(() => {
+    if (!isCurrentEngine()) return;
+
     elapsedSeconds += 5;
 
-    // Tant que la session n'a pas commencé, on ne fait pas tourner les cartes.
-    // Le passage au live est géré par updateBsTimers(), sans recharger la page.
     if (isBigScreenSessionNotStarted()) {
       elapsedSeconds = 0;
       trendElapsedSeconds = 0;
@@ -21934,59 +22882,60 @@ let trendElapsedSeconds = 0;
     }
 
     if (game.isResolved) {
-      // MODE FIN DE PARTIE : Rotation toutes les 15 secondes
       if (elapsedSeconds >= 15) {
         elapsedSeconds = 0;
-        // CORRECTION : On cible UNIQUEMENT la grille pour le fondu, l'écran reste parfaitement stable
+
         const gridEl = document.getElementById("bsRecapContainer");
         if (gridEl) gridEl.classList.add("bs-faded"); 
         
         setTimeout(() => {
-const totalChallenges = (game.challenges || []).length;
-window.bsFinalRecapIndex = totalChallenges
-  ? (window.bsFinalRecapIndex + 2) % totalChallenges
-  : 0;
+          if (!isCurrentEngine()) return;
 
-renderBigScreen();
-bsLastLayoutKey = getBigScreenLayoutKey();
+          const totalChallenges = (game.challenges || []).length;
 
-const newGridEl = document.getElementById("bsRecapContainer");
-if (newGridEl) newGridEl.classList.remove("bs-faded");
+          window.bsFinalRecapIndex = totalChallenges
+            ? (window.bsFinalRecapIndex + 2) % totalChallenges
+            : 0;
+
+          renderBigScreen();
+          bsLastLayoutKey = getBigScreenLayoutKey();
+
+          const newGridEl = document.getElementById("bsRecapContainer");
+          if (newGridEl) newGridEl.classList.remove("bs-faded");
         }, 800);
       }
-} else {
-  // MODE EN DIRECT : changement automatique de la fenêtre d'évolution toutes les 10 secondes
-  trendElapsedSeconds += 5;
+    } else {
+      trendElapsedSeconds += 5;
 
-  if (trendElapsedSeconds >= 10) {
-    trendElapsedSeconds = 0;
-    rotateBsTrendRange();
-  }
+      if (trendElapsedSeconds >= 10) {
+        trendElapsedSeconds = 0;
+        rotateBsTrendRange();
+      }
 
-  // MODE EN DIRECT : Rotation alternée toutes les 30 secondes
-if (elapsedSeconds >= 30) {
-  elapsedSeconds = 0;
+      if (elapsedSeconds >= 30) {
+        elapsedSeconds = 0;
 
-  const targetId = (bsToggle === 'left') ? "bsLeft" : "bsMiddle";
-  const targetEl = document.getElementById(targetId);
+        const targetId = (bsToggle === "left") ? "bsLeft" : "bsMiddle";
+        const targetEl = document.getElementById(targetId);
 
-  if (targetEl) targetEl.classList.add("bs-faded");
+        if (targetEl) targetEl.classList.add("bs-faded");
 
-  setTimeout(() => {
-    updateBsIndices(false);
-    renderBigScreen();
-    bsLastLayoutKey = getBigScreenLayoutKey();
+        setTimeout(() => {
+          if (!isCurrentEngine()) return;
 
-    const newTargetEl = document.getElementById(targetId);
-    if (newTargetEl) newTargetEl.classList.remove("bs-faded");
-  }, 800);
-}
+          updateBsIndices(false);
+          renderBigScreen();
+          bsLastLayoutKey = getBigScreenLayoutKey();
+
+          const newTargetEl = document.getElementById(targetId);
+          if (newTargetEl) newTargetEl.classList.remove("bs-faded");
+        }, 800);
+      }
     }
   }, 5000);
 
-  // MOTEUR DE CHRONOMÈTRE : S'exécute chaque seconde pour la fluidité
   bsTimerInterval = setInterval(() => {
-     if(isBigScreenActive) updateBsTimers();
+    if (isCurrentEngine()) updateBsTimers();
   }, 1000);
 }
 
@@ -22264,6 +23213,10 @@ function computeBsTimedHistory(cIndex, rangeMs = bsTrendRangeMs) {
 function renderBigScreen() {
   if (!game) return;
   if (!Array.isArray(game.challenges)) game.challenges = [];
+
+  if (typeof updateBigScreenFinalRevealButton === "function") {
+    updateBigScreenFinalRevealButton();
+  }
   
   // CORRECTION SÉCURITÉ : On s'assure que le conteneur du Grand Écran est bien visible au cas où
   const bsScreen = document.getElementById('bigScreen');
@@ -22273,7 +23226,7 @@ function renderBigScreen() {
 
 // GÉNÉRATION DU QR CODE DE REJOINDRE
 // CORRECTION : On force l'utilisation du code de la session actuellement projetée (Gère le mode Avancé)
-const activeCode = window.currentActiveSessionCode || sessionConfig.code;
+const activeCode = window.bigScreenActiveSessionCode || window.currentActiveSessionCode || sessionConfig.code;
 const joinUrl = getPlayerJoinUrl(activeCode);
 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
       
@@ -22412,6 +23365,7 @@ if (shouldShowNextSessionQR) {
 
       // --- NOUVEAU : AFFICHAGE SPÉCIAL FIN DE JEU ---
       if (game.isResolved) {
+        updateBigScreenFinalRevealButton();
          // Avant d'afficher les résultats finaux, on joue une animation de révélation.
          if (!window.bsFinalRevealDone) {
            startBsFinalRankingReveal();
@@ -22452,7 +23406,7 @@ if (shouldShowNextSessionQR) {
          // 2. Classement Final : GÉNÉRÉ UNE SEULE FOIS pour éviter le clignotement
          {
              const playersList = game.players || [];
-             const isEasyScreen = (sessionConfig.mode === 'easy' || (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code));
+
              
              const leaderboard = playersList.map(p => {
                 return { name: p.name, score: window.calculatePlayerScore(p, game) };
@@ -22480,9 +23434,7 @@ leaderboard.forEach((p, idx) => {
     idx === 2 ? "bs-final-rank-row top-3" :
     "bs-final-rank-row";
 
-  const scoreDisplay = isEasyScreen
-    ? `${Number(p.score || 0).toFixed(2).replace('.', ',')} 💰`
-    : `${Math.round(Number(p.score || 0)).toLocaleString('fr-FR')} 💰`;
+const scoreDisplay = formatBsLeaderboardScore(p.score);
 
   lbHtml += `
     <div class="${rowClass}">
@@ -22901,21 +23853,44 @@ return `
   }).join('');
 }
 
+function formatBsLeaderboardScore(value) {
+  const n = Number(value || 0);
+
+  if (!Number.isFinite(n)) {
+    return "0 💰";
+  }
+
+  if (n === 0) {
+    return "0 💰";
+  }
+
+  const abs = Math.abs(n);
+
+  // 3 chiffres significatifs, sans notation scientifique.
+  const rounded = Number(n.toPrecision(3));
+
+  const decimals =
+    abs < 1 ? 3 :
+    abs < 10 ? 2 :
+    abs < 100 ? 1 :
+    0;
+
+  return `${rounded.toLocaleString("fr-FR", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals
+  })} 💰`;
+}
+
 function renderBsLeaderboard() {
   const playersList = game.players || [];
-  const isEasyScreen = (
-    sessionConfig.mode === 'easy' ||
-    (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code)
-  );
+
 
   const leaderboard = playersList.map(p => {
     return { name: p.name || "Joueur", score: window.calculatePlayerScore(p, game) };
   }).sort((a, b) => b.score - a.score).slice(0, 10);
 
   const rows = leaderboard.map((p, idx) => {
-    const scoreDisplay = isEasyScreen
-      ? `${Number(p.score || 0).toFixed(2).replace('.', ',')} 💰`
-      : `${Math.round(Number(p.score || 0)).toLocaleString('fr-FR')} 💰`;
+const scoreDisplay = formatBsLeaderboardScore(p.score);
 
     return `
       <div class="bs-leader-row">
@@ -22952,26 +23927,150 @@ function clearBsFinalRevealTimers() {
   window.bsFinalRevealTimers = [];
 }
 
+function resetBigScreenRevealStateForSession(code) {
+  const safeCode = String(code || "");
+
+  if (typeof clearBsFinalRevealTimers === "function") {
+    clearBsFinalRevealTimers();
+  }
+
+  if (typeof bsRefreshRaf !== "undefined" && bsRefreshRaf) {
+    cancelAnimationFrame(bsRefreshRaf);
+    bsRefreshRaf = null;
+  }
+
+  if (typeof bsChartRefreshTimer !== "undefined" && bsChartRefreshTimer) {
+    clearTimeout(bsChartRefreshTimer);
+    bsChartRefreshTimer = null;
+  }
+
+  if (typeof bsTrendFadeTimer !== "undefined" && bsTrendFadeTimer) {
+    clearTimeout(bsTrendFadeTimer);
+    bsTrendFadeTimer = null;
+  }
+
+  window.bsFinalRevealDone = false;
+  window.bsFinalRevealRunning = false;
+  window.bsFinalRevealSessionCode = safeCode;
+  window.bsFinalRecapIndex = 0;
+  window.bsScreenSwitchedToWaiting = false;
+  window.bsScreenWaitingForStart = false;
+
+  if (typeof bsLastLayoutKey !== "undefined") {
+    bsLastLayoutKey = "";
+  }
+
+  const oldConfettiLayer = document.getElementById("bsFinalConfettiLayer");
+  if (oldConfettiLayer) oldConfettiLayer.remove();
+
+  const grid = document.querySelector(".bs-grid");
+  if (grid) grid.classList.remove("bs-grid-final");
+
+  const left = document.getElementById("bsLeft");
+  const middle = document.getElementById("bsMiddle");
+  const right = document.getElementById("bsRight");
+
+  if (left) left.innerHTML = "";
+  if (middle) middle.innerHTML = "";
+  if (right) {
+    right.innerHTML = "";
+    right.style.display = "";
+  }
+
+  updateBigScreenFinalRevealButton();
+}
+
 function queueBsFinalRevealStep(fn, delay) {
   if (!window.bsFinalRevealTimers) window.bsFinalRevealTimers = [];
-  const id = setTimeout(fn, delay);
+
+  const token = window.bigScreenActiveLoadToken;
+  const code = window.bigScreenActiveSessionCode;
+
+  const id = setTimeout(() => {
+    if (
+      window.bigScreenActiveLoadToken !== token ||
+      window.bigScreenActiveSessionCode !== code ||
+      !isBigScreenActive
+    ) {
+      return;
+    }
+
+    fn();
+  }, delay);
+
   window.bsFinalRevealTimers.push(id);
   return id;
 }
 
+function updateBigScreenFinalRevealButton() {
+  const btn = document.getElementById("bsRevealToggleBtn");
+  if (!btn) return;
+
+  const shouldShow =
+    isBigScreenActive &&
+    game &&
+    game.isResolved;
+
+  if (!shouldShow) {
+    btn.style.display = "none";
+    btn.textContent = "Passer";
+    return;
+  }
+
+  btn.style.display = "inline-flex";
+  btn.style.alignItems = "center";
+  btn.style.justifyContent = "center";
+
+  btn.textContent = window.bsFinalRevealDone
+    ? "Voir l’animation"
+    : "Passer";
+}
+
+window.toggleBigScreenFinalReveal = function() {
+  if (!game || !game.isResolved) return;
+
+  const code = window.bigScreenActiveSessionCode || window.currentActiveSessionCode || "";
+  const oldConfettiLayer = document.getElementById("bsFinalConfettiLayer");
+  if (oldConfettiLayer) oldConfettiLayer.remove();
+
+  clearBsFinalRevealTimers();
+
+  if (!window.bsFinalRevealDone) {
+    // PASSER : on va directement à l'écran final.
+    window.bsFinalRevealRunning = false;
+    window.bsFinalRevealDone = true;
+    window.bsFinalRevealSessionCode = code;
+
+    if (typeof bsLastLayoutKey !== "undefined") {
+      bsLastLayoutKey = "";
+    }
+
+    updateBigScreenFinalRevealButton();
+    renderBigScreen();
+    return;
+  }
+
+  // VOIR L'ANIMATION : on relance l'animation du mode actuellement projeté.
+  window.bsFinalRevealRunning = false;
+  window.bsFinalRevealDone = false;
+  window.bsFinalRevealSessionCode = code;
+
+  if (typeof bsLastLayoutKey !== "undefined") {
+    bsLastLayoutKey = "";
+  }
+
+  updateBigScreenFinalRevealButton();
+  renderBigScreen();
+};
+
 function getBsFinalRevealLeaderboard() {
-  const isEasyScreen = (
-    sessionConfig.mode === 'easy' ||
-    (sessionConfig.mode === 'both' && window.currentActiveSessionCode === sessionConfig.code)
-  );
+
 
   return (game.players || [])
     .map(p => ({
       name: p.name || "Joueur",
       score: window.calculatePlayerScore(p, game),
-      scoreDisplay: isEasyScreen
-        ? `${Number(window.calculatePlayerScore(p, game) || 0).toFixed(2).replace('.', ',')} 💰`
-        : `${Math.round(Number(window.calculatePlayerScore(p, game) || 0)).toLocaleString('fr-FR')} 💰`
+scoreDisplay: formatBsLeaderboardScore(window.calculatePlayerScore(p, game))
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
@@ -23177,38 +24276,78 @@ function launchBsFinalRevealConfetti(duration = 3200) {
     if (currentLayer) currentLayer.remove();
   }, duration + 700);
 }
-
 function startBsFinalRankingReveal() {
-  if (window.bsFinalRevealRunning || window.bsFinalRevealDone) return;
+  const revealCode = window.bigScreenActiveSessionCode || window.currentActiveSessionCode || "";
+  const revealToken = window.bigScreenActiveLoadToken;
 
-  const leaderboard = getBsFinalRevealLeaderboard();
+  if (!revealCode) return;
 
-  if (!leaderboard.length) {
-    window.bsFinalRevealDone = true;
-    window.bsFinalRevealRunning = false;
-    renderBigScreen();
+  if (
+    window.bsFinalRevealRunning &&
+    window.bsFinalRevealSessionCode === revealCode
+  ) {
+    return;
+  }
+
+  if (
+    window.bsFinalRevealDone &&
+    window.bsFinalRevealSessionCode === revealCode
+  ) {
     return;
   }
 
   clearBsFinalRevealTimers();
 
-  window.bsFinalRevealRunning = true;
-  window.bsFinalRevealDone = false;
+window.bsFinalRevealRunning = true;
+window.bsFinalRevealDone = false;
+window.bsFinalRevealSessionCode = revealCode;
+
+if (typeof updateBigScreenFinalRevealButton === "function") {
+  updateBigScreenFinalRevealButton();
+}
+
+  const isStillSameReveal = () => {
+    return (
+      window.bigScreenActiveLoadToken === revealToken &&
+      window.bigScreenActiveSessionCode === revealCode &&
+      isBigScreenActive
+    );
+  };
+
+  const leaderboard = getBsFinalRevealLeaderboard();
+
+if (!leaderboard.length) {
+  if (!isStillSameReveal()) return;
+
+  window.bsFinalRevealDone = true;
+  window.bsFinalRevealRunning = false;
+
+  if (typeof updateBigScreenFinalRevealButton === "function") {
+    updateBigScreenFinalRevealButton();
+  }
+
+  renderBigScreen();
+  return;
+}
 
   renderBsFinalRevealShell();
 
   const lowerRanks = [];
+
   for (let idx = Math.min(9, leaderboard.length - 1); idx >= 3; idx--) {
     lowerRanks.push(idx);
   }
+
   let delay = 1000;
 
   lowerRanks.forEach(idx => {
     queueBsFinalRevealStep(() => {
+      if (!isStillSameReveal()) return;
       showBsFinalRevealSpotlight(leaderboard[idx], idx);
     }, delay);
 
     queueBsFinalRevealStep(() => {
+      if (!isStillSameReveal()) return;
       addBsFinalRevealRow(leaderboard[idx], idx);
     }, delay + 1650);
 
@@ -23216,6 +24355,7 @@ function startBsFinalRankingReveal() {
   });
 
   queueBsFinalRevealStep(() => {
+    if (!isStillSameReveal()) return;
     renderBsPodiumRevealShell();
   }, delay + 600);
 
@@ -23226,14 +24366,14 @@ function startBsFinalRankingReveal() {
 
   podiumOrder.forEach((idx, order) => {
     queueBsFinalRevealStep(() => {
+      if (!isStillSameReveal()) return;
       revealBsPodiumPlayer(leaderboard[idx], idx);
     }, podiumStartDelay + order * podiumStepDelay);
   });
 
-  // Entre la révélation du 2e et celle du 1er :
-  // le titre "Le podium" disparaît progressivement.
   if (leaderboard[1] && leaderboard[0]) {
     queueBsFinalRevealStep(() => {
+      if (!isStillSameReveal()) return;
       fadeBsPodiumTitle();
     }, podiumStartDelay + podiumStepDelay + 1450);
   }
@@ -23241,14 +24381,22 @@ function startBsFinalRankingReveal() {
   const confettiDelay = podiumStartDelay + podiumOrder.length * podiumStepDelay + 1800;
 
   queueBsFinalRevealStep(() => {
+    if (!isStillSameReveal()) return;
     launchBsFinalRevealConfetti(3300);
   }, confettiDelay);
 
   queueBsFinalRevealStep(() => {
-    window.bsFinalRevealDone = true;
-    window.bsFinalRevealRunning = false;
-    clearBsFinalRevealTimers();
-    renderBigScreen();
+    if (!isStillSameReveal()) return;
+
+window.bsFinalRevealDone = true;
+window.bsFinalRevealRunning = false;
+clearBsFinalRevealTimers();
+
+if (typeof updateBigScreenFinalRevealButton === "function") {
+  updateBigScreenFinalRevealButton();
+}
+
+renderBigScreen();
   }, confettiDelay + 3600);
 }
 
@@ -23761,20 +24909,27 @@ let poolOpenUrgent = simGame.challenges.map((ch, idx) => ({idx, ch}))
         if (now >= triggerTime) {
           const ansIndex = Math.floor(Math.random() * ch.answers.length);
           
-          let betAmount = 1; 
-          if (simConfig.mode === 'advanced' || simConfig.mode === 'both') {
-            const availableCount = bot.assignedIndices.filter(idx => {
-                const chTemp = simGame.challenges[idx];
-                return chTemp && getEffectiveStatus(chTemp) === "open" && (!bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx));
-            }).length;
-            
-            if (availableCount <= 1) {
-                betAmount = bot.balance; // Tapis si c'est la dernière
-            } else {
-                const safeMax = bot.balance - (availableCount - 1);
-                betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
-            }
-          }
+const isEasySim =
+  (simConfig.mode === 'easy') ||
+  (simConfig.mode === 'both' && code === simConfig.code);
+
+let betAmount = 1;
+
+// En mode facile, le bot doit répondre à toutes ses questions disponibles.
+// Donc on garde toujours une mise fixe à 1, même si c'est sa dernière question.
+if (!isEasySim) {
+  const availableCount = bot.assignedIndices.filter(idx => {
+      const chTemp = simGame.challenges[idx];
+      return chTemp && getEffectiveStatus(chTemp) === "open" && (!bot.portfolio || !bot.portfolio.some(b => b.cIndex === idx));
+  }).length;
+  
+  if (availableCount <= 1) {
+      betAmount = bot.balance; // Tapis si c'est la dernière en mode avancé / polymarket
+  } else {
+      const safeMax = bot.balance - (availableCount - 1);
+      betAmount = safeMax > 1 ? Math.floor(Math.random() * safeMax) + 1 : 1;
+  }
+}
           
           if (betAmount <= 0) return;
           const probsStart = getLMSRProbs(ch.votes);
@@ -23807,10 +24962,9 @@ const betTime = Date.now();
             }]
           });
 
-          let isEasySim = (simConfig.mode === 'easy') || (simConfig.mode === 'both' && code === simConfig.code);
-          if (!isEasySim) {
-              bot.balance -= betAmount;
-          }
+if (!isEasySim) {
+    bot.balance -= betAmount;
+}
           
           ch.votes = simulatedVotes;
           
@@ -24026,6 +25180,8 @@ function renderNextSessionQR() {
 
     const container = document.getElementById("bsNextSessionHeaderContainer");
     if (!container) return;
+
+    
     
     const nextUrl = getPlayerJoinUrl(sessionConfig.nextSessionCode);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=190x190&data=${encodeURIComponent(nextUrl)}`;
